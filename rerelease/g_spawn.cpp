@@ -150,11 +150,45 @@ void SP_monster_guardian(edict_t *self);
 void SP_monster_arachnid(edict_t *self);
 void SP_monster_guncmdr(edict_t *self);
 /*KONIG*/
-void SP_monster_mutant_alpha(edict_t* self);
-void SP_monster_shocker(edict_t* self);
-void SP_monster_gnorta(edict_t* self);
+//boss stands
 void SP_monster_guardian_stand(edict_t* self);
 void SP_monster_widow_stand(edict_t* self);
+//cut monsters restored
+void SP_monster_shocker(edict_t* self);
+void SP_monster_gnorta(edict_t* self);
+//q4 demake enemies
+//void SP_monster_tactical_male(edict_t* self);
+//void SP_monster_tactical_female(edict_t* self);
+//void SP_monster_tactical_cyborg(edict_t* self);
+//void SP_monster_berserk2(edict_t* self);
+//void SP_monster_dropper(edict_t* self);
+void SP_monster_protector(edict_t* self);
+//void SP_monster_fixbot2(edict_t* self);
+//void SP_monster_valkaryne(edict_t* self);
+//void SP_monster_valkaryne2(edict_t* self);
+//beta enemies
+void SP_monster_mutant_alpha(edict_t* self);
+// void SP_monster_mimic(edict_t* self);
+// void SP_monster_flipper2(edict_t* self);
+// void SP_monster_guardian2(edict_t* self);
+// void SP_monster_brain2(edict_t* self);
+// void SP_monster_jorg2(edict_t* self);
+// void SP_monster_rider2(edict_t* self);
+// void SP_monster_gekk2(edict_t* self);
+// void SP_monster_carrier2(edict_t* self);
+// zaero enemies
+// void SP_monster_hound(edict_t* self);
+// void SP_monster_sentien(edict_t* self);
+// void SP_monster_turretz(edict_t* self);
+// void SP_monster_zboss(edict_t* self);
+// quake 1 shareware enemies
+// void SP_monster_grunt(edict_t* self);
+// void SP_monster_ogre(edict_t* self);
+// void SP_monster_scrag(edict_t* self);
+// void SP_monster_fiend(edict_t* self);
+// void SP_monster_knight(edict_t* self);
+// void SP_monster_zombie(edict_t* self);
+// void SP_monster_chthon(edict_t* self);
 
 void SP_monster_commander_body(edict_t *self);
 
@@ -487,7 +521,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	// { "monster_tactical_cyborg", SP_monster_tactical_cyborg },
 	// { "monster_berzerk2", SP_monster_berzerk2 },
 	// { "monster_dropper", SP_monster_dropper },
-	// { "monster_protector", SP_monster_protector },
+	 { "monster_protector", SP_monster_protector },
 	// { "monster_fixbot2", SP_monster_fixbot2 },
 	// { "monster_valkaryne", SP_monster_valkaryne },
 	// { "monster_valkaryne2", SP_monster_valkaryne2 },
