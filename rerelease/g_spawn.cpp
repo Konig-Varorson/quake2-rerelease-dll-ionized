@@ -149,6 +149,12 @@ void SP_monster_tank_stand(edict_t *self);
 void SP_monster_guardian(edict_t *self);
 void SP_monster_arachnid(edict_t *self);
 void SP_monster_guncmdr(edict_t *self);
+/*KONIG*/
+void SP_monster_mutant_alpha(edict_t* self);
+void SP_monster_shocker(edict_t* self);
+void SP_monster_gnorta(edict_t* self);
+void SP_monster_guardian_stand(edict_t* self);
+void SP_monster_widow_stand(edict_t* self);
 
 void SP_monster_commander_body(edict_t *self);
 
@@ -216,6 +222,60 @@ void SP_info_ctf_teleport_destination(edict_t *self);
 // ZOID
 
 void SP_monster_shambler(edict_t* self);
+
+/*KONIG - new spawns*/
+void SP_ammo_shells_small(edict_t* self);
+void SP_ammo_bullets_small(edict_t* self);
+void SP_ammo_rockets_small(edict_t* self);
+void SP_ammo_cells_small(edict_t* self);
+void SP_ammo_slugs_small(edict_t* self);
+void SP_misc_gib_chest(edict_t* self);
+void SP_misc_gib_head2(edict_t* self);
+void SP_misc_berserkgib_chest(edict_t* self);
+void SP_misc_berserkgib_head(edict_t* self);
+void SP_misc_bitchgib_chest(edict_t* self);
+void SP_misc_bitchgib_head(edict_t* self);
+void SP_misc_boss1gib_chest(edict_t* self);
+void SP_misc_boss1gib_head(edict_t* self);
+void SP_misc_boss2gib_chest(edict_t* self);
+void SP_misc_boss2gib_head(edict_t* self);
+void SP_misc_boss31gib_chest(edict_t* self);
+void SP_misc_boss31gib_head(edict_t* self);
+void SP_misc_braingib_chest(edict_t* self);
+void SP_misc_braingib_head(edict_t* self);
+void SP_misc_carriergib_chest(edict_t* self);
+void SP_misc_carriergib_head(edict_t* self);
+void SP_misc_floatgib_base(edict_t* self);
+void SP_misc_floatgib_jar(edict_t* self);
+void SP_misc_gekkgib_chest(edict_t* self);
+void SP_misc_gekkgib_claw(edict_t* self);
+void SP_misc_gekkgib_head(edict_t* self);
+void SP_misc_gladiatrgib_chest(edict_t* self);
+void SP_misc_gladiatrgib_head(edict_t* self);
+void SP_misc_guardiangib_chest(edict_t* self);
+void SP_misc_guardiangib_head(edict_t* self);
+void SP_misc_gunnergib_chest(edict_t* self);
+void SP_misc_gunnergib_head(edict_t* self);
+void SP_misc_hovergib_chest(edict_t* self);
+void SP_misc_hovergib_head(edict_t* self);
+void SP_misc_infantrygib_chest(edict_t* self);
+void SP_misc_infantrygib_head(edict_t* self);
+void SP_misc_medicgib_chest(edict_t* self);
+void SP_misc_medicgib_head(edict_t* self);
+void SP_misc_mutantgib_chest(edict_t* self);
+void SP_misc_mutantgib_head(edict_t* self);
+void SP_misc_mutantgib_foot(edict_t* self);
+void SP_misc_mutantgib_hand(edict_t* self);
+void SP_misc_parasitegib_chest(edict_t* self);
+void SP_misc_parasitegib_head(edict_t* self);
+void SP_misc_shamblergib_head(edict_t* self);
+void SP_misc_soldiergib_chest(edict_t* self);
+void SP_misc_soldiergib_head(edict_t* self);
+void SP_misc_stalkergib_chest(edict_t* self);
+void SP_misc_stalkergib_head(edict_t* self);
+void SP_misc_tankgib_chest(edict_t* self);
+void SP_misc_tankgib_head(edict_t* self);
+
 
 // clang-format off
 static const std::initializer_list<spawn_t> spawns = {
@@ -331,6 +391,58 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "misc_flare", SP_misc_flare }, // [Sam-KEX]
 	{ "misc_hologram", SP_misc_hologram }, // Paril
 	{ "misc_lavaball", SP_misc_lavaball }, // Paril
+	/*KONIG*/
+	{ "ammo_shells_small", SP_ammo_shells_small },
+	{ "ammo_bullets_small", SP_ammo_bullets_small },
+	{ "ammo_rockets_small", SP_ammo_rockets_small },
+	{ "ammo_cells_small", SP_ammo_cells_small },
+	{ "ammo_slugs_small", SP_ammo_slugs_small },
+	{ "misc_gib_chest", SP_misc_gib_chest },
+	{ "misc_gib_head2", SP_misc_gib_head2 },
+	{ "misc_berserkgib_chest", SP_misc_berserkgib_chest },
+	{ "misc_berserkgib_head", SP_misc_berserkgib_head },
+	{ "misc_bitchgib_chest", SP_misc_bitchgib_chest },
+	{ "misc_bitchgib_head", SP_misc_bitchgib_head },
+	{ "misc_boss1gib_chest", SP_misc_boss1gib_chest },
+	{ "misc_boss1gib_head", SP_misc_boss1gib_head },
+	{ "misc_boss2gib_chest", SP_misc_boss2gib_chest },
+	{ "misc_boss2gib_head", SP_misc_boss2gib_head },
+	{ "misc_boss31gib_chest", SP_misc_boss31gib_chest },
+	{ "misc_boss31gib_head", SP_misc_boss31gib_head },
+	{ "misc_braingib_chest", SP_misc_braingib_chest },
+	{ "misc_braingib_head", SP_misc_braingib_head },
+	{ "misc_carriergib_chest", SP_misc_carriergib_chest },
+	{ "misc_carriergib_head", SP_misc_carriergib_head },
+	{ "misc_floatgib_base", SP_misc_floatgib_base },
+	{ "misc_floatgib_jar", SP_misc_floatgib_jar },
+	{ "misc_gekkgib_chest", SP_misc_gekkgib_chest },
+	{ "misc_gekkgib_claw", SP_misc_gekkgib_claw },
+	{ "misc_gekkgib_head", SP_misc_gekkgib_head },
+	{ "misc_gladiatrgib_chest", SP_misc_gladiatrgib_chest },
+	{ "misc_gladiatrgib_head", SP_misc_gladiatrgib_head },
+	{ "misc_guardiangib_chest", SP_misc_guardiangib_chest },
+	{ "misc_guardiangib_head", SP_misc_guardiangib_head },
+	{ "misc_gunnergib_chest", SP_misc_gunnergib_chest },
+	{ "misc_gunnergib_head", SP_misc_gunnergib_head },
+	{ "misc_hovergib_chest", SP_misc_hovergib_chest },
+	{ "misc_hovergib_head", SP_misc_hovergib_head },
+	{ "misc_infantrygib_chest", SP_misc_infantrygib_chest },
+	{ "misc_infantrygib_head", SP_misc_infantrygib_head },
+	{ "misc_medicgib_chest", SP_misc_medicgib_chest },
+	{ "misc_medicgib_head", SP_misc_medicgib_head },
+	{ "misc_mutantgib_chest", SP_misc_mutantgib_chest },
+	{ "misc_mutantgib_head", SP_misc_mutantgib_head },
+	{ "misc_mutantgib_foot", SP_misc_mutantgib_foot },
+	{ "misc_mutantgib_hand", SP_misc_mutantgib_hand },
+	{ "misc_parasitegib_chest", SP_misc_parasitegib_chest },
+	{ "misc_parasitegib_head", SP_misc_parasitegib_head },
+	{ "misc_shamblergib_head", SP_misc_shamblergib_head },
+	{ "misc_soldiergib_chest", SP_misc_soldiergib_chest },
+	{ "misc_soldiergib_head", SP_misc_soldiergib_head },
+	{ "misc_stalkergib_chest", SP_misc_stalkergib_chest },
+	{ "misc_stalkergib_head", SP_misc_stalkergib_head },
+	{ "misc_tankgib_chest", SP_misc_tankgib_chest },
+	{ "misc_tankgib_head", SP_misc_tankgib_head },
 
 	{ "monster_berserk", SP_monster_berserk },
 	{ "monster_gladiator", SP_monster_gladiator },
@@ -362,6 +474,47 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_guardian", SP_monster_guardian },
 	{ "monster_arachnid", SP_monster_arachnid },
 	{ "monster_guncmdr", SP_monster_guncmdr },
+	/*KONIG*/
+	// boss stands
+	{ "monster_guardian_stand", SP_monster_guardian_stand },
+	{ "monster_widow_stand", SP_monster_widow_stand },
+	// cut monsters restored
+	{ "monster_gnorta", SP_monster_gnorta },
+	{ "monster_shocker", SP_monster_shocker },
+	// q4 demake enemies
+	// { "monster_tactical_male", SP_monster_tactical_male },
+	// { "monster_tactical_female", SP_monster_tactical_female },
+	// { "monster_tactical_cyborg", SP_monster_tactical_cyborg },
+	// { "monster_berzerk2", SP_monster_berzerk2 },
+	// { "monster_dropper", SP_monster_dropper },
+	// { "monster_protector", SP_monster_protector },
+	// { "monster_fixbot2", SP_monster_fixbot2 },
+	// { "monster_valkaryne", SP_monster_valkaryne },
+	// { "monster_valkaryne2", SP_monster_valkaryne2 },
+	// beta enemies
+	{ "monster_mutant_alpha", SP_monster_mutant_alpha },
+	// { "monster_mimic", SP_monster_mimic },
+
+	// { "monster_flipper2", SP_monster_flipper2 },
+	// { "monster_guardian2", SP_monster_guardian2 },
+	// { "monster_brain2", SP_monster_brain2 },
+	// { "monster_jorg2", SP_monster_jorg2 },
+	// { "monster_rider2", SP_monster_rider2 },
+	// { "monster_gekk2", SP_monster_gekk2 },
+	// { "monster_carrier2", SP_monster_carrier2 },
+	// zaero enemies
+	// { "monster_hound", SP_monster_hound },
+	// { "monster_sentinel", SP_monster_sentinel },
+	// { "monster_turretz", SP_monster_turretz },
+	// { "monster_zsentinel", SP_monster_zsentiel },
+	// quake 1 shareware enemies
+	// { "monster_grunt", SP_monster_grunt },
+	// { "monster_ogre", SP_monster_ogre },
+	// { "monster_scrag", SP_monster_scrag },
+	// { "monster_fiend", SP_monster_fiend },
+	// { "monster_knight", SP_monster_knight },
+	// { "monster_zombie", SP_monster_zombie },
+	// { "monster_chthon", SP_monster_chthon },
 
 	{ "monster_commander_body", SP_monster_commander_body },
 

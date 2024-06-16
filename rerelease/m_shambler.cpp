@@ -225,14 +225,13 @@ PAIN(shambler_pain) (edict_t* self, edict_t* other, float kick, int damage, cons
 	self->pain_debounce_time = level.time + 2_sec;
 	M_SetAnimation(self, &shambler_move_pain);
 }
-
+/*KONIG - set painskin*/
 MONSTERINFO_SETSKIN(shambler_setskin) (edict_t* self) -> void
 {
-	// FIXME: create pain skin?
-	//if (self->health < (self->max_health / 2))
-	//	self->s.skinnum |= 1;
-	//else
-	//	self->s.skinnum &= ~1;
+	if (self->health < (self->max_health / 2))
+		self->s.skinnum |= 1;
+	else
+		self->s.skinnum &= ~1;
 }
 
 //
@@ -520,14 +519,18 @@ DIE(shambler_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 	}
 
 	// check for gib
+	/* KONIG - add gib head from Q1; increased amount of sm_meat gibs; added bone gibs
+	TODO - find/make better chest gib; limb gibs?*/
 	if (M_CheckGib(self, mod))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		// FIXME: better gibs for shambler, shambler head
 		ThrowGibs(self, damage, {
-			{ "models/objects/gibs/sm_meat/tris.md2" },
+			{ 2, "models/objects/gibs/bone/tris.md2" },
+			{ 1, "models/objects/gibs/bone2/tris.md2" },
+			{ 3, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/chest/tris.md2" },
-			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
+			{ "models/monsters/shambler/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 		});
 		self->deadflag = true;
 		return;

@@ -311,13 +311,13 @@ USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 	gi.sound(ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_goals++;
-
+	/* KONIG - swaps muting to n64 level complete music*/
 	if (level.found_goals == level.total_goals && !ent->spawnflags.has(SPAWNFLAG_GOAL_KEEP_MUSIC))
 	{
 		if (ent->sounds)
 			gi.configstring (CS_CDTRACK, G_Fmt("{}", ent->sounds).data() );
 		else
-			gi.configstring(CS_CDTRACK, "0");
+			gi.configstring(CS_CDTRACK, "78");
 	}
 
 	// [Paril-KEX] n64 goals

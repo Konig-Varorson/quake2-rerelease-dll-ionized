@@ -23,6 +23,9 @@ static cached_soundindex sound_pain3;
 static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 
+/*KONIG - add powerup copy*/
+void MBossPowerups(edict_t* self);
+
 MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void
 {
 	if (frandom() < 0.5f)
@@ -295,7 +298,9 @@ void Boss2HyperBlaster(edict_t *self)
 	forward = target - start;
 	forward.normalize();
 
-	monster_fire_blaster(self, start, forward, 2, 1000, id, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
+	/*KONIG - updated N64 version, flechettes instead of normal blasters*/
+	monster_fire_flechette(self, start, forward, 10, 1000, MZ2_BOSS2_MACHINEGUN_L1);
+	//monster_fire_blaster(self, start, forward, 2, 1000, id, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 }
 
 mframe_t boss2_frames_attack_hb[] = {
@@ -526,12 +531,15 @@ PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		M_SetAnimation(self, &boss2_move_pain_heavy);
 }
 
+/*KONIG - Additional skin for N64*/
 MONSTERINFO_SETSKIN(boss2_setskin) (edict_t *self) -> void
 {
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		//self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		//self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 static void boss2_gib(edict_t *self)
@@ -610,15 +618,16 @@ DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 // [Paril-KEX] use generic function
 MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool
 {
+	MBossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
 
 /*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight Hyperblaster
  */
-void SP_monster_boss2(edict_t *self)
+void SP_monster_boss2(edict_t* self)
 {
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -630,10 +639,16 @@ void SP_monster_boss2(edict_t *self)
 
 	gi.soundindex("tank/rocket.wav");
 
+	/*KONIG - fletchettes for N64*/
 	if (self->spawnflags.has(SPAWNFLAG_BOSS2_N64))
-		gi.soundindex("flyer/flyatck3.wav");
+	{
+		gi.soundindex("guncmdr/gcdratck2.wav");
+		//gi.soundindex("flyer/flyatck3.wav");
+	}
 	else
+	{
 		gi.soundindex("infantry/infatck1.wav");
+	}
 
 	self->monsterinfo.weapon_sound = gi.soundindex("bosshovr/bhvengn1.wav");
 
@@ -655,11 +670,30 @@ void SP_monster_boss2(edict_t *self)
 	self->mins = { -56, -56, 0 };
 	self->maxs = { 56, 56, 80 };
 
-	self->health = 2000 * st.health_multiplier;
+	/*KONIG - Adding second skin for N64 flag*/
+	if (self->spawnflags.has(SPAWNFLAG_BOSS2_N64))
+	{
+		self->s.skinnum = 2;
+	}
+	/*KONIG - Adding power shield and co-op health buff for N64 bosses*/
+	if (level.is_n64)
+	{
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = 500 + (75 * skill->integer);
+		self->health = (1800 + (250 * skill->integer)) * st.health_multiplier;
+		if (coop->integer)
+			self->health += 250 * skill->integer;
+	}
+	else
+	{
+		self->health = 2000 * st.health_multiplier;
+	}
 	self->gib_health = -200;
 	self->mass = 1000;
 
-	self->yaw_speed = 50;
+		self->yaw_speed = 50;
 
 	self->flags |= FL_IMMUNE_LASER;
 

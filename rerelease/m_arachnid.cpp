@@ -147,6 +147,14 @@ PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 	else
 		M_SetAnimation(self, &arachnid_move_pain2);
 }
+/*KONIG - set pain skin*/
+MONSTERINFO_SETSKIN(arachnid_setskin) (edict_t* self) -> void
+{
+	if (self->health < (self->max_health / 2))
+		self->s.skinnum |= 1;
+	else
+		self->s.skinnum &= ~1;
+}
 
 static cached_soundindex sound_charge;
 
@@ -191,7 +199,8 @@ void arachnid_rail(edict_t *self)
 	dir = self->pos1 - start;
 	dir.normalize();
 
-	monster_fire_railgun(self, start, dir, 35, 100, id);
+	/* KONIG - Increased damage to 50 to match PSX */
+	monster_fire_railgun(self, start, dir, 50, 100, id);
 }
 
 mframe_t arachnid_frames_attack1[] = {
@@ -238,7 +247,8 @@ void arachnid_melee_charge(edict_t *self)
 
 void arachnid_melee_hit(edict_t *self)
 {
-	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 15, 50))
+	/* KONIG - update damage to 20 to match PSX */
+	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 20, 50))
 		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
 }
 
@@ -312,13 +322,16 @@ MMOVE_T(arachnid_move_death) = { FRAME_death1, FRAME_death20, arachnid_frames_de
 DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	// check for gib
+	/* KONIG - replaced generic head for gunner head, added gunner chest, added generic gear gib*/
 	if (M_CheckGib(self, mod))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		ThrowGibs(self, damage, {
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
-			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
+			{ 1, "models/objects/gibs/gear/tris.md2" },
+			{ "models/monsters/gunner/gibs/chest.md2", GIB_SKINNED },
+			{ "models/monsters/gunner/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 		});
 		self->deadflag = true;
 		return;
@@ -376,6 +389,7 @@ void SP_monster_arachnid(edict_t *self)
 	self->monsterinfo.run = arachnid_run;
 	self->monsterinfo.attack = arachnid_attack;
 	self->monsterinfo.sight = arachnid_sight;
+	self->monsterinfo.setskin = arachnid_setskin;
 
 	gi.linkentity(self);
 

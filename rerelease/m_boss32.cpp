@@ -35,6 +35,9 @@ static cached_soundindex sound_taunt2;
 static cached_soundindex sound_taunt3;
 static cached_soundindex sound_hit;
 
+/*KONIG - add powerup copy*/
+void BossPowerups(edict_t* self);
+
 void makron_taunt(edict_t *self)
 {
 	float r;
@@ -693,8 +696,10 @@ DIE(makron_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 }
 
 // [Paril-KEX] use generic function
+/*Konig - add powerup copy*/
 MONSTERINFO_CHECKATTACK(Makron_CheckAttack) (edict_t *self) -> bool
 {
+	BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -739,7 +744,14 @@ void SP_monster_makron(edict_t *self)
 	self->mins = { -30, -30, 0 };
 	self->maxs = { 30, 30, 90 };
 
-	self->health = 3000 * st.health_multiplier;
+	/* KONIG - Scaling health based on difficulty + extra for co-op*/
+	self->health = (2500 + 500 * skill->integer) * st.health_multiplier;
+	if (coop->integer)
+	{
+		self->health += 500 * skill->integer;
+		self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		self->monsterinfo.armor_power += 50 * skill->integer;
+	}
 	self->gib_health = -2000;
 	self->mass = 500;
 

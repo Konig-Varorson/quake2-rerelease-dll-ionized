@@ -370,6 +370,9 @@ bool Pickup_Bandolier(edict_t *ent, edict_t *other)
 	G_AdjustAmmoCap(other, AMMO_MAGSLUG, 75);
 	G_AdjustAmmoCap(other, AMMO_FLECHETTES, 250);
 	G_AdjustAmmoCap(other, AMMO_DISRUPTOR, 21);
+	/* KONIG - increase ammo cap for Tesla and Trap too*/
+	G_AdjustAmmoCap(other, AMMO_TESLA, 15);
+	G_AdjustAmmoCap(other, AMMO_TRAP, 10);
 
 	G_AddAmmoAndCapQuantity(other, AMMO_BULLETS);
 	G_AddAmmoAndCapQuantity(other, AMMO_SHELLS);
@@ -391,6 +394,9 @@ bool Pickup_Pack(edict_t *ent, edict_t *other)
 	G_AdjustAmmoCap(other, AMMO_MAGSLUG, 100);
 	G_AdjustAmmoCap(other, AMMO_FLECHETTES, 300);
 	G_AdjustAmmoCap(other, AMMO_DISRUPTOR, 30);
+	/* KONIG - increase ammo cap for Tesla and Trap too*/
+	G_AdjustAmmoCap(other, AMMO_TESLA, 20);
+	G_AdjustAmmoCap(other, AMMO_TRAP, 15);
 
 	G_AddAmmoAndCapQuantity(other, AMMO_BULLETS);
 	G_AddAmmoAndCapQuantity(other, AMMO_SHELLS);
@@ -1795,17 +1801,18 @@ model="models/items/armor/body/tris.md2"
 
 /* weapon_grapple (.3 .3 1) (-16 -16 -16) (16 16 16)
 always owned, never in the world
+KONIG - made pickupable for sp
 */
 	{
 		/* id */ IT_WEAPON_GRAPPLE,
-		/* classname */ "weapon_grapple", 
-		/* pickup */ nullptr,
+		/* classname */ "weapon_grapple",
+		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
-		/* drop */ nullptr,
+		/* drop */ Drop_Weapon,
 		/* weaponthink */ CTFWeapon_Grapple,
-		/* pickup_sound */ nullptr,
-		/* world_model */ nullptr,
-		/* world_model_flags */ EF_NONE,
+		/* pickup_sound */ "misc/w_pkup.wav",
+		/* world_model */ "models/weapons/g_flareg/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
 		/* view_model */ "models/weapons/grapple/tris.md2",
 		/* icon */ "w_grapple",
 		/* use_name */  "Grapple",
@@ -1823,13 +1830,14 @@ always owned, never in the world
 
 /* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 always owned, never in the world
+KONIG - allow dropping
 */
 	{
 		/* id */ IT_WEAPON_BLASTER,
 		/* classname */ "weapon_blaster", 
 		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
-		/* drop */ nullptr,
+		/* drop */ Drop_Weapon,
 		/* weaponthink */ Weapon_Blaster,
 		/* pickup_sound */ "misc/w_pkup.wav",
 		/* world_model */ "models/weapons/g_blast/tris.md2",
@@ -2055,6 +2063,7 @@ model="models/weapons/g_shotg/tris.md2"
 // RAFAEL
 /*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
+/*KONIG - up quanitty from 1 to 2*/
 	{
 		/* id */ IT_AMMO_TRAP,
 		/* classname */ "ammo_trap",
@@ -2100,7 +2109,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* use_name */  "Tesla",
 		/* pickup_name */  "$item_tesla",
 		/* pickup_name_definite */ "$item_tesla_def",
-		/* quantity */ 3,
+		/* quantity */ 1,
 		/* ammo */ IT_AMMO_TESLA,
 		/* chain */ IT_AMMO_GRENADES,
 		/* flags */ IF_AMMO | IF_WEAPON | IF_NO_INFINITE_AMMO,
@@ -2405,10 +2414,11 @@ model="models/weapons/g_launch/tris.md2"
 	// ROGUE WEAPONS
 	// =========================
 
-#if 0 // sorry little guy
+// sorry little guy
+/* KONIG - Disintegrator reintegratored*/
 	{
 		/* id */ IT_WEAPON_DISINTEGRATOR,
-		/* classname */ "weapon_beta_disintegrator",
+		/* classname */ "weapon_disintegrator2",
 		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
 		/* drop */ Drop_Weapon,
@@ -2430,7 +2440,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* tag */ 0,
 		/* precaches */ "",
 	},
-#endif
+
 
 	//
 	// AMMO ITEMS
@@ -2543,6 +2553,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 
 /*QUAKED ammo_slugs (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
+/*KONIG - reduced ammo pickup quantity from 10 to 6.*/
 	{
 		/* id */ IT_AMMO_SLUGS,
 		/* classname */ "ammo_slugs",
@@ -2558,7 +2569,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* use_name */  "Slugs",
 		/* pickup_name */  "$item_slugs",
 		/* pickup_name_definite */ "$item_slugs_def",
-		/* quantity */ 10,
+		/* quantity */ 6,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
 		/* flags */ IF_AMMO,
@@ -2706,6 +2717,9 @@ model="models/items/ammo/rockets/medium/tris.md2"
 // ROGUE AMMO
 // =======================================
 
+/* KONIG - Small Ammos
+TO DO: Small models/textures for expansion ammo; large models/textures for slugs, rockets, and expansion ammo
+EDIT: Had to temporarily disable.*/
 	//
 	// POWERUP ITEMS
 	//
@@ -4052,4 +4066,39 @@ void SetItemNames()
 		itemlist[i].powerup_wheel_index = cs_index;
 		cs_index++;
 	}
+}
+
+void SP_ammo_shells_small(edict_t* self)
+{
+	self->model = "models/vault/items/ammo/shells/small/tris.md2";
+	SpawnItem(self, GetItemByIndex(IT_AMMO_SHELLS));
+	self->count = 5;
+}
+
+void SP_ammo_bullets_small(edict_t* self)
+{
+	self->model = "models/vault/items/ammo/bullets/small/tris.md2";
+	SpawnItem(self, GetItemByIndex(IT_AMMO_BULLETS));
+	self->count = 25;
+}
+
+void SP_ammo_rockets_small(edict_t* self)
+{
+	self->model = "models/vault/items/ammo/rockets/small/tris.md2";
+	SpawnItem(self, GetItemByIndex(IT_AMMO_ROCKETS));
+	self->count = 2;
+}
+
+void SP_ammo_cells_small(edict_t* self)
+{
+	self->model = "models/vault/items/ammo/cells/small/tris.md2";
+	SpawnItem(self, GetItemByIndex(IT_AMMO_CELLS));
+	self->count = 25;
+}
+
+void SP_ammo_slugs_small(edict_t* self)
+{
+	self->model = "models/vault/items/ammo/slugs/small/tris.md2";
+	SpawnItem(self, GetItemByIndex(IT_AMMO_SLUGS));
+	self->count = 3;
 }

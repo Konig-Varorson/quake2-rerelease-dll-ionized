@@ -16,6 +16,9 @@ GUARDIAN
 // stand
 //
 
+/*KONIG - add powerup copy*/
+void MBossPowerups(edict_t* self);
+
 mframe_t guardian_frames_stand[] = {
 	{ ai_stand },
 	{ ai_stand },
@@ -199,6 +202,15 @@ PAIN(guardian_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 	M_SetAnimation(self, &guardian_move_pain1);
 	self->monsterinfo.weapon_sound = 0;
 }
+/*KONIG - set pain skin*/
+MONSTERINFO_SETSKIN(guardian_setskin) (edict_t* self) -> void
+{
+	if (self->health < (self->max_health / 2))
+		self->s.skinnum |= 1;
+	else
+		self->s.skinnum &= ~1;
+}
+
 
 mframe_t guardian_frames_atk1_out[] = {
 	{ ai_charge },
@@ -477,6 +489,12 @@ DIE(guardian_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 //
 // monster_tank
 //
+/*Konig - add powerup copy*/
+MONSTERINFO_CHECKATTACK(Guardian_CheckAttack) (edict_t* self) -> bool
+{
+	MBossPowerups(self);
+	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
+}
 
 /*QUAKED monster_guardian (1 .5 0) (-96 -96 -66) (96 96 62) Ambush Trigger_Spawn Sight
  */
@@ -514,10 +532,57 @@ void SP_monster_guardian(edict_t *self)
 	self->monsterinfo.walk = guardian_walk;
 	self->monsterinfo.run = guardian_run;
 	self->monsterinfo.attack = guardian_attack;
+	self->monsterinfo.setskin = guardian_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &guardian_move_stand);
 
 	walkmonster_start(self);
+}
+
+/*KONIG - copied from monster_tank_stand*/
+void Use_Boss3(edict_t* ent, edict_t* other, edict_t* activator);
+
+THINK(Think_GuardianStand) (edict_t* ent) -> void
+{
+	if (ent->s.frame == FRAME_idle52)
+		ent->s.frame = FRAME_idle1;
+	else
+		ent->s.frame++;
+	ent->nextthink = level.time + 10_hz;
+}
+
+/*QUAKED monster_guardian_stand (1 .5 0) (-96 -96 -66) (96 96 62)
+
+Just stands and cycles in one place until targeted, then teleports away.
+*/
+void SP_monster_guardian_stand(edict_t* self)
+{
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->model = "models/monsters/guardian/tris.md2";
+	self->s.modelindex = gi.modelindex(self->model);
+	self->s.frame = FRAME_idle1;
+
+	gi.soundindex("misc/bigtele.wav");
+
+	self->mins = { -32, -32, -16 };
+	self->maxs = { 32, 32, 64 };
+
+	if (!self->s.scale)
+		self->s.scale = 1.5f;
+
+	self->mins *= self->s.scale;
+	self->maxs *= self->s.scale;
+
+	self->use = Use_Boss3;
+	self->think = Think_GuardianStand;
+	self->nextthink = level.time + 10_hz;
+	gi.linkentity(self);
 }

@@ -1785,6 +1785,7 @@ void weapon_railgun_fire(edict_t *ent)
 	int damage, kick;
 	
 	// normal damage too extreme for DM
+	/* KONIG - increased damage of railgun from 125 to 135 in SP*/
 	if (deathmatch->integer)
 	{
 		damage = 100;
@@ -1792,7 +1793,7 @@ void weapon_railgun_fire(edict_t *ent)
 	}
 	else
 	{
-		damage = 125;
+		damage = 135;
 		kick = 225;
 	}
 

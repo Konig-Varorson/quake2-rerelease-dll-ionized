@@ -891,9 +891,8 @@ enum item_id_t : int32_t {
 	IT_WEAPON_PHALANX,
 	IT_WEAPON_BFG,
 	IT_WEAPON_DISRUPTOR,
-#if 0
+/* KONIG - Disintegrator reintegratored*/
 	IT_WEAPON_DISINTEGRATOR,
-#endif
 
 	IT_AMMO_SHELLS,
 	IT_AMMO_BULLETS,
@@ -1094,7 +1093,8 @@ struct mod_t
 
 // the total number of levels we'll track for the
 // end of unit screen.
-constexpr size_t MAX_LEVELS_PER_UNIT = 8;
+/*KONIG - expands end of unit display from 8 to 16*/
+constexpr size_t MAX_LEVELS_PER_UNIT = 16;
 
 struct level_entry_t
 {
@@ -1673,9 +1673,12 @@ struct monsterinfo_t
 	int32_t	 monster_used;
 	edict_t *commander;
 	// powerup timers, used by widow, our friend
+	/* KONIG - add quadfire and invisibility*/
 	gtime_t quad_time;
 	gtime_t invincible_time;
 	gtime_t double_time;
+	gtime_t quadfire_time;
+	gtime_t invisible_time;
 	// ROGUE
 
 	// Paril

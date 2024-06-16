@@ -30,6 +30,8 @@ static cached_soundindex sound_step_right;
 static cached_soundindex sound_death_hit;
 
 void MakronToss(edict_t *self);
+/*KONIG - add powerup copy*/
+void BossPowerups(edict_t* self);
 
 void jorg_attack1_end_sound(edict_t *self)
 {
@@ -560,8 +562,10 @@ DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 }
 
 // [Paril-KEX] use generic function
+/*Konig - add powerup copy*/
 MONSTERINFO_CHECKATTACK(Jorg_CheckAttack) (edict_t *self) -> bool
 {
+	BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -613,7 +617,15 @@ void SP_monster_jorg(edict_t *self)
 	self->mins = { -80, -80, 0 };
 	self->maxs = { 80, 80, 140 };
 
-	self->health = 8000 * st.health_multiplier;
+	/*KONIG - reduced health but added body armor; add extra health + armor per skill level, plus even more in co-op*/
+	self->health = (7000 + 500 * skill->integer) * st.health_multiplier;
+	self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	self->monsterinfo.armor_power = (200 + 50 * skill->integer);
+	if (coop->integer)
+	{
+		self->health += 500 * skill->integer;
+		self->monsterinfo.armor_power += 25 * skill->integer;
+	}
 	self->gib_health = -2000;
 	self->mass = 1000;
 

@@ -453,6 +453,12 @@ void M_SetEffects(edict_t *ent)
 		if (G_PowerUpExpiring(ent->monsterinfo.invincible_time))
 			ent->s.effects |= EF_PENT;
 	}
+	/*KONIG - Add quadfire effect for monsters*/
+	if (ent->monsterinfo.quadfire_time > level.time)
+	{
+		if (G_PowerUpExpiring(ent->monsterinfo.quadfire_time))
+			ent->s.effects |= EF_DUALFIRE;
+	}
 }
 
 bool M_AllowSpawn( edict_t * self ) {
@@ -1647,4 +1653,276 @@ void SP_trigger_health_relay(edict_t *self)
 
 	self->svflags |= SVF_NOCLIENT;
 	self->use = trigger_health_relay_use;
+}
+
+/*KONIG - Widow's Powerup copying universal*/
+unsigned int boss_damage_multiplier;
+
+void BossGoinQuad(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	boss_damage_multiplier = 4;
+}
+
+void BossDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.double_time = time;
+	boss_damage_multiplier = 2;
+}
+
+void BossInvul(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invincible_time = time;
+}
+
+void BossAccel(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quadfire_time = time;
+}
+
+/*void BossInvis(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invisible_time = time;
+}*/
+
+/*KONIG - Powerup Copying for BBEG (Jorg, Makron, and both Black Widows)*/
+void BossPowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
+}
+
+void BossCombatArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 100 * skill->integer;
+}
+
+void BossRespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD)
+	{
+		if (skill->integer == 1)
+			BossDouble(self, other->client->double_time);
+		else if (skill->integer >= 2)
+			BossGoinQuad(self, other->client->quad_time);
+		if (skill->integer == 3)
+			BossPowerArmor(self);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		if (skill->integer >= 2)
+			BossDouble(self, other->client->double_time);
+		if (skill->integer == 3)
+			BossPowerArmor(self);
+	}
+	else
+		boss_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		BossPowerArmor(self);
+		if (skill->integer >= 2)
+			BossCombatArmor(self);
+		if (skill->integer == 3)
+			BossInvul(self, other->client->invincible_time);
+	}
+	if (other->s.effects & EF_DUALFIRE)
+	{
+		if (skill->integer >= 2)
+			BossAccel(self, other->client->quadfire_time);
+		if (skill->integer == 3)
+			BossPowerArmor(self);
+	}
+}
+
+void BossPowerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		BossRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				BossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				BossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				BossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DUALFIRE)
+			{
+				BossRespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
+}
+
+/*KONIG - Powerup Copying for lesser bosses (Supertank, Hornet, Guardian, Carrier)*/
+void MBossPowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 100 * skill->integer;
+}
+
+void MBossCombatArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 50 * skill->integer;
+}
+
+void MBossRespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD)
+	{
+		if (skill->integer > 1)
+			MBossPowerArmor(self);
+		if (skill->integer == 3)
+			BossGoinQuad(self, other->client->double_time);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		if (skill->integer > 1)
+			MBossPowerArmor(self);
+		if (skill->integer == 3)
+			BossDouble(self, other->client->double_time);
+	}
+	else
+		boss_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		if (skill->integer == 3)
+		{
+			BossPowerArmor(self);
+			MBossCombatArmor(self);
+		}
+		else if (skill->integer > 1)
+			MBossPowerArmor(self);
+	}
+	if (other->s.effects & EF_DUALFIRE)
+	{
+		if (skill->integer > 1)
+			MBossPowerArmor(self);
+		if (skill->integer == 3)
+			BossAccel(self, other->client->quadfire_time);
+	}
+}
+
+void MBossPowerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		MBossRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				MBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				MBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				MBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DUALFIRE)
+			{
+				MBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
 }

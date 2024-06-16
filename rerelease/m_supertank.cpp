@@ -25,6 +25,9 @@ static cached_soundindex sound_search2;
 
 static cached_soundindex tread_sound;
 
+/*KONIG - add powerup copy*/
+void MBossPowerups(edict_t* self);
+
 void TreadSound(edict_t *self)
 {
 	gi.sound(self, CHAN_BODY, tread_sound, 1, ATTN_NORM, 0);
@@ -471,7 +474,8 @@ void supertankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_POWERSHIELD))
+	/* KONIG - use style if statement instead of spawnflag for heat seekers to be more clear for mappers and more consistent for players*/
+	if (self->style == 1)
 	{
 		vec = self->enemy->s.origin;
 		vec[2] += self->enemy->viewheight;
@@ -505,7 +509,12 @@ void supertankMachineGun(edict_t *self)
 	AngleVectors(dir, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 	PredictAim(self, self->enemy, start, 0, true, -0.1f, &forward, nullptr);
-	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD * 3, flash_number);
+	/* KONIG - use flechettes for beta */
+	if (self->style == 1)
+		monster_fire_flechette(self, start, forward, 10, 1000, MZ2_BOSS2_MACHINEGUN_L1);
+	else
+		monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD * 3, flash_number);
+
 }
 
 MONSTERINFO_ATTACK(supertank_attack) (edict_t *self) -> void
@@ -624,7 +633,12 @@ MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool
 }
 // PGM
 //===========
-
+/*Konig - add powerup copy*/
+MONSTERINFO_CHECKATTACK(Supertank_CheckAttack) (edict_t* self) -> bool
+{
+	MBossPowerups(self);
+	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
+}
 //
 // monster_supertank
 //
@@ -669,7 +683,15 @@ void SP_monster_supertank(edict_t *self)
 	self->mins = { -64, -64, 0 };
 	self->maxs = { 64, 64, 112 };
 
-	self->health = 1500 * st.health_multiplier;
+	/* KONIG - reduced health and added combat armor; extra health per difficulty; bonus health and armor in co-op*/
+	self->health = 1250 * st.health_multiplier;
+	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
+	self->monsterinfo.power_armor_power = 100;
+	if (coop->integer)
+	{
+		self->health += 250 * skill->integer;
+		self->monsterinfo.power_armor_power += 25 * skill->integer;
+	}
 	self->gib_health = -500;
 	self->mass = 800;
 
@@ -698,6 +720,8 @@ void SP_monster_supertank(edict_t *self)
 			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
 			self->monsterinfo.power_armor_power = 400;
+		/*KONIG - buff health to counter combat armor being removed*/
+		self->health = 1500 * st.health_multiplier;
 	}
 	// RAFAEL
 
@@ -728,4 +752,6 @@ void SP_monster_boss5(edict_t *self)
 	SP_monster_supertank(self);
 	gi.soundindex("weapons/railgr1a.wav");
 	self->s.skinnum = 2;
+	/*KONIG - adding self style flag for beta weapon changes*/
+	self->style = 1;
 }
