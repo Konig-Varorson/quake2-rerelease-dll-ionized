@@ -37,6 +37,7 @@ Quake II: Ionized is a mod designed with three purposes in mind.
   * Added code for pain skin.
   * Buffed attack damage to match original PSX numbers (railgun 35->50; melee 15->20).
   * Altered gibs that spawn on death.
+  * First rendition of beta version inspiread by Quake 4 Stream Protectors. Replaces railgun attacks with heat seeking rockets, given armor, and stronger melee.
 * m_berserk.cpp:
   * Buffed jump attack damage from 8 to 16 (original damage at remaster launch was 32).
 * m_boss2.cpp:
