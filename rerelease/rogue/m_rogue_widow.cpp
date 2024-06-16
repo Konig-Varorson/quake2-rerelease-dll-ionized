@@ -1003,6 +1003,7 @@ MONSTERINFO_MELEE(widow_melee) (edict_t *self) -> void
 	M_SetAnimation(self, &widow_move_attack_kick);
 }
 
+/* KONIG - replacing WidowPowerups with BossPowerups
 void WidowGoinQuad(edict_t *self, gtime_t time)
 {
 	self->monsterinfo.quad_time = time;
@@ -1069,7 +1070,7 @@ void WidowRespondPowerup(edict_t *self, edict_t *other)
 	}
 }
 
-void WidowPowerups(edict_t *self)
+void WidowPowerups(edict_t* self)
 {
 	edict_t *ent;
 
@@ -1122,14 +1123,16 @@ void WidowPowerups(edict_t *self)
 			}
 		}
 	}
-}
+}*/
+void BossPowerups(edict_t* self);
 
 MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (edict_t *self) -> bool
 {
 	if (!self->enemy)
 		return false;
-
-	WidowPowerups(self);
+	/* KONIG - replacing WidowPowerups with BossPowerups*/
+	//WidowPowerups(self);
+	BossPowerups(self);
 
 	if (self->monsterinfo.active_move == &widow_move_run)
 	{
@@ -1302,4 +1305,50 @@ void SP_monster_widow(edict_t *self)
 	widow_damage_multiplier = 1;
 
 	walkmonster_start(self);
+}
+
+/*KONIG - copied from monster_tank_stand*/
+void Use_Boss3(edict_t* ent, edict_t* other, edict_t* activator);
+
+THINK(Think_WidowStand) (edict_t* ent) -> void
+{
+	if (ent->s.frame == FRAME_idle11)
+		ent->s.frame = FRAME_idle01;
+	else
+		ent->s.frame++;
+	ent->nextthink = level.time + 10_hz;
+}
+
+/*QUAKED monster_widow_stand (1 .5 0) (-40 -40 0) (40 40 144)
+
+Just stands and cycles in one place until targeted, then teleports away.
+*/
+void SP_monster_widow_stand(edict_t* self)
+{
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->model = "models/monsters/blackwidow/tris.md2";
+	self->s.modelindex = gi.modelindex(self->model);
+	self->s.frame = FRAME_idle01;
+
+	gi.soundindex("misc/bigtele.wav");
+
+	self->mins = { -32, -32, -16 };
+	self->maxs = { 32, 32, 64 };
+
+	if (!self->s.scale)
+		self->s.scale = 1.5f;
+
+	self->mins *= self->s.scale;
+	self->maxs *= self->s.scale;
+
+	self->use = Use_Boss3;
+	self->think = Think_WidowStand;
+	self->nextthink = level.time + 10_hz;
+	gi.linkentity(self);
 }

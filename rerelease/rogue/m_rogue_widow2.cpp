@@ -36,7 +36,9 @@ constexpr vec3_t stalker_maxs = { 28, 28, 18 };
 
 bool infront(edict_t *self, edict_t *other);
 void WidowCalcSlots(edict_t *self);
-void WidowPowerups(edict_t *self);
+/*KONIG - Replaced WidowPowerups for new BossPowerUps*/
+//void WidowPowerups(edict_t *self);
+void BossPowerups(edict_t* self);
 
 void widow2_run(edict_t *self);
 void widow2_dead(edict_t *self);
@@ -955,7 +957,9 @@ MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool
 	if (!self->enemy)
 		return false;
 
-	WidowPowerups(self);
+	/*KONIG - replaced WidowPowerups for BossPowerups*/
+	//WidowPowerups(self);
+	BossPowerups(self);
 
 	if ((frandom() < 0.8f) && (M_SlotsLeft(self) >= 2) && (realrange(self, self->enemy) > 150))
 	{
@@ -1022,7 +1026,10 @@ void SP_monster_widow2(edict_t *self)
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 144 };
 
-	self->health = (2000 + 800 + 1000 * skill->integer) * st.health_multiplier;
+	/*KONIG - reduced health; added body armor*/
+	self->health = (2350 + 1000 * skill->integer) * st.health_multiplier;
+	self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	self->monsterinfo.armor_power = (200 + 50 * skill->integer);
 	if (coop->integer)
 		self->health += 500 * skill->integer;
 	//	self->health = 1;
