@@ -273,20 +273,49 @@ void protector_rockets(edict_t *self)
 		PredictAim(self, self->enemy, start, rocketSpeed, false, 0, &dir, &vec);
 
 	dir.normalize();
+	//copied from m_chick
 	if (blindfire)
 	{
-		if (M_AdjustBlindfireTarget(self, start, vec, right, dir))
+		// blindfire has different fail criteria for the trace
+		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 		{
-			monster_fire_heat(self, start, dir, 75, rocketSpeed, id, self->accel);
+			// RAFAEL
+			if (self->s.skinnum > 1)
+				monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
+			else
+				// RAFAEL
+				monster_fire_rocket(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1);
+		}
+		else
+		{
+			vec = target;
+			vec += (right * -10);
+			dir = vec - start;
+			dir.normalize();
+			trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
+			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
+			{
+				monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
+			}
+			else
+			{
+				vec = target;
+				vec += (right * 10);
+				dir = vec - start;
+				dir.normalize();
+				trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
+				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
+				{
+					monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
+				}
+			}
 		}
 	}
 	else
 	{
-		trace_t trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
-
 		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
 		{
-			monster_fire_heat(self, start, dir, 75, rocketSpeed, id, self->accel);
+			monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.15f);
 		}
 	}
 }
