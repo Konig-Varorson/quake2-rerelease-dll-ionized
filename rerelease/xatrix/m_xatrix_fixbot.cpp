@@ -1257,8 +1257,23 @@ void fixbot_fire_blaster(edict_t *self)
 	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
+	/*KONIG - Beam attack if Beta*/
+	if (self->style == 1)
+	{
+		// PMM - changed to wait from pausetime to not interfere with dodge code
+		if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
+			self->monsterinfo.fire_wait = level.time + random_time(300_ms, 1.1_sec);
 
-	monster_fire_blaster(self, start, dir, 15, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
+		monster_fire_dabeam(self, 1, false, fixbot_laser_update);
+
+		if (level.time >= self->monsterinfo.fire_wait)
+			self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+		else
+			self->monsterinfo.aiflags |= AI_HOLD_FRAME;
+	}
+	else
+		monster_fire_blaster(self, start, dir, 15, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
+
 }
 
 MONSTERINFO_STAND(fixbot_stand) (edict_t *self) -> void
@@ -1400,4 +1415,15 @@ void SP_monster_fixbot(edict_t *self)
 	fixbot_set_fly_parameters(self, false, false);
 
 	flymonster_start(self);
+}
+
+/*KONIG - Repair Bot from Q4 as Fixbot Beta*/
+void SP_monster_fixbot2(edict_t* self)
+{
+	SP_monster_fixbot(self);
+
+	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
+	self->monsterinfo.armor_power = 75;
+	self->style = 1;
+	self->s.skinnum = 1;
 }
