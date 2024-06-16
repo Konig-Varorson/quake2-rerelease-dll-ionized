@@ -2063,7 +2063,6 @@ model="models/weapons/g_shotg/tris.md2"
 // RAFAEL
 /*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
-/*KONIG - up quanitty from 1 to 2*/
 	{
 		/* id */ IT_AMMO_TRAP,
 		/* classname */ "ammo_trap",
@@ -2109,7 +2108,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* use_name */  "Tesla",
 		/* pickup_name */  "$item_tesla",
 		/* pickup_name_definite */ "$item_tesla_def",
-		/* quantity */ 1,
+		/* quantity */ 3,
 		/* ammo */ IT_AMMO_TESLA,
 		/* chain */ IT_AMMO_GRENADES,
 		/* flags */ IF_AMMO | IF_WEAPON | IF_NO_INFINITE_AMMO,
@@ -2418,7 +2417,7 @@ model="models/weapons/g_launch/tris.md2"
 /* KONIG - Disintegrator reintegratored*/
 	{
 		/* id */ IT_WEAPON_DISINTEGRATOR,
-		/* classname */ "weapon_disintegrator2",
+		/* classname */ "weapon_beta_disintegrator",
 		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
 		/* drop */ Drop_Weapon,
@@ -2427,7 +2426,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* world_model */ "models/weapons/g_disint/tris.md2",
 		/* world_model_flags */ EF_ROTATE | EF_BOB,
 		/* view_model */ "models/weapons/v_disint/tris.md2",
-		/* icon */ "w_bfg",
+		/* icon */ "w_disint",
 		/* use_name */  "Disintegrator",
 		/* pickup_name */  "$item_disintegrator",
 		/* pickup_name_definite */ "$item_disintegrator_def",
@@ -2435,7 +2434,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* ammo */ IT_AMMO_ROUNDS,
 		/* chain */ IT_WEAPON_BFG,
 		/* flags */ IF_WEAPON | IF_STAY_COOP,
-		/* vwep_model */ "#w_bfg.md2",
+		/* vwep_model */ "#w_disint.md2",
 		/* armor_info */ nullptr,
 		/* tag */ 0,
 		/* precaches */ "",
