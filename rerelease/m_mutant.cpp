@@ -697,40 +697,19 @@ void SP_monster_mutant(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-
-	/*KONIG - Red Mutant upright model from vault
-	TO DO: Reskin gibs to be red, put in folder models/monsters/mutant/alphagibs/*/
-	if (strcmp(self->classname, "monster_mutant_alpha") == 0)
-	{
-		self->s.scale = 1.5f;
-		self->s.modelindex = gi.modelindex("models/vault/monsters/mutant/tris.md2");
-		gi.modelindex("models/monsters/mutant/gibs/head.md2");
-		gi.modelindex("models/monsters/mutant/gibs/chest.md2");
-		gi.modelindex("models/monsters/mutant/gibs/hand.md2");
-		gi.modelindex("models/monsters/mutant/gibs/foot.md2");
-
-		self->health = 500 * st.health_multiplier;
-		self->gib_health = -180;
-		self->count = 1;
-		self->mass = 350;
-	}
-	else
-	{
-		self->s.scale = 1.0f;
-		self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
-		gi.modelindex("models/monsters/mutant/gibs/head.md2");
-		gi.modelindex("models/monsters/mutant/gibs/chest.md2");
-		gi.modelindex("models/monsters/mutant/gibs/hand.md2");
-		gi.modelindex("models/monsters/mutant/gibs/foot.md2");
-
-		self->health = 300 * st.health_multiplier;
-		self->gib_health = -120;
-		self->mass = 300;
-	}
-
+	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
+	
+	gi.modelindex("models/monsters/mutant/gibs/head.md2");
+	gi.modelindex("models/monsters/mutant/gibs/chest.md2");
+	gi.modelindex("models/monsters/mutant/gibs/hand.md2");
+	gi.modelindex("models/monsters/mutant/gibs/foot.md2");
 
 	self->mins = { -18, -18, -24 };
 	self->maxs = { 18, 18, 30 };
+
+	self->health = 300 * st.health_multiplier;
+	self->gib_health = -120;
+	self->mass = 300;
 
 	self->pain = mutant_pain;
 	self->die = mutant_die;
