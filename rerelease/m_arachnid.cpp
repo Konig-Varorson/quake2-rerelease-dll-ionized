@@ -202,6 +202,94 @@ void arachnid_rail(edict_t *self)
 	/* KONIG - Increased damage to 50 to match PSX */
 	monster_fire_railgun(self, start, dir, 50, 100, id);
 }
+/*KONIG - Beta attacks; NOTE: 3 rockets, 4-6 blaster shots;
+Q4 Stream Protectors also have flamethrower and flak nail volley, consider adding?*/
+static void protector_blind_check(edict_t* self)
+{
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
+	{
+		vec3_t aim = self->monsterinfo.blind_fire_target - self->s.origin;
+		self->ideal_yaw = vectoyaw(aim);
+	}
+}
+
+void protector_rockets(edict_t *self)
+{
+	vec3_t						start;
+	vec3_t						dir;
+	vec3_t						forward, right;
+	vec3_t						vec;
+	monster_muzzleflash_id_t	id;
+	int							rocketSpeed;
+	vec3_t						target;
+	bool						blindfire = self->monsterinfo.aiflags & AI_MANUAL_STEERING;
+
+	switch (self->s.frame)
+	{
+	case FRAME_rails4:
+	default:
+		id = MZ2_ARACHNID_RAIL1;
+		break;
+	case FRAME_rails8:
+		id = MZ2_ARACHNID_RAIL2;
+		break;
+	case FRAME_rails_up7:
+		id = MZ2_ARACHNID_RAIL_UP1;
+		break;
+	case FRAME_rails_up11:
+		id = MZ2_ARACHNID_RAIL_UP2;
+		break;
+	}
+
+	AngleVectors(self->s.angles, forward, right, nullptr);
+	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
+
+	rocketSpeed = 500;
+
+	if (blindfire)
+		target = self->monsterinfo.blind_fire_target;
+	else
+		target = self->enemy->s.origin;
+
+	if (blindfire)
+	{
+		vec = target;
+		dir = vec - start;
+	}
+	else if (frandom() < 0.66f || (start[2] < self->enemy->absmin[2]))
+	{
+		vec = self->enemy->s.origin;
+		vec[2] += self->enemy->viewheight;
+		dir = vec - start;
+	}
+	else
+	{
+		vec = self->enemy->s.origin;
+		vec[2] = self->enemy->absmin[2] + 1;
+		dir = vec - start;
+	}
+
+	if ((!blindfire) && ((frandom() < (0.2f + ((3 - skill->integer) * 0.15f)))))
+		PredictAim(self, self->enemy, start, rocketSpeed, false, 0, &dir, &vec);
+
+	dir.normalize();
+	if (blindfire)
+	{
+		if (M_AdjustBlindfireTarget(self, start, vec, right, dir))
+		{
+			monster_fire_heat(self, start, dir, 75, rocketSpeed, id, self->accel);
+		}
+	}
+	else
+	{
+		trace_t trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
+
+		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
+		{
+			monster_fire_heat(self, start, dir, 75, rocketSpeed, id, self->accel);
+		}
+	}
+}
 
 mframe_t arachnid_frames_attack1[] = {
 	{ ai_charge, 0, arachnid_charge_rail },
@@ -237,7 +325,41 @@ mframe_t arachnid_frames_attack_up1[] = {
 	{ ai_charge },
 };
 MMOVE_T(arachnid_attack_up1) = { FRAME_rails_up1, FRAME_rails_up16, arachnid_frames_attack_up1, arachnid_run };
+/*KONIG - Beta attack animations*/
+mframe_t protector_frames_attack1[] = {
+	{ ai_charge, 0, protector_blind_check },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, protector_rockets },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, protector_rockets },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge }
+};
+MMOVE_T(protector_attack1) = { FRAME_rails1, FRAME_rails11, protector_frames_attack1, arachnid_run };
 
+mframe_t protector_frames_attack_up1[] = {
+	{ ai_charge, 0, protector_blind_check },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, protector_rockets },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, protector_rockets },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+};
+MMOVE_T(protector_attack_up1) = { FRAME_rails_up1, FRAME_rails_up16, protector_frames_attack_up1, arachnid_run };
 static cached_soundindex sound_melee, sound_melee_hit;
 
 void arachnid_melee_charge(edict_t *self)
@@ -247,9 +369,17 @@ void arachnid_melee_charge(edict_t *self)
 
 void arachnid_melee_hit(edict_t *self)
 {
-	/* KONIG - update damage to 20 to match PSX */
-	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 20, 50))
-		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
+	/* KONIG - update damage to 20 to match PSX;Beta does 30 meleedamage*/
+	if (self->style == 1)
+	{
+		if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 30, 50))
+			self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
+	}
+	else
+	{
+		if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 20, 50))
+			self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
+	}
 }
 
 mframe_t arachnid_frames_melee[] = {
@@ -272,13 +402,26 @@ MONSTERINFO_ATTACK(arachnid_attack) (edict_t *self) -> void
 {
 	if (!self->enemy || !self->enemy->inuse)
 		return;
-
+	/*KONIG - Adding beta attacks*/
 	if (self->monsterinfo.melee_debounce_time < level.time && range_to(self, self->enemy) < MELEE_DISTANCE)
 		M_SetAnimation(self, &arachnid_melee);
-	else if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
-		M_SetAnimation(self, &arachnid_attack_up1);
 	else
-		M_SetAnimation(self, &arachnid_attack1);
+	{
+		if (self->style == 1)
+		{
+			if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
+				M_SetAnimation(self, &protector_attack_up1);
+			else
+				M_SetAnimation(self, &protector_attack1);
+		}
+		else
+		{
+			if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
+				M_SetAnimation(self, &arachnid_attack_up1);
+			else
+				M_SetAnimation(self, &arachnid_attack1);
+		}
+	}
 }
 
 //
@@ -396,4 +539,15 @@ void SP_monster_arachnid(edict_t *self)
 	M_SetAnimation(self, &arachnid_move_stand);
 
 	walkmonster_start(self);
+}
+
+/*KONIG - Stream Protector from Q4 as Arachnid Beta*/
+void SP_monster_protector(edict_t *self)
+{
+	SP_monster_arachnid(self);
+
+	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	self->monsterinfo.armor_power = 100;
+	self->style = 1;
+	self->s.skinnum = 2;
 }
