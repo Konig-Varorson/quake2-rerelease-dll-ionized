@@ -685,12 +685,12 @@ void SP_monster_supertank(edict_t *self)
 
 	/* KONIG - reduced health and added combat armor; extra health per difficulty; bonus health and armor in co-op*/
 	self->health = 1250 * st.health_multiplier;
-	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
-	self->monsterinfo.power_armor_power = 100;
+	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	self->monsterinfo.armor_power = 100;
 	if (coop->integer)
 	{
 		self->health += 250 * skill->integer;
-		self->monsterinfo.power_armor_power += 25 * skill->integer;
+		self->monsterinfo.armor_power += 25 * skill->integer;
 	}
 	self->gib_health = -500;
 	self->mass = 800;
@@ -720,8 +720,6 @@ void SP_monster_supertank(edict_t *self)
 			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
 			self->monsterinfo.power_armor_power = 400;
-		/*KONIG - buff health to counter combat armor being removed*/
-		self->health = 1500 * st.health_multiplier;
 	}
 	// RAFAEL
 
