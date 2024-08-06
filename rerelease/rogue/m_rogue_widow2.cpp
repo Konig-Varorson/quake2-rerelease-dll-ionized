@@ -21,6 +21,10 @@ static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 static cached_soundindex sound_tentacles_retract;
 
+/* KONIG - allowing custom spawns; adding arachnid spawn */
+constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2; monster_protector 4";
+constexpr int32_t default_monster_slots_base = 3;
+
 // sqrt(64*64*2) + sqrt(28*28*2) => 130.1
 constexpr vec3_t spawnpoints[] = {
 	{ 30, 135, 0 },
@@ -151,18 +155,26 @@ void Widow2Spawn(edict_t *self)
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
 	edict_t *ent, *designated_enemy;
 	int		 i;
+	int		 num_summoned;
 
 	AngleVectors(self->s.angles, f, r, u);
 
+	num_summoned = 0;
+
+	for (int32_t count = 0; count < MAX_REINFORCEMENTS; count++, num_summoned++)
+		if (self->monsterinfo.chosen_reinforcements[count] == 255)
+			break;
+
 	for (i = 0; i < 2; i++)
 	{
+		auto& reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[i]];
 		offset = spawnpoints[i];
 
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
 
 		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64))
 		{
-			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, "monster_stalker", 256);
+			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, reinforcement.classname, 256);
 
 			if (!ent)
 				continue;
@@ -1027,7 +1039,7 @@ void SP_monster_widow2(edict_t *self)
 	self->maxs = { 70, 70, 144 };
 
 	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
-	self->health = max(2500, 2500 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	if (!st.was_key_specified("armor_type"))
 		self->monsterinfo.armor_type = IT_ARMOR_BODY;
 	if (!st.was_key_specified("armor_power"))

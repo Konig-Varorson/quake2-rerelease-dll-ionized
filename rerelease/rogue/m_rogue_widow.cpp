@@ -20,6 +20,10 @@ constexpr gtime_t BLASTER_TIME = 2_sec;
 constexpr int	BLASTER2_DAMAGE = 10;
 constexpr int	WIDOW_RAIL_DAMAGE = 50;
 
+/* KONIG - allowing custom spawns; adding arachnid spawn */
+constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2";
+constexpr int32_t default_monster_slots_base = 3;
+
 bool infront(edict_t *self, edict_t *other);
 
 static cached_soundindex sound_pain1;
@@ -251,23 +255,54 @@ void WidowBlaster(edict_t *self)
 	}
 }
 
+void WidowCalcSlots(edict_t* self)
+{
+	const char *reinforcements = default_reinforcements;
+	void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t & list);
+	std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t * self, int32_t & num_chosen, int32_t max_slots);
+
+	if (!st.was_key_specified("monster_slots"))
+		self->monsterinfo.monster_slots = default_monster_slots_base;
+	if (st.was_key_specified("reinforcements"))
+		reinforcements = st.reinforcements;
+
+	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements)
+	{
+		if (skill->integer)
+			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
+		if (coop->integer)
+		{
+			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
+		}
+		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
+	}
+}
+
 void WidowSpawn(edict_t *self)
 {
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
 	edict_t *ent, *designated_enemy;
 	int		 i;
+	int		 num_summoned;
 
 	AngleVectors(self->s.angles, f, r, u);
 
+	num_summoned = 0;
+
+	for (int32_t count = 0; count < MAX_REINFORCEMENTS; count++, num_summoned++)
+		if (self->monsterinfo.chosen_reinforcements[count] == 255)
+			break;
+
 	for (i = 0; i < 2; i++)
 	{
+		auto& reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[i]];
 		offset = spawnpoints[i];
 
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
 
 		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64))
 		{
-			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, "monster_stalker", 256);
+			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, reinforcement.classname, 256);
 
 			if (!ent)
 				continue;
@@ -1003,127 +1038,7 @@ MONSTERINFO_MELEE(widow_melee) (edict_t *self) -> void
 	M_SetAnimation(self, &widow_move_attack_kick);
 }
 
-/* KONIG - replacing WidowPowerups with BossPowerups
-void WidowGoinQuad(edict_t *self, gtime_t time)
-{
-	self->monsterinfo.quad_time = time;
-	widow_damage_multiplier = 4;
-}
-
-void WidowDouble(edict_t *self, gtime_t time)
-{
-	self->monsterinfo.double_time = time;
-	widow_damage_multiplier = 2;
-}
-
-void WidowPent(edict_t *self, gtime_t time)
-{
-	self->monsterinfo.invincible_time = time;
-}
-
-void WidowPowerArmor(edict_t *self)
-{
-	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-	// I don't like this, but it works
-	if (self->monsterinfo.power_armor_power <= 0)
-		self->monsterinfo.power_armor_power += 250 * skill->integer;
-}
-
-void WidowRespondPowerup(edict_t *self, edict_t *other)
-{
-	if (other->s.effects & EF_QUAD)
-	{
-		if (skill->integer == 1)
-			WidowDouble(self, other->client->quad_time);
-		else if (skill->integer == 2)
-			WidowGoinQuad(self, other->client->quad_time);
-		else if (skill->integer == 3)
-		{
-			WidowGoinQuad(self, other->client->quad_time);
-			WidowPowerArmor(self);
-		}
-	}
-	else if (other->s.effects & EF_DOUBLE)
-	{
-		if (skill->integer == 2)
-			WidowDouble(self, other->client->double_time);
-		else if (skill->integer == 3)
-		{
-			WidowDouble(self, other->client->double_time);
-			WidowPowerArmor(self);
-		}
-	}
-	else
-		widow_damage_multiplier = 1;
-
-	if (other->s.effects & EF_PENT)
-	{
-		if (skill->integer == 1)
-			WidowPowerArmor(self);
-		else if (skill->integer == 2)
-			WidowPent(self, other->client->invincible_time);
-		else if (skill->integer == 3)
-		{
-			WidowPent(self, other->client->invincible_time);
-			WidowPowerArmor(self);
-		}
-	}
-}
-
-void WidowPowerups(edict_t* self)
-{
-	edict_t *ent;
-
-	if (!coop->integer)
-	{
-		WidowRespondPowerup(self, self->enemy);
-	}
-	else
-	{
-		// in coop, check for pents, then quads, then doubles
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_PENT)
-			{
-				WidowRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_QUAD)
-			{
-				WidowRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_DOUBLE)
-			{
-				WidowRespondPowerup(self, ent);
-				return;
-			}
-		}
-	}
-}*/
+/* KONIG - replacing WidowPowerups with BossPowerups*/
 void BossPowerups(edict_t* self);
 
 MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (edict_t *self) -> bool
@@ -1184,35 +1099,6 @@ MONSTERINFO_BLOCKED(widow_blocked) (edict_t *self, float dist) -> bool
 	return false;
 }
 
-void WidowCalcSlots(edict_t *self)
-{
-	/* KONIG - allowing custom spawns; adding arachnid spawn */
-	constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2; monster_protector 4";
-	constexpr int32_t default_monster_slots_base = 3;
-
-	const char* reinforcements = default_reinforcements;
-	void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t & list);
-	std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t * self, int32_t & num_chosen, int32_t max_slots);
-
-	if (!st.was_key_specified("monster_slots"))
-		self->monsterinfo.monster_slots = default_monster_slots_base;
-	if (st.was_key_specified("reinforcements"))
-		reinforcements = st.reinforcements;
-
-	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements)
-	{
-		if (skill->integer)
-			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
-
-		if (coop->integer)
-		{
-			/* KONIG - double spawn cap in coop */
-			self->monsterinfo.monster_slots = min(12, self->monsterinfo.monster_slots + (skill->integer * CountPlayers()));
-		}
-		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
-	}
-}
-
 void WidowPrecache()
 {
 	// cache in all of the stalker stuff, widow stuff, spawngro stuff, gibs
@@ -1268,6 +1154,7 @@ void SP_monster_widow(edict_t *self)
 	sound_pain2.assign("widow/bw1pain2.wav");
 	sound_pain3.assign("widow/bw1pain3.wav");
 	sound_rail.assign("gladiator/railgun.wav");
+
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

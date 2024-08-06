@@ -63,6 +63,9 @@ void carrier_prep_spawn(edict_t *self);
 void CarrierMachineGunHold(edict_t *self);
 void CarrierRocket(edict_t *self);
 
+/*KONIG - add powerup copy*/
+void MBossPowerups(edict_t* self);
+
 MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void
 {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -1148,7 +1151,11 @@ void SP_monster_carrier(edict_t *self)
 	{
 		if (skill->integer)
 			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
-
+		/* KONIG - doubles reinforcement scaling in coop */
+		if (coop->integer)
+		{
+			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
+		}
 		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
 	}
 
