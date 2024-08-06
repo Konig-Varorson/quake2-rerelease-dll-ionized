@@ -622,10 +622,11 @@ PAIN(flyer_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 
 MONSTERINFO_SETSKIN(flyer_setskin) (edict_t *self) -> void
 {
+	/* KONIG - new skin for Kamikaze Flyers */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 DIE(flyer_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
@@ -771,10 +772,10 @@ void SP_monster_flyer(edict_t *self)
 }
 
 // PMM - suicide fliers
-void SP_monster_kamikaze(edict_t *self)
+void SP_monster_kamikaze(edict_t* self)
 {
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 

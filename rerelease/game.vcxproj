@@ -109,6 +109,8 @@
     <ClInclude Include="game.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_statusbar.h" />
+    <ClInclude Include="ionized\m_shocker.h" />
+    <ClInclude Include="ionized\m_gnorta.h" />
     <ClInclude Include="m_actor.h" />
     <ClInclude Include="m_arachnid.h" />
     <ClInclude Include="m_berserk.h" />
@@ -173,6 +175,8 @@
     <ClCompile Include="g_turret.cpp" />
     <ClCompile Include="g_utils.cpp" />
     <ClCompile Include="g_weapon.cpp" />
+    <ClCompile Include="ionized\m_gnorta.cpp" />
+    <ClCompile Include="ionized\m_shocker.cpp" />
     <ClCompile Include="m_actor.cpp" />
     <ClCompile Include="m_arachnid.cpp" />
     <ClCompile Include="m_berserk.cpp" />
@@ -210,14 +214,12 @@
     <ClCompile Include="rogue\g_rogue_combat.cpp" />
     <ClCompile Include="rogue\g_rogue_func.cpp" />
     <ClCompile Include="rogue\g_rogue_items.cpp" />
-    <ClCompile Include="rogue\g_rogue_misc.cpp" />
     <ClCompile Include="rogue\g_rogue_monster.cpp" />
     <ClCompile Include="rogue\g_rogue_newai.cpp" />
     <ClCompile Include="rogue\g_rogue_newdm.cpp" />
     <ClCompile Include="rogue\g_rogue_newfnc.cpp" />
     <ClCompile Include="rogue\g_rogue_newtarg.cpp" />
     <ClCompile Include="rogue\g_rogue_newtrig.cpp" />
-    <ClCompile Include="rogue\g_rogue_newweap.cpp" />
     <ClCompile Include="rogue\g_rogue_phys.cpp" />
     <ClCompile Include="rogue\g_rogue_spawn.cpp" />
     <ClCompile Include="rogue\g_rogue_sphere.cpp" />
@@ -232,13 +234,14 @@
     <ClCompile Include="rogue\rogue_dm_tag.cpp" />
     <ClCompile Include="xatrix\g_xatrix_func.cpp" />
     <ClCompile Include="xatrix\g_xatrix_items.cpp" />
-    <ClCompile Include="xatrix\g_xatrix_misc.cpp" />
     <ClCompile Include="xatrix\g_xatrix_monster.cpp" />
     <ClCompile Include="xatrix\g_xatrix_target.cpp" />
-    <ClCompile Include="xatrix\g_xatrix_weapon.cpp" />
     <ClCompile Include="xatrix\m_xatrix_fixbot.cpp" />
     <ClCompile Include="xatrix\m_xatrix_gekk.cpp" />
     <ClCompile Include="xatrix\p_xatrix_weapon.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

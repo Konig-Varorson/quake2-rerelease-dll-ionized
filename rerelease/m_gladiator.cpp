@@ -423,13 +423,18 @@ void SP_monster_gladiator(edict_t *self)
 	{
 		sound_gunb.assign("weapons/plasshot.wav");
 
-		self->health = 250 * st.health_multiplier;
+		/* KONIG - slight buff to health; power armor -> screen; reduced armor but scaled on skill & coop*/
+		self->health = 400 * st.health_multiplier;
 		self->mass = 350;
 
 		if (!st.was_key_specified("power_armor_type"))
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
 		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 250;
+			self->monsterinfo.power_armor_power = max(100, 100 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 
 		self->s.skinnum = 2;
 

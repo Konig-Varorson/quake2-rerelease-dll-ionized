@@ -1680,58 +1680,65 @@ void BossAccel(edict_t* self, gtime_t time)
 	self->monsterinfo.quadfire_time = time;
 }
 
-/*void BossInvis(edict_t* self, gtime_t time)
+void BossInvis(edict_t* self, gtime_t time)
 {
 	self->monsterinfo.invisible_time = time;
-}*/
+}
 
 /*KONIG - Powerup Copying for BBEG (Jorg, Makron, and both Black Widows)*/
 void BossPowerArmor(edict_t* self)
 {
 	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 	if (self->monsterinfo.power_armor_power <= 0)
-		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	{
+		self->monsterinfo.power_armor_power += 500;
+		if (coop->integer)
+			self->monsterinfo.power_armor_power += 50 * skill->integer;
+	}
 }
 
 void BossCombatArmor(edict_t* self)
 {
-	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
-	if (self->monsterinfo.power_armor_power <= 0)
-		self->monsterinfo.power_armor_power += 100 * skill->integer;
+	self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	if (self->monsterinfo.armor_power <= 0)
+	{
+		self->monsterinfo.armor_power += 250;
+		if (coop->integer)
+			self->monsterinfo.armor_power += 25 * skill->integer;
+	}
 }
 
 void BossRespondPowerup(edict_t* self, edict_t* other)
 {
 	if (other->s.effects & EF_QUAD)
 	{
-		if (skill->integer == 1)
-			BossDouble(self, other->client->double_time);
-		else if (skill->integer >= 2)
+		if (skill->integer >= 1)
 			BossGoinQuad(self, other->client->quad_time);
 		if (skill->integer == 3)
 			BossPowerArmor(self);
 	}
 	else if (other->s.effects & EF_DOUBLE)
 	{
-		if (skill->integer >= 2)
+		if (skill->integer >= 1)
 			BossDouble(self, other->client->double_time);
 		if (skill->integer == 3)
 			BossPowerArmor(self);
 	}
 	else
+	{
 		boss_damage_multiplier = 1;
+	}
 
 	if (other->s.effects & EF_PENT)
 	{
-		BossPowerArmor(self);
-		if (skill->integer >= 2)
-			BossCombatArmor(self);
+		if (skill->integer >= 1)
+			BossPowerArmor(self);
 		if (skill->integer == 3)
-			BossInvul(self, other->client->invincible_time);
+			BossCombatArmor(self);
 	}
 	if (other->s.effects & EF_DUALFIRE)
 	{
-		if (skill->integer >= 2)
+		if (skill->integer >= 1)
 			BossAccel(self, other->client->quadfire_time);
 		if (skill->integer == 3)
 			BossPowerArmor(self);
@@ -1811,51 +1818,54 @@ void MBossPowerArmor(edict_t* self)
 {
 	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 	if (self->monsterinfo.power_armor_power <= 0)
-		self->monsterinfo.power_armor_power += 100 * skill->integer;
+	{
+		self->monsterinfo.power_armor_power += 250;
+		if (coop->integer)
+			self->monsterinfo.power_armor_power += 25 * skill->integer;
+	}
 }
 
 void MBossCombatArmor(edict_t* self)
 {
-	self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
-	if (self->monsterinfo.power_armor_power <= 0)
-		self->monsterinfo.power_armor_power += 50 * skill->integer;
+	self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	if (self->monsterinfo.armor_power <= 0)
+	{
+		self->monsterinfo.armor_power += 100;
+		if (coop->integer)
+			self->monsterinfo.armor_power += 20 * skill->integer;
+	}
 }
 
 void MBossRespondPowerup(edict_t* self, edict_t* other)
 {
 	if (other->s.effects & EF_QUAD)
 	{
-		if (skill->integer > 1)
-			MBossPowerArmor(self);
 		if (skill->integer == 3)
-			BossGoinQuad(self, other->client->double_time);
+			BossPowerArmor(self);
+		else if (skill->integer > 1)
+			MBossPowerArmor(self);
 	}
-	else if (other->s.effects & EF_DOUBLE)
+	if (other->s.effects & EF_DOUBLE)
 	{
-		if (skill->integer > 1)
-			MBossPowerArmor(self);
 		if (skill->integer == 3)
-			BossDouble(self, other->client->double_time);
+			BossPowerArmor(self);
+		else if (skill->integer > 1)
+			MBossPowerArmor(self);
 	}
-	else
-		boss_damage_multiplier = 1;
 
 	if (other->s.effects & EF_PENT)
 	{
 		if (skill->integer == 3)
-		{
 			BossPowerArmor(self);
-			MBossCombatArmor(self);
-		}
 		else if (skill->integer > 1)
 			MBossPowerArmor(self);
 	}
 	if (other->s.effects & EF_DUALFIRE)
 	{
-		if (skill->integer > 1)
-			MBossPowerArmor(self);
 		if (skill->integer == 3)
-			BossAccel(self, other->client->quadfire_time);
+			BossPowerArmor(self);
+		else if (skill->integer > 1)
+			MBossPowerArmor(self);
 	}
 }
 

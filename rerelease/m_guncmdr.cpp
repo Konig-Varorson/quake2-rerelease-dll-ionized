@@ -1458,10 +1458,15 @@ void SP_monster_guncmdr(edict_t *self)
 	M_SetAnimation(self, &guncmdr_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (!st.was_key_specified("power_armor_power"))
-		self->monsterinfo.power_armor_power = 200;
+	/* KONIG - power armor -> screen; reduced armor but scaled on skill & coop*/
 	if (!st.was_key_specified("power_armor_type"))
-		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	if (coop->integer)
+	{
+		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 
 	// PMM
 	//self->monsterinfo.blindfire = true;

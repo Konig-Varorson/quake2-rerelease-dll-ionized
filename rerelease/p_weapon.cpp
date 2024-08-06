@@ -1420,7 +1420,8 @@ void Weapon_HyperBlaster_Fire(edict_t *ent)
 				damage = 15;
 			else
 				damage = 20;
-			Blaster_Fire(ent, offset, damage, true, (ent->client->ps.gunframe % 4) ? EF_NONE : EF_HYPERBLASTER);
+			/* KONIG - blue hyperblaster bolts*/
+			Blaster_Fire(ent, offset, damage, true, (ent->client->ps.gunframe % 4) ? EF_NONE : EF_BLUEHYPERBLASTER);
 			Weapon_PowerupSound(ent);
 
 			G_RemoveAmmo(ent);

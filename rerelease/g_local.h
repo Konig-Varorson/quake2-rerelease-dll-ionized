@@ -1146,7 +1146,8 @@ struct game_locals_t
 	vec3_t *lag_origins; // maxclients * max_lag_origins
 };
 
-constexpr size_t MAX_HEALTH_BARS = 2;
+/* KONIG - Increase max health bars from 2 to 4*/
+constexpr size_t MAX_HEALTH_BARS = 4;
 
 //
 // this structure is cleared as each map is entered
@@ -3238,6 +3239,10 @@ struct edict_t
 	uint32_t crosslevel_flags;
 	// NOTE: if adding new elements, make sure to add them
 	// in g_save.cpp too!
+
+	/* KONIG - borrowed from */
+	const char* cvar;
+	const char* cvarvalue; 
 };
 
 //=============

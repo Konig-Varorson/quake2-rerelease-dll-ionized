@@ -266,7 +266,8 @@ void ShamblerSaveLoc(edict_t* self)
 	shambler_lightning_update(self);
 }
 
-constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 1_spawnflag;
+/* KONIG - fixing apparent bug of spawnflag using 1_spawnflag rather than 8_spawnflag as Modir has spawnflag 8 checked despite it doing nothing. */
+constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 8_spawnflag;
 
 vec3_t FindShamblerOffset(edict_t *self)
 {
@@ -571,7 +572,12 @@ void SP_monster_shambler(edict_t* self)
 	sound_smack.assign("shambler/smack.wav");
 	sound_boom.assign("shambler/sboom.wav");
 
-	self->health = 600 * st.health_multiplier;
+	/* KONIG - scaling health per skill & coop, to compensate lack of armor (doesn't feel right to add) */
+	self->health = max(600, 600 + 100 * (skill->integer - 1)) * st.health_multiplier;
+	if (coop->integer)
+	{
+		self->health += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 	self->gib_health = -60;
 
 	self->mass = 500;

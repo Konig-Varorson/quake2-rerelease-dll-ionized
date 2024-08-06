@@ -77,6 +77,8 @@
     <ClInclude Include="xatrix\m_xatrix_gekk.h">
       <Filter>xatrix</Filter>
     </ClInclude>
+    <ClInclude Include="ionized\m_gnorta.h" />
+    <ClInclude Include="ionized\m_shocker.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cg_main.cpp" />
@@ -160,9 +162,6 @@
     <ClCompile Include="rogue\g_rogue_items.cpp">
       <Filter>rogue</Filter>
     </ClCompile>
-    <ClCompile Include="rogue\g_rogue_misc.cpp">
-      <Filter>rogue</Filter>
-    </ClCompile>
     <ClCompile Include="rogue\g_rogue_monster.cpp">
       <Filter>rogue</Filter>
     </ClCompile>
@@ -179,9 +178,6 @@
       <Filter>rogue</Filter>
     </ClCompile>
     <ClCompile Include="rogue\g_rogue_newtrig.cpp">
-      <Filter>rogue</Filter>
-    </ClCompile>
-    <ClCompile Include="rogue\g_rogue_newweap.cpp">
       <Filter>rogue</Filter>
     </ClCompile>
     <ClCompile Include="rogue\g_rogue_phys.cpp">
@@ -226,16 +222,10 @@
     <ClCompile Include="xatrix\g_xatrix_items.cpp">
       <Filter>xatrix</Filter>
     </ClCompile>
-    <ClCompile Include="xatrix\g_xatrix_misc.cpp">
-      <Filter>xatrix</Filter>
-    </ClCompile>
     <ClCompile Include="xatrix\g_xatrix_monster.cpp">
       <Filter>xatrix</Filter>
     </ClCompile>
     <ClCompile Include="xatrix\g_xatrix_target.cpp">
-      <Filter>xatrix</Filter>
-    </ClCompile>
-    <ClCompile Include="xatrix\g_xatrix_weapon.cpp">
       <Filter>xatrix</Filter>
     </ClCompile>
     <ClCompile Include="xatrix\m_xatrix_fixbot.cpp">
@@ -244,9 +234,9 @@
     <ClCompile Include="xatrix\m_xatrix_gekk.cpp">
       <Filter>xatrix</Filter>
     </ClCompile>
-    <ClCompile Include="xatrix\p_xatrix_weapon.cpp">
-      <Filter>xatrix</Filter>
-    </ClCompile>
+    <ClCompile Include="ionized\m_gnorta.cpp" />
+    <ClCompile Include="ionized\m_shocker.cpp" />
+    <ClCompile Include="xatrix\p_xatrix_weapon.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="bots">
@@ -261,5 +251,8 @@
     <Filter Include="xatrix">
       <UniqueIdentifier>{6565427e-a805-4dc7-ba57-3ce0b62e4336}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vcpkg.json" />
   </ItemGroup>
 </Project>

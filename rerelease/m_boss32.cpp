@@ -744,13 +744,16 @@ void SP_monster_makron(edict_t *self)
 	self->mins = { -30, -30, 0 };
 	self->maxs = { 30, 30, 90 };
 
-	/* KONIG - Scaling health based on difficulty + extra for co-op*/
-	self->health = (2500 + 500 * skill->integer) * st.health_multiplier;
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	if (!st.was_key_specified("power_armor_type"))
+		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = max(600, 600 + 100 * (skill->integer - 1));
 	if (coop->integer)
 	{
-		self->health += 500 * skill->integer;
-		self->monsterinfo.armor_type = IT_ARMOR_BODY;
-		self->monsterinfo.armor_power += 50 * skill->integer;
+		self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+		self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
 	}
 	self->gib_health = -2000;
 	self->mass = 500;

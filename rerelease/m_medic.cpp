@@ -1529,8 +1529,16 @@ void SP_monster_medic(edict_t *self)
 	// PMM
 	if (strcmp(self->classname, "monster_medic_commander") == 0)
 	{
+		/* KONIG - Adding combat armor */
 		self->health = 600 * st.health_multiplier;
-		self->gib_health = -130;
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 		self->mass = 600;
 		self->yaw_speed = 40; // default is 20
 		MedicCommanderCache();
@@ -1539,10 +1547,10 @@ void SP_monster_medic(edict_t *self)
 	{
 		// PMM
 		self->health = 300 * st.health_multiplier;
-		self->gib_health = -130;
 		self->mass = 400;
 	}
 
+	self->gib_health = -130;
 	self->pain = medic_pain;
 	self->die = medic_die;
 

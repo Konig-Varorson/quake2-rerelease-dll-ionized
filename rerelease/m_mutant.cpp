@@ -497,10 +497,12 @@ PAIN(mutant_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(mutant_setskin) (edict_t *self) -> void
 {
+	/* KONIG - new skinnums for alphamutant */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
-	else
-		self->s.skinnum = 0;
+		if (self->health < (self->max_health / 2))
+			self->s.skinnum |= 1;
+		else
+			self->s.skinnum &= ~1;
 }
 
 //
@@ -697,19 +699,41 @@ void SP_monster_mutant(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
-	
+
 	gi.modelindex("models/monsters/mutant/gibs/head.md2");
 	gi.modelindex("models/monsters/mutant/gibs/chest.md2");
 	gi.modelindex("models/monsters/mutant/gibs/hand.md2");
 	gi.modelindex("models/monsters/mutant/gibs/foot.md2");
 
+	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
+
+	if (strcmp(self->classname, "monster_alphamutant") == 0)
+	{
+		if (!self->s.scale)
+			self->s.scale = 1.25f;
+
+		self->count = 1;
+		self->s.skinnum = 2;
+
+		self->health = max(400, 400 + 100 * (skill->integer - 1)) * st.health_multiplier;
+		if (coop->integer)
+		{
+			self->health += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
+		self->gib_health = -180;
+		self->mass = 350;
+	}
+	else
+	{
+		self->s.scale = 1.0f;
+
+		self->health = 300 * st.health_multiplier;
+		self->gib_health = -120;
+		self->mass = 300;
+	}
+
 	self->mins = { -18, -18, -24 };
 	self->maxs = { 18, 18, 30 };
-
-	self->health = 300 * st.health_multiplier;
-	self->gib_health = -120;
-	self->mass = 300;
 
 	self->pain = mutant_pain;
 	self->die = mutant_die;

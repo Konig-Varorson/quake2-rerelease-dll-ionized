@@ -394,14 +394,20 @@ void TankBlaster(edict_t *self)
 		PredictAim(self, self->enemy, start, 0, false, 0.f, &dir, nullptr);
 	// pmm
 
-	/*KONIG - N64 Commanders now uses green blaster lasers, hits harder*/
-	if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+	/*KONIG - Tanks now use blue blaster, slightly slower; Commanders hit slightly harder; Guardians use green blasters, hits even harder and faster*/
+	if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
-		monster_fire_blaster2(self, start, dir, 40, 1000, flash_number, EF_BLASTER);
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			monster_fire_blaster2(self, start, dir, 40, 1000, flash_number, EF_BLASTER);
+		else
+			monster_fire_blaster(self, start, dir, 35, 800, flash_number, EF_BLASTER);
 	}
 	else
 	{
-		monster_fire_blaster(self, start, dir, 30, 800, flash_number, EF_BLASTER);
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			monster_fire_blaster2(self, start, dir, 35, 800, flash_number, EF_BLASTER);
+		else
+			monster_fire_blueblaster(self, start, dir, 30, 600, flash_number, EF_BLUEHYPERBLASTER);
 	}
 }
 
@@ -436,12 +442,12 @@ void TankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 
 	// [Paril-KEX] scale
-	/* KONIG - Changed else if statement to give N64 Commanders heat seeking rockets too*/
+	/* KONIG - Changed else if statement to give all Commanders heat seeking rockets*/
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
 	if (self->speed)
 		rocketSpeed = self->speed;
-	else if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING) || self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+	else if (strcmp(self->classname, "monster_tank_commander") == 0 || self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
 		rocketSpeed = 500;
 	else
 		rocketSpeed = 650;
@@ -488,13 +494,12 @@ void TankRocket(edict_t *self)
 
 	// pmm blindfire doesn't check target (done in checkattack)
 	// paranoia, make sure we're not shooting a target right next to us
-	/* KONIG - Making N64 Commander rockets heaseeking too*/
 	if (blindfire)
 	{
 		// blindfire has different fail criteria for the trace
 		if (M_AdjustBlindfireTarget(self, start, vec, right, dir))
 		{
-			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING) || self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, flash_number, self->accel);
 			else
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, flash_number);
@@ -506,7 +511,7 @@ void TankRocket(edict_t *self)
 
 		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
 		{
-			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING) || self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, flash_number, self->accel);
 			else
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, flash_number);
@@ -551,14 +556,20 @@ void TankMachineGun(edict_t *self)
 
 	AngleVectors(dir, forward, nullptr, nullptr);
 
-	/*KONIG - N64 uses railgun instead of bullets */
-	if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+	/*KONIG - Commander hits slightly harder; Guardian uses railgun */
+	if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
-		monster_fire_railgun(self, start, forward, 50, 100, MZ2_GLADIATOR_RAILGUN_1);
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			monster_fire_railgun(self, start, forward, 50, 100, MZ2_GLADIATOR_RAILGUN_1);
+		else
+			monster_fire_bullet(self, start, forward, 25, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	}
 	else
 	{
-		monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+			monster_fire_grenade(self, start, forward, 50, 500, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+		else
+			monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	}
 }
 
@@ -1088,37 +1099,78 @@ void SP_monster_tank(edict_t* self)
 	gi.soundindex("tank/tnkatk2e.wav");
 	gi.soundindex("tank/tnkatck3.wav");
 
+	/*KONIG - reworked health code to have only TC affected by chonky boy code*/
 	if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
-		/*KONIG - reduce health buff and include combat armor (60% reduction)*/
-		self->health = 850 * st.health_multiplier;
-		self->gib_health = -225;
-		self->count = 1;
+		self->spawnflags |= SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING;
 		sound_pain2.assign("tank/pain.wav");
-		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-		self->monsterinfo.armor_power = 100;
+
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+		{
+			self->s.skinnum = 6;
+			if (!self->s.scale)
+				self->s.scale = 1.5f;
+			self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+			self->gib_health = -275;
+			if (!st.was_key_specified("armor_type"))
+				self->monsterinfo.armor_type = IT_ARMOR_BODY;
+			if (!st.was_key_specified("armor_power"))
+				self->monsterinfo.armor_power = max(200, 200 + 200 * (skill->integer - 1));
+			if (coop->integer)
+			{
+				self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			}
+		}
+		else
+		{
+			self->s.skinnum = 2;
+			self->health = 1000 * st.health_multiplier;
+			self->gib_health = -225;
+			self->count = 1;
+			if (!st.was_key_specified("armor_type"))
+				self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+			if (!st.was_key_specified("armor_power"))
+				self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+			if (coop->integer)
+			{
+				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			}
+		}
 	}
-	else
+	else //normal tank
 	{
-		self->health = 750 * st.health_multiplier;
-		self->gib_health = -200;
 		sound_pain.assign("tank/tnkpain2.wav");
+		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+		{
+			self->s.skinnum = 4;
+			if (!self->s.scale)
+				self->s.scale = 1.25f;
+			self->health = 1500 * st.health_multiplier;
+			self->gib_health = -250;
+			if (!st.was_key_specified("armor_type"))
+				self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+			if (!st.was_key_specified("armor_power"))
+				self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+			if (coop->integer)
+			{
+				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			}
+
+
+		}
+		else
+		{
+			self->health = 750 * st.health_multiplier;
+			self->gib_health = -200;
+			if (!st.was_key_specified("armor_type"))
+				self->monsterinfo.armor_type = IT_ARMOR_JACKET;
+			if (!st.was_key_specified("armor_power"))
+				self->monsterinfo.armor_power = 100;
+		}
 	}
 
 	self->monsterinfo.scale = MODEL_SCALE;
-
-	// [Paril-KEX] N64 tank commander is a chonky boy
-	/* KONIG - health scales on skill level + armor that scales too + extra health + armor in co-op*/
-	if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-	{
-		if (!self->s.scale)
-			self->s.scale = 1.5f;
-		self->health = 1100 + (100 * skill->integer) * st.health_multiplier;
-		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-		self->monsterinfo.armor_power = 150 + (25 * skill->integer);
-		if (coop->integer)
-			self->health += 500 * skill->integer;
-	}
 
 	// heat seekingness
 	if (!self->accel)
@@ -1149,15 +1201,6 @@ void SP_monster_tank(edict_t* self)
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 	self->monsterinfo.blindfire = true;
 	// pmm
-	/*KONIG - New skin for N64*/
-	if (strcmp(self->classname, "monster_tank_commander") == 0)
-	{
-		self->s.skinnum = 2;
-	}
-	if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-	{
-		self->s.skinnum = 4;
-	}
 }
 
 void Use_Boss3(edict_t *ent, edict_t *other, edict_t *activator);
@@ -1180,7 +1223,8 @@ N64 edition!
 void SP_monster_tank_stand(edict_t *self)
 {
 	constexpr spawnflags_t SPAWNFLAG_TANK_SKIN = 1_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_COMMANDER_SKIN = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN_SKIN = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_COMMANDER_SKIN = 4_spawnflag;
 
 	if( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
@@ -1192,11 +1236,14 @@ void SP_monster_tank_stand(edict_t *self)
 	self->model = "models/monsters/tank/tris.md2";
 	self->s.modelindex = gi.modelindex(self->model);
 	self->s.frame = FRAME_stand01;
-	self->s.skinnum = 4; 
 	if (self->spawnflags.has(SPAWNFLAG_TANK_SKIN))
 		self->s.skinnum = 0;
 	else if (self->spawnflags.has(SPAWNFLAG_COMMANDER_SKIN))
 		self->s.skinnum = 2;
+	else if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN_SKIN))
+		self->s.skinnum = 4;
+	else
+		self->s.skinnum = 6;
 
 	gi.soundindex("misc/bigtele.wav");
 	

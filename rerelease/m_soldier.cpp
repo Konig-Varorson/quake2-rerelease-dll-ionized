@@ -724,11 +724,106 @@ void soldier_fire_xatrix(edict_t *self, int flash_number, bool angle_limited)
 }
 // RAFAEL
 
-void soldier_fire(edict_t *self, int flash_number, bool angle_limited)
+/* KONIG - New soldiers.*/
+void soldier_fire_konig(edict_t* self, int flash_number, bool angle_limited)
+{
+	vec3_t					 start;
+	vec3_t					 forward, right, up;
+	vec3_t					 aim;
+	vec3_t					 dir;
+	vec3_t					 end;
+	float					 r, u;
+	monster_muzzleflash_id_t flash_index;
+	vec3_t					 aim_norm;
+	float					 angle;
+	vec3_t					 aim_good;
+
+	if (self->count < 2)
+		flash_index = hyper_flash[flash_number]; // hyperblaster
+	else if (self->count < 4)
+		flash_index = blaster_flash[flash_number];
+	else
+		flash_index = machinegun_flash[flash_number];
+
+	AngleVectors(self->s.angles, forward, right, nullptr);
+	start = M_ProjectFlashSource(self, monster_flash_offset[flash_index], forward, right);
+
+	if (flash_number == 5 || flash_number == 6) // he's dead
+	{
+		if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
+			return;
+
+		aim = forward;
+	}
+	else
+	{
+		if ((!self->enemy) || (!self->enemy->inuse))
+		{
+			self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+			return;
+		}
+
+		// PMM
+		if (self->monsterinfo.attack_state == AS_BLIND)
+			end = self->monsterinfo.blind_fire_target;
+		else
+			end = self->enemy->s.origin;
+		// pmm
+		end[2] += self->enemy->viewheight;
+		aim = end - start;
+		aim_good = end;
+		// PMM
+		if (angle_limited)
+		{
+			aim_norm = aim;
+			aim_norm.normalize();
+			angle = aim_norm.dot(forward);
+			if (angle < 0.5f) // ~25 degree angle
+			{
+				if (level.time >= self->monsterinfo.fire_wait)
+					self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+				else
+					self->monsterinfo.aiflags |= AI_HOLD_FRAME;
+
+				return;
+			}
+		}
+		//-PMM
+		dir = vectoangles(aim);
+		AngleVectors(dir, forward, right, up);
+
+		r = crandom() * 1000;
+		u = crandom() * 500;
+
+		end = start + (forward * 8192);
+		end += (right * r);
+		end += (up * u);
+
+		aim = end - start;
+		aim.normalize();
+	}
+
+	if (self->count <= 1)
+	{
+		monster_fire_railgun(self, start, dir, 50, 100, flash_index);
+	}
+	else if (self->count <= 3)
+	{
+		monster_fire_blaster2(self, start, aim, 5, 600, flash_index, EF_BLASTER);
+	}
+	else
+	{
+		fire_bullet(self, start, aim, 8, 15, 0, 0, MOD_TESLA);
+	}
+}
+
+void soldier_fire(edict_t* self, int flash_number, bool angle_limited)
 {
 	// RAFAEL
 	if (self->style == 1)
 		soldier_fire_xatrix(self, flash_number, angle_limited);
+	else if (self->style == 1)
+		soldier_fire_konig(self, flash_number, angle_limited);
 	else
 		// RAFAEL
 		soldier_fire_vanilla(self, flash_number, angle_limited);
@@ -2047,3 +2142,91 @@ void SP_monster_soldier_lasergun(edict_t *self)
 }
 
 // END 13-APR-98
+
+/* KONIG - FROM MODS:
+- Citadel: blaster with power screen
+- Unseen: rapid shotgun, rapid blaster, railgun w/ power screen, white armors (Light but Orange; feels Officer Wolf3d inspired?)
+- Anniversary: Disruptor with power screen
+
+IDEAS: all w/ jacket or combat armor
+- Beta Light: Green blaster with good accuracy but same rate of fire / damage per shot
+- Railgun: low accuracy railgun
+- Disruptor: low accuracy disruptor
+*/
+/*KONIG - Railgun Tactical Soldier */
+
+void SP_monster_soldier_k(edict_t* self)
+{
+	SP_monster_soldier_x(self);
+	self->style = 2;
+}
+
+void SP_monster_soldier_railgun(edict_t* self)
+{
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	SP_monster_soldier_k(self);
+
+	sound_pain.assign("soldier/solpain1.wav");
+	sound_death.assign("soldier/soldeth1.wav");
+	gi.soundindex("gladiator/railgun.wav");
+	gi.soundindex("soldier/solatck1.wav");
+
+	self->s.skinnum = 12;
+	self->count = self->s.skinnum - 12;
+	self->health = self->max_health = 70 * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	self->gib_health = -30;
+}
+void SP_monster_soldier_glight(edict_t* self)
+{
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	SP_monster_soldier_k(self);
+
+	sound_pain_light.assign("soldier/solpain2.wav");
+	sound_death_light.assign("soldier/soldeth2.wav");
+	gi.modelindex("models/objects/laser/tris.md2");
+	gi.soundindex("misc/lasfly.wav");
+	gi.soundindex("soldier/solatck2.wav");
+
+	self->s.skinnum = 14;
+	self->count = self->s.skinnum - 12;
+	self->health = self->max_health = 60 * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	self->gib_health = -30;
+}
+void SP_monster_soldier_lightning(edict_t* self)
+{
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	SP_monster_soldier_k(self);
+
+	sound_pain_ss.assign("soldier/solpain3.wav");
+	sound_death_ss.assign("soldier/soldeth3.wav");
+	gi.soundindex("soldier/solatck3.wav");
+
+	self->s.skinnum = 16;
+	self->count = self->s.skinnum - 12;
+	self->health = self->max_health = 80 * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	self->gib_health = -30;
+}

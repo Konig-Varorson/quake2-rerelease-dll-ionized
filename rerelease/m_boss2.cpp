@@ -670,25 +670,36 @@ void SP_monster_boss2(edict_t* self)
 	self->mins = { -56, -56, 0 };
 	self->maxs = { 56, 56, 80 };
 
-	/*KONIG - Adding second skin for N64 flag*/
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling; second skin for Hornet Guardian */
 	if (self->spawnflags.has(SPAWNFLAG_BOSS2_N64))
 	{
 		self->s.skinnum = 2;
-	}
-	/*KONIG - Adding power shield and co-op health buff for N64 bosses*/
-	if (level.is_n64)
-	{
-		if (!st.was_key_specified("power_armor_type"))
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 500 + (75 * skill->integer);
-		self->health = (1800 + (250 * skill->integer)) * st.health_multiplier;
+		self->health = max(1500, 1000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		if (!level.is_n64)
+		{
+			if (!st.was_key_specified("power_armor_type"))
+				self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+			if (!st.was_key_specified("power_armor_power"))
+				self->monsterinfo.power_armor_power = max(400, 400 + 100 * (skill->integer - 1));
+		}
 		if (coop->integer)
-			self->health += 250 * skill->integer;
+		{
+			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 	}
 	else
 	{
-		self->health = 2000 * st.health_multiplier;
+		self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 	}
 	self->gib_health = -200;
 	self->mass = 1000;

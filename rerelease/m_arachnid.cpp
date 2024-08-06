@@ -221,6 +221,7 @@ void protector_rockets(edict_t *self)
 	vec3_t						vec;
 	monster_muzzleflash_id_t	id;
 	int							rocketSpeed;
+	trace_t						trace;
 	vec3_t						target;
 	bool						blindfire = self->monsterinfo.aiflags & AI_MANUAL_STEERING;
 
@@ -274,6 +275,7 @@ void protector_rockets(edict_t *self)
 
 	dir.normalize();
 	//copied from m_chick
+	trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
 	if (blindfire)
 	{
 		// blindfire has different fail criteria for the trace
@@ -547,7 +549,16 @@ void SP_monster_arachnid(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
+	/* KONIG - adding combat armor */
 	self->health = 1000 * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	if (coop->integer)
+	{
+		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 	self->gib_health = -200;
 
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -575,8 +586,20 @@ void SP_monster_protector(edict_t *self)
 {
 	SP_monster_arachnid(self);
 
-	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-	self->monsterinfo.armor_power = 100;
 	self->style = 1;
 	self->s.skinnum = 2;
+
+	if (!self->s.scale)
+		self->s.scale = 1.5f;
+
+	self->health = 1250 * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+	if (coop->integer)
+	{
+		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
+	self->mass = 600;
 }

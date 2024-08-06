@@ -1293,8 +1293,15 @@ void SP_misc_blackhole(edict_t *ent)
 
 /*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32)
  */
- /* KONIG - Allow both Tank and Commander skin on easter tank*/
+ /* KONIG - Allow all eight tank skins on easter tank; default Commander*/
 constexpr spawnflags_t SPAWNFLAG_TANK_SKIN = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_PAIN_SKIN = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_SKIN = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_PAIN_SKIN = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN_SKIN = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN_PAIN_SKIN = 32_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_GUARDIAN_SKIN = 64_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_GUARDIAN_PAIN_SKIN = 128_spawnflag;
 
 THINK(misc_eastertank_think) (edict_t *self) -> void
 {
@@ -1321,14 +1328,28 @@ void SP_misc_eastertank(edict_t *ent)
 
 	if (ent->spawnflags.has(SPAWNFLAG_TANK_SKIN))
 		ent->s.skinnum = 0;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_PAIN_SKIN))
+		ent->s.skinnum = 1;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_PAIN_SKIN))
+		ent->s.skinnum = 3;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN_SKIN))
+		ent->s.skinnum = 4;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN_PAIN_SKIN))
+		ent->s.skinnum = 5;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN_SKIN))
+		ent->s.skinnum = 6;
+	else if (ent->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN_PAIN_SKIN))
+		ent->s.skinnum = 7;
 	else
 		ent->s.skinnum = 2;
 }
 
 /*QUAKED misc_easterchick (1 .5 0) (-32 -32 0) (32 32 32)
  */
-/* KONIG - Allow both base and heat skin on easter chicks*/
-constexpr spawnflags_t SPAWNFLAG_HEAT_SKIN = 1_spawnflag;
+/* KONIG - Allow all four skins on easter chicks*/
+constexpr spawnflags_t SPAWNFLAG_PAIN_SKIN = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_HEAT_SKIN = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_HEAT_PAIN_SKIN = 4_spawnflag;
 
 THINK(misc_easterchick_think) (edict_t *self) -> void
 {
@@ -1353,8 +1374,12 @@ void SP_misc_easterchick(edict_t *ent)
 	ent->nextthink = level.time + 20_hz;
 	gi.linkentity(ent);
 
-	if (ent->spawnflags.has(SPAWNFLAG_HEAT_SKIN))
+	if (ent->spawnflags.has(SPAWNFLAG_PAIN_SKIN))
+		ent->s.skinnum = 1;
+	else if (ent->spawnflags.has(SPAWNFLAG_HEAT_SKIN))
 		ent->s.skinnum = 2;
+	else if (ent->spawnflags.has(SPAWNFLAG_HEAT_PAIN_SKIN))
+		ent->s.skinnum = 3;
 	else
 		ent->s.skinnum = 0;
 }
@@ -1386,8 +1411,12 @@ void SP_misc_easterchick2(edict_t *ent)
 	ent->nextthink = level.time + 20_hz;
 	gi.linkentity(ent);
 
-	if (ent->spawnflags.has(SPAWNFLAG_HEAT_SKIN))
+	if (ent->spawnflags.has(SPAWNFLAG_PAIN_SKIN))
+		ent->s.skinnum = 1;
+	else if (ent->spawnflags.has(SPAWNFLAG_HEAT_SKIN))
 		ent->s.skinnum = 2;
+	else if (ent->spawnflags.has(SPAWNFLAG_HEAT_PAIN_SKIN))
+		ent->s.skinnum = 3;
 	else
 		ent->s.skinnum = 0;
 }
@@ -1739,12 +1768,19 @@ void SP_light_mine2(edict_t *ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_gib_arm (1 0 0) (-8 -8 -8) (8 8 8)
+/*KONIG - more misc_gibs from monsters */
+/*QUAKED misc_gib(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
-*/
-void SP_misc_gib_arm(edict_t *ent)
+Replace original "misc_gib_x" entities and expand to include chest and strogg head og gibs via spawnflags*/
+
+constexpr spawnflags_t SPAWNFLAG_GIB_ARM = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_GIB_HEAD = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_GIB_CHEST = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_GIB_LEG = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_GIB_STROGGHEAD = 16_spawnflag;
+
+void SP_misc_gib(edict_t* ent)
 {
-	gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -1757,6 +1793,29 @@ void SP_misc_gib_arm(edict_t *ent)
 	ent->think = G_FreeEdict;
 	ent->nextthink = level.time + 10_sec;
 	gi.linkentity(ent);
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_ARM))
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HEAD))
+		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CHEST))
+		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_LEG))
+		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_STROGGHEAD))
+		gi.setmodel(ent, "models/objects/gibs/head2/tris.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+}
+
+/*QUAKED misc_gib_arm (1 0 0) (-8 -8 -8) (8 8 8)
+Intended for use with the target_spawner
+*/
+void SP_misc_gib_arm(edict_t *ent)
+{
+	ent->spawnflags |= SPAWNFLAG_GIB_ARM;
+	SP_misc_gib(ent);
 }
 
 /*QUAKED misc_gib_leg (1 0 0) (-8 -8 -8) (8 8 8)
@@ -1764,19 +1823,8 @@ Intended for use with the target_spawner
 */
 void SP_misc_gib_leg(edict_t *ent)
 {
-	gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
+	ent->spawnflags |= SPAWNFLAG_GIB_LEG;
+	SP_misc_gib(ent);
 }
 
 /*QUAKED misc_gib_head (1 0 0) (-8 -8 -8) (8 8 8)
@@ -1784,68 +1832,20 @@ Intended for use with the target_spawner
 */
 void SP_misc_gib_head(edict_t *ent)
 {
-	gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
+	ent->spawnflags |= SPAWNFLAG_GIB_HEAD;
+	SP_misc_gib(ent);
 }
 
-/*KONIG - more misc_gibs from monsters
-QUAKED misc_gib_chest (1 0 0) (-8 -8 -8) (8 8 8)
-Intended for use with the target_spawner
+/*QUAKED misc_gib_gekk(1 0 0) (-8 - 8 - 8) (8 8 8)
 */
-void SP_misc_gib_chest(edict_t* ent)
+void SP_misc_gib_gekk(edict_t* ent)
 {
-	gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gib_head2(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gib_head2(edict_t * ent)
-{
-	gi.setmodel(ent, "models/objects/gibs/head2/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gekkgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gekkgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/objects/gekkgibs/torso/tris.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CLAW = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HEAD = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CHEST = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_PELVIS = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_LEG = 32_spawnflag;
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GREENGIB;
 	ent->takedamage = true;
@@ -1858,94 +1858,82 @@ void SP_misc_gekkgib_chest(edict_t* ent)
 	ent->think = G_FreeEdict;
 	ent->nextthink = level.time + 10_sec;
 	gi.linkentity(ent);
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_ARM))
+		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CLAW))
+		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HEAD))
+		gi.setmodel(ent, "models/objects/gekkgibs/head/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CHEST))
+		gi.setmodel(ent, "models/objects/gekkgibs/torso/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_PELVIS))
+		gi.setmodel(ent, "models/objects/gekkgibs/pelvis/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_LEG))
+		gi.setmodel(ent, "models/objects/gekkgibs/leg/tris.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
 }
 
-/*QUAKED misc_gekkgib_claw(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_strogg1(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_gekkgib_claw(edict_t* ent)
+void SP_misc_gib_strogg1(edict_t* ent)
 {
-	gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GREENGIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
+	constexpr spawnflags_t SPAWNFLAG_GIB_BERSERK_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BERSERK_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BERSERK_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BERSERK_LEG = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BITCH_ARM = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BITCH_HEAD = 32_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BITCH_CHEST = 64_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BITCH_LEG = 128_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BRAIN_ARM = 65536_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BRAIN_HEAD = 131072_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BRAIN_CHEST = 262144_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_BRAIN_LEG= 524288_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GLAD_ARM = 1048576_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GLAD_HEAD = 2097152_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GLAD_CHEST = 4194304_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GLAD_LEG = 8388608_spawnflag;
 
-/*QUAKED misc_gekkgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gekkgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/objects/gekkgibs/head/tris.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GREENGIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_BERSERK_ARM))
+		gi.setmodel(ent, "models/monsters/berserk/gibs/hammer.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BERSERK_HEAD))
+		gi.setmodel(ent, "models/monsters/berserk/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BERSERK_CHEST))
+		gi.setmodel(ent, "models/monsters/berserk/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BERSERK_LEG))
+		gi.setmodel(ent, "models/monsters/berserk/gibs/thigh.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BITCH_ARM))
+		gi.setmodel(ent, "models/monsters/bitch/gibs/arm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BITCH_HEAD))
+		gi.setmodel(ent, "models/monsters/bitch/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BITCH_CHEST))
+		gi.setmodel(ent, "models/monsters/bitch/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BITCH_LEG))
+		gi.setmodel(ent, "models/monsters/bitch/gibs/foot.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BRAIN_ARM))
+		gi.setmodel(ent, "models/monsters/brain/gibs/arm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BRAIN_HEAD))
+		gi.setmodel(ent, "models/monsters/brain/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BRAIN_CHEST))
+		gi.setmodel(ent, "models/monsters/brain/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_BRAIN_LEG))
+		gi.setmodel(ent, "models/monsters/brain/gibs/boot.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GLAD_ARM))
+		gi.setmodel(ent, "models/monsters/gladiatr/gibs/larm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GLAD_HEAD))
+		gi.setmodel(ent, "models/monsters/gladiatr/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GLAD_CHEST))
+		gi.setmodel(ent, "models/monsters/gladiatr/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GLAD_LEG))
+		gi.setmodel(ent, "models/monsters/gladiatr/gibs/thigh.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
 
-/*QUAKED misc_berserkgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_berserkgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/berserk/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_berserkgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_berserkgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/berserk/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_bitchgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_bitchgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/bitch/gibs/chest.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -1960,12 +1948,64 @@ void SP_misc_bitchgib_chest(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_bitchgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_strogg2(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_bitchgib_head(edict_t* ent)
+void SP_misc_gib_strogg2(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/bitch/gibs/head.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUNNER_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUNNER_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUNNER_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUNNER_LEG = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HOVER_ARM = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HOVER_HEAD = 32_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HOVER_CHEST = 64_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HOVER_LEG = 128_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_INFANTRY_ARM = 65536_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_INFANTRY_HEAD = 131072_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_INFANTRY_CHEST = 262144_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_INFANTRY_LEG = 524288_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MEDIC_ARM = 1048576_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MEDIC_HEAD = 2097152_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MEDIC_CHEST = 4194304_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MEDIC_LEG = 8388608_spawnflag;
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_GUNNER_ARM))
+		gi.setmodel(ent, "models/monsters/gunner/gibs/garm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUNNER_HEAD))
+		gi.setmodel(ent, "models/monsters/gunner/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUNNER_CHEST))
+		gi.setmodel(ent, "models/monsters/gunner/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUNNER_LEG))
+		gi.setmodel(ent, "models/monsters/gunner/gibs/foot.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HOVER_ARM))
+		gi.setmodel(ent, "models/monsters/hover/gibs/ring.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HOVER_HEAD))
+		gi.setmodel(ent, "models/monsters/hover/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HOVER_CHEST))
+		gi.setmodel(ent, "models/monsters/hover/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HOVER_LEG))
+		gi.setmodel(ent, "models/monsters/hover/gibs/foot.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_INFANTRY_ARM))
+		gi.setmodel(ent, "models/monsters/infantry/gibs/arm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_INFANTRY_HEAD))
+		gi.setmodel(ent, "models/monsters/infantry/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_INFANTRY_CHEST))
+		gi.setmodel(ent, "models/monsters/infantry/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_INFANTRY_LEG))
+		gi.setmodel(ent, "models/monsters/infantry/gibs/foot.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MEDIC_ARM))
+		gi.setmodel(ent, "models/monsters/medic/gibs/hook.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MEDIC_HEAD))
+		gi.setmodel(ent, "models/monsters/medic/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MEDIC_CHEST))
+		gi.setmodel(ent, "models/monsters/medic/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MEDIC_LEG))
+		gi.setmodel(ent, "models/monsters/medic/gibs/leg.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -1980,12 +2020,64 @@ void SP_misc_bitchgib_head(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_boss1gib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_strogg3(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_boss1gib_chest(edict_t* ent)
+void SP_misc_gib_strogg3(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/boss1/gibs/chest.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_PARASITE_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_PARASITE_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_PARASITE_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_PARASITE_LEG = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SOLDIER_ARM = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SOLDIER_HEAD = 32_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SOLDIER_CHEST = 64_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SOLDIER_LEG = 128_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_STALKER_ARM = 65536_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_STALKER_HEAD = 131072_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_STALKER_CHEST = 262144_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_STALKER_LEG = 524288_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_TANK_ARM = 1048576_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_TANK_HEAD = 2097152_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_TANK_CHEST = 4194304_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_TANK_LEG = 8388608_spawnflag;
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_PARASITE_ARM))
+		gi.setmodel(ent, "models/monsters/parasite/gibs/fleg.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_PARASITE_HEAD))
+		gi.setmodel(ent, "models/monsters/parasite/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_PARASITE_CHEST))
+		gi.setmodel(ent, "models/monsters/parasite/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_PARASITE_LEG))
+		gi.setmodel(ent, "models/monsters/parasite/gibs/bleg.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SOLDIER_ARM))
+		gi.setmodel(ent, "models/monsters/soldier/gibs/arm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SOLDIER_HEAD))
+		gi.setmodel(ent, "models/monsters/soldier/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SOLDIER_CHEST))
+		gi.setmodel(ent, "models/monsters/soldier/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SOLDIER_LEG))
+		gi.setmodel(ent, "models/monsters/soldier/gibs/gun.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_STALKER_ARM))
+		gi.setmodel(ent, "models/monsters/stalker/gibs/claw.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_STALKER_HEAD))
+		gi.setmodel(ent, "models/monsters/stalker/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_STALKER_CHEST))
+		gi.setmodel(ent, "models/monsters/stalker/gibs/bodya.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_STALKER_LEG))
+		gi.setmodel(ent, "models/monsters/stalker/gibs/leg.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_TANK_ARM))
+		gi.setmodel(ent, "models/monsters/tank/gibs/barm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_TANK_HEAD))
+		gi.setmodel(ent, "models/monsters/tank/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_TANK_CHEST))
+		gi.setmodel(ent, "models/monsters/tank/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_TANK_LEG))
+		gi.setmodel(ent, "models/monsters/tank/gibs/thigh.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -2000,12 +2092,28 @@ void SP_misc_boss1gib_chest(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_boss1gib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_mutant(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_boss1gib_head(edict_t* ent)
+void SP_misc_gib_mutant(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/boss1/gibs/head.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_MUTANT_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MUTANT_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MUTANT_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_MUTANT_LEG = 8_spawnflag;
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_ARM))
+		gi.setmodel(ent, "models/monsters/mutant/gibs/hand.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_HEAD))
+		gi.setmodel(ent, "models/monsters/mutant/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_CHEST))
+		gi.setmodel(ent, "models/monsters/mutant/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_LEG))
+		gi.setmodel(ent, "models/monsters/mutant/gibs/foot.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -2020,12 +2128,65 @@ void SP_misc_boss1gib_head(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_boss2gib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_strogg_big1(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
+Boss gibs
 */
-void SP_misc_boss2gib_chest(edict_t* ent)
+void SP_misc_gib_strogg_big1(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/boss2/gibs/chest.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_SUPERTANK_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SUPERTANK_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SUPERTANK_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_SUPERTANK_LEG = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HORNET_ARM = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HORNET_HEAD = 32_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HORNET_CHEST = 64_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HORNET_LEG = 128_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_JORG_ARM = 65536_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_JORG_HEAD = 131072_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_JORG_CHEST = 262144_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_JORG_LEG = 524288_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CARRIER_ARM = 1048576_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CARRIER_HEAD = 2097152_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CARRIER_CHEST = 4194304_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CARRIER_LEG = 8388608_spawnflag;
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_SUPERTANK_ARM))
+		gi.setmodel(ent, "models/monsters/boss1/gibs/cgun.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SUPERTANK_HEAD))
+		gi.setmodel(ent, "models/monsters/boss1/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SUPERTANK_CHEST))
+		gi.setmodel(ent, "models/monsters/boss1/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_SUPERTANK_LEG))
+		gi.setmodel(ent, "models/monsters/boss1/gibs/ltread.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HORNET_ARM))
+		gi.setmodel(ent, "models/monsters/boss2/gibs/larm.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HORNET_HEAD))
+		gi.setmodel(ent, "models/monsters/boss2/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HORNET_CHEST))
+		gi.setmodel(ent, "models/monsters/boss2/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HORNET_LEG))
+		gi.setmodel(ent, "models/monsters/boss2/gibs/wing.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_JORG_ARM))
+		gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/gun.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_JORG_HEAD))
+		gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_JORG_CHEST))
+		gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_JORG_LEG))
+		gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/thigh.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CARRIER_ARM))
+		gi.setmodel(ent, "models/monsters/carrier/gibs/rwing.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CARRIER_HEAD))
+		gi.setmodel(ent, "models/monsters/carrier/gibs/head.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CARRIER_CHEST))
+		gi.setmodel(ent, "models/monsters/carrier/gibs/chest.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CARRIER_LEG))
+		gi.setmodel(ent, "models/monsters/carrier/gibs/thigh.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -2040,132 +2201,64 @@ void SP_misc_boss2gib_chest(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_boss2gib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_strogg_big2(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_boss2gib_head(edict_t* ent)
+void SP_misc_gib_strogg_big2(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/boss2/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_HEAD = 2_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_CHEST = 4_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_LEG = 8_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_ARM = 16_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_HEAD = 32_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_CHEST = 64_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_LEG = 128_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_ARM = 65536_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_HEAD = 131072_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_CHEST = 262144_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_LEG = 524288_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_ARM = 1048576_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_HEAD = 2097152_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_CHEST = 4194304_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_LEG = 8388608_spawnflag;
 
-/*QUAKED misc_boss31gib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_boss31gib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_ARM))
+		gi.setmodel(ent, "models/monsters/guardian/gib5.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_HEAD))
+		gi.setmodel(ent, "models/monsters/guardian/gib3.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_CHEST))
+		gi.setmodel(ent, "models/monsters/guardian/gib4.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_LEG))
+		gi.setmodel(ent, "models/monsters/guardian/gib6.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_ARM))
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_HEAD))
+		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_CHEST))
+		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_LEG))
+		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_ARM))
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_HEAD))
+		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_CHEST))
+		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_LEG))
+		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_ARM))
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HEAD))
+		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CHEST))
+		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_LEG))
+		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
+	else
+		//NOTE: MAKE RANDOM SPAWNFLAG!
+		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
 
-/*QUAKED misc_boss31gib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_boss31gib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/boss3/jorg/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_braingib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_braingib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/brain/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_braingib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_braingib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/brain/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_carriergib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_carriergib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/carrier/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_carriergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_carriergib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/carrier/gibs/head.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -2183,9 +2276,18 @@ void SP_misc_carriergib_head(edict_t* ent)
 /*QUAKED misc_floatgib_base(1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_floatgib_base(edict_t* ent)
+void SP_misc_gib_technician(edict_t* ent)
 {
-	gi.setmodel(ent, "models/monsters/float/gibs/base.md2");
+	constexpr spawnflags_t SPAWNFLAG_GIB_FLOAT_ARM = 1_spawnflag;
+	constexpr spawnflags_t SPAWNFLAG_GIB_FLOAT_HEAD = 2_spawnflag;
+
+	if (ent->spawnflags.has(SPAWNFLAG_GIB_FLOAT_ARM))
+		gi.setmodel(ent, "models/monsters/float/gibs/base.md2");
+	else if (ent->spawnflags.has(SPAWNFLAG_GIB_FLOAT_HEAD))
+		gi.setmodel(ent, "models/monsters/float/gibs/jar.md2");
+	else
+		gi.setmodel(ent, "models/monsters/float/gibs/base.md2");
+
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = true;
@@ -2200,390 +2302,10 @@ void SP_misc_floatgib_base(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_floatgib_jar(1 0 0) (-8 - 8 - 8) (8 8 8)
+/*QUAKED misc_gib_shambler (1 0 0) (-8 - 8 - 8) (8 8 8)
 Intended for use with the target_spawner
 */
-void SP_misc_floatgib_jar(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/float/gibs/jar.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gladiatrgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gladiatrgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/gladiatr/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gladiatrgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gladiatrgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/gladiatr/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_guardiangib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_guardiangib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/guardian/gib4.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_guardiangib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_guardiangib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/guardian/gib3.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gunnergib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gunnergib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/gunner/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_gunnergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_gunnergib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/gunner/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_hovergib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_hovergib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/hover/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_hovergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_hovergib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/hover/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_infantrygib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_infantrygib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/infantry/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_infantrygib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_infantrygib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/infantry/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_medicgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_medicgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/medic/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_medicgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_medicgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/medic/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_mutantgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_mutantgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/mutant/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_mutantgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_mutantgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/mutant/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_mutantgib_foot(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_mutantgib_foot(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/mutant/gibs/foot.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_mutantgib_hand(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_mutantgib_hand(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/mutant/gibs/hand.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_parasitegib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_parasitegib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/parasite/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_parasitegib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_parasitegib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/parasite/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_shamblergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_shamblergib_head(edict_t* ent)
+void SP_misc_gib_shambler(edict_t* ent)
 {
 	gi.setmodel(ent, "models/monsters/shambler/gibs/head.md2");
 	ent->solid = SOLID_NOT;
@@ -2600,125 +2322,6 @@ void SP_misc_shamblergib_head(edict_t* ent)
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_soldiergib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_soldiergib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/soldier/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_soldiergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_soldiergib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/soldier/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_stalkergib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_stalkergib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/stalker/gibs/bodya.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_stalkergib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_stalkergib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/stalker/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_tankgib_chest(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_tankgib_chest(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/tank/gibs/chest.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
-
-/*QUAKED misc_tankgib_head(1 0 0) (-8 - 8 - 8) (8 8 8)
-Intended for use with the target_spawner
-*/
-void SP_misc_tankgib_head(edict_t* ent)
-{
-	gi.setmodel(ent, "models/monsters/tank/gibs/head.md2");
-	ent->solid = SOLID_NOT;
-	ent->s.effects |= EF_GIB;
-	ent->takedamage = true;
-	ent->die = gib_die;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->deadflag = true;
-	ent->avelocity[0] = frandom(200);
-	ent->avelocity[1] = frandom(200);
-	ent->avelocity[2] = frandom(200);
-	ent->think = G_FreeEdict;
-	ent->nextthink = level.time + 10_sec;
-	gi.linkentity(ent);
-}
 //=====================================================
 
 /*QUAKED target_character (0 0 1) ?
@@ -3474,4 +3077,185 @@ void SP_misc_model(edict_t *ent)
 {
 	gi.setmodel(ent, ent->model);
 	gi.linkentity(ent);
+}
+
+/* KONIG - Adding rogue and xatrix misc for nuke etc. functionality */
+/* KONIG - Adding rogue_misc's content for nuke */
+USE(misc_nuke_core_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	if (self->svflags & SVF_NOCLIENT)
+		self->svflags &= ~SVF_NOCLIENT;
+	else
+		self->svflags |= SVF_NOCLIENT;
+}
+
+/*QUAKED misc_nuke_core (1 0 0) (-16 -16 -16) (16 16 16)
+toggles visible/not visible. starts visible.
+*/
+void SP_misc_nuke_core(edict_t* ent)
+{
+	gi.setmodel(ent, "models/objects/core/tris.md2");
+	gi.linkentity(ent);
+
+	ent->use = misc_nuke_core_use;
+}
+
+
+/*QUAKED misc_crashviper (1 .5 0) (-176 -120 -24) (176 120 72)
+This is a large viper about to crash
+*/
+void SP_misc_crashviper(edict_t* ent)
+{
+	if (!ent->target)
+	{
+		gi.Com_PrintFmt("{}: no target\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	if (!ent->speed)
+		ent->speed = 300;
+
+	ent->movetype = MOVETYPE_PUSH;
+	ent->solid = SOLID_NOT;
+	ent->s.modelindex = gi.modelindex("models/ships/bigviper/tris.md2");
+	ent->mins = { -16, -16, 0 };
+	ent->maxs = { 16, 16, 32 };
+
+	ent->think = func_train_find;
+	ent->nextthink = level.time + 10_hz;
+	ent->use = misc_viper_use;
+	ent->svflags |= SVF_NOCLIENT;
+	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
+
+	gi.linkentity(ent);
+}
+
+// RAFAEL
+/*QUAKED misc_viper_missile (1 0 0) (-8 -8 -8) (8 8 8)
+"dmg"	how much boom should the bomb make? the default value is 250
+*/
+
+USE(misc_viper_missile_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	vec3_t forward, right, up;
+	vec3_t start, dir;
+	vec3_t vec;
+
+	AngleVectors(self->s.angles, forward, right, up);
+
+	self->enemy = G_FindByString<&edict_t::targetname>(nullptr, self->target);
+
+	vec = self->enemy->s.origin;
+
+	start = self->s.origin;
+	dir = vec - start;
+	dir.normalize();
+
+	monster_fire_rocket(self, start, dir, self->dmg, 500, MZ2_CHICK_ROCKET_1);
+
+	self->nextthink = level.time + 10_hz;
+	self->think = G_FreeEdict;
+}
+
+void SP_misc_viper_missile(edict_t* self)
+{
+	self->movetype = MOVETYPE_NONE;
+	self->solid = SOLID_NOT;
+	self->mins = { -8, -8, -8 };
+	self->maxs = { 8, 8, 8 };
+
+	if (!self->dmg)
+		self->dmg = 250;
+
+	self->s.modelindex = gi.modelindex("models/objects/bomb/tris.md2");
+
+	self->use = misc_viper_missile_use;
+	self->svflags |= SVF_NOCLIENT;
+
+	gi.linkentity(self);
+}
+
+// RAFAEL 17-APR-98
+/*QUAKED misc_transport (1 0 0) (-8 -8 -8) (8 8 8)
+Maxx's transport at end of game
+*/
+void SP_misc_transport(edict_t* ent)
+{
+	if (!ent->target)
+	{
+		gi.Com_PrintFmt("{}: no target\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	if (!ent->speed)
+		ent->speed = 300;
+
+	ent->movetype = MOVETYPE_PUSH;
+	ent->solid = SOLID_NOT;
+	ent->s.modelindex = gi.modelindex("models/objects/ship/tris.md2");
+
+	ent->mins = { -16, -16, 0 };
+	ent->maxs = { 16, 16, 32 };
+
+	ent->think = func_train_find;
+	ent->nextthink = level.time + 10_hz;
+	ent->use = misc_strogg_ship_use;
+	ent->svflags |= SVF_NOCLIENT;
+	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
+
+	if (!(ent->spawnflags & SPAWNFLAG_TRAIN_START_ON))
+		ent->spawnflags |= SPAWNFLAG_TRAIN_START_ON;
+
+	gi.linkentity(ent);
+}
+// END 17-APR-98
+
+/*QUAKED misc_amb4 (1 0 0) (-16 -16 -16) (16 16 16)
+Mal's amb4 loop entity
+*/
+static cached_soundindex amb4sound;
+
+THINK(amb4_think) (edict_t* ent) -> void
+{
+	ent->nextthink = level.time + 2.7_sec;
+	gi.sound(ent, CHAN_VOICE, amb4sound, 1, ATTN_NONE, 0);
+}
+
+void SP_misc_amb4(edict_t* ent)
+{
+	ent->think = amb4_think;
+	ent->nextthink = level.time + 1_sec;
+	amb4sound.assign("world/amb4.wav");
+	gi.linkentity(ent);
+}
+
+/*QUAKED misc_nuke (1 0 0) (-16 -16 -16) (16 16 16)
+ */
+extern void target_killplayers_use(edict_t* self, edict_t* other, edict_t* activator);
+
+static THINK(misc_nuke_think) (edict_t* self) -> void {
+	//Nuke_Explode(self);
+}
+
+static USE(misc_nuke_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
+	edict_t* nuke;
+
+	nuke = G_Spawn();
+	nuke->s.origin = self->s.origin;
+	nuke->clipmask = MASK_PROJECTILE;
+	nuke->solid = SOLID_NOT;
+	nuke->mins = { -1, -1, 1 };
+	nuke->maxs = { 1, 1, 1 };
+	nuke->owner = self;
+	nuke->teammaster = self;
+	nuke->nextthink = level.time + FRAME_TIME_S;
+	nuke->dmg = 800;
+	nuke->dmg_radius = 8192;
+	nuke->think = misc_nuke_think;
+}
+void SP_misc_nuke(edict_t* ent)
+{
+	ent->use = misc_nuke_use;
 }

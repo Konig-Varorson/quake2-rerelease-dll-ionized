@@ -892,10 +892,11 @@ PAIN(parasite_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 
 MONSTERINFO_SETSKIN(parasite_setskin) (edict_t *self) -> void
 {
+	/* KONIG - new skinnums for Dropper */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 constexpr spawnflags_t SPAWNFLAG_PARASITE_NOJUMPING = 8_spawnflag;
@@ -962,4 +963,20 @@ void SP_monster_parasite(edict_t *self)
 	self->monsterinfo.jump_height = 68;
 
 	walkmonster_start(self);
+}
+
+/*QUAKED monster_dropper (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
+ */
+ /* KONIG - new parasite beta; Quake 4's Portal Dropper*/
+void SP_monster_dropper(edict_t* self)
+{
+	SP_monster_parasite(self);
+	self->s.skinnum = 2;
+	self->style = 1;
+
+	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
+	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
+
+	if (!self->s.scale)
+		self->s.scale = 1.1f;
 }

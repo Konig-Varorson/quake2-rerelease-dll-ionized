@@ -580,17 +580,23 @@ void SP_target_spawner(edict_t *self)
 
 //==========================================================
 
-/*QUAKED target_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
-Fires a blaster bolt in the set direction when triggered.
+/* KONIG - NEW TARGET ENTITIES */
+/*QUAKED target_shooter_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS BLUEBLASTER GREENBLASTER NAILS RIPPER
+Fires a projectile attack in the set direction when triggered.
 
 dmg		default is 15
 speed	default is 1000
+volume	default is 0.75
 */
-
+/* KONIG - spawnflags for alternative projectiles; sound variable by volume entity key; default to 0.75*/
 constexpr spawnflags_t SPAWNFLAG_BLASTER_NOTRAIL = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_BLASTER_NOEFFECTS = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BLASTER_BLUEBLASTER = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BLASTER_GREENBLASTER = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BLASTER_NAILS = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BLASTER_RIPPER = 32_spawnflag;
 
-USE(use_target_blaster) (edict_t *self, edict_t *other, edict_t *activator) -> void
+USE(use_target_shooter_blaster) (edict_t* self, edict_t* other, edict_t* activator) -> void
 {
 	effects_t effect;
 
@@ -601,22 +607,150 @@ USE(use_target_blaster) (edict_t *self, edict_t *other, edict_t *activator) -> v
 	else
 		effect = EF_BLASTER;
 
-	fire_blaster(self, self->s.origin, self->movedir, self->dmg, (int) self->speed, effect, MOD_TARGET_BLASTER);
-	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+	if (self->spawnflags.has(SPAWNFLAG_BLASTER_NAILS))
+	{
+		self->spawnflags |= SPAWNFLAG_BLASTER_NOEFFECTS;
+		fire_flechette(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, effect);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_RIPPER))
+	{
+		self->spawnflags |= SPAWNFLAG_BLASTER_NOEFFECTS;
+		fire_ionripper(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, EF_IONRIPPER);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_BLUEBLASTER))
+	{
+		fire_blueblaster(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, EF_BLUEHYPERBLASTER);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_GREENBLASTER))
+	{
+		fire_blaster2(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, effect, MOD_TARGET_BLASTER);
+	}
+	else
+	{
+		fire_blaster(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, effect, MOD_TARGET_BLASTER);
+	}
+
+	gi.sound(self, CHAN_VOICE, self->noise_index, self->volume, ATTN_NORM, 0);
 }
 
-void SP_target_blaster(edict_t *self)
+void SP_target_shooter_blaster(edict_t* self)
 {
-	self->use = use_target_blaster;
+	self->use = use_target_shooter_blaster;
 	G_SetMovedir(self->s.angles, self->movedir);
-	self->noise_index = gi.soundindex("weapons/laser2.wav");
+	if (self->spawnflags.has(SPAWNFLAG_BLASTER_NAILS))
+	{
+		self->noise_index = gi.soundindex("weapons/nail1.wav");
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_RIPPER))
+	{
+		self->noise_index = gi.soundindex("weapons/rippfire.wav");
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_BLUEBLASTER))
+	{
+		self->noise_index = gi.soundindex("weapons/laser2.wav");
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BLASTER_GREENBLASTER))
+	{
+		self->noise_index = gi.soundindex("weapons/laser2.wav");
+	}
+	else
+	{
+		self->noise_index = gi.soundindex("weapons/laser2.wav");
+	}
 
 	if (!self->dmg)
 		self->dmg = 15;
 	if (!self->speed)
 		self->speed = 1000;
+	if (!self->volume)
+		self->volume = 0.75;
 
 	self->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_shooter_rockets (1 0 0) (-8 -8 -8) (8 8 8) GRENADE PHALANX BFG
+Fires an explosive projectile in the set direction when triggered.
+
+dmg		default is 15
+speed	default is 1000
+volume  default is 0.75
+*/
+constexpr spawnflags_t SPAWNFLAG_GRENADE = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_PHALANX = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BFG = 4_spawnflag;
+
+USE(use_target_shooter_rockets) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
+	{
+		fire_grenade(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 2.5_sec, self->dmg, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), true);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
+	{
+		fire_plasma(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BFG))
+	{
+		fire_bfg(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 1000);
+	}
+	else
+	{
+		fire_rocket(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, self->dmg, self->dmg);
+	}
+
+	gi.sound(self, CHAN_VOICE, self->noise_index, self->volume, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_rockets(edict_t* self)
+{
+	self->use = use_target_shooter_rockets;
+	G_SetMovedir(self->s.angles, self->movedir);
+
+	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
+	{
+		self->noise_index = gi.soundindex("weapons/grenlf1a.wav");
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
+	{
+		self->noise_index = gi.soundindex("weapons/plasshot.wav");
+		if (!self->dmg)
+			self->dmg = 80;
+		if (!self->speed)
+			self->speed = 725;
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BFG))
+	{
+		self->noise_index = gi.soundindex("makron/bfg_fire.wav");
+		if (!self->dmg)
+			self->dmg = deathmatch->integer ? 200 : 500;;
+		if (!self->speed)
+			self->speed = 400;
+	}
+	else
+	{
+		self->noise_index = gi.soundindex("weapons/rocklf1a.wav");
+		if (!self->dmg)
+			self->dmg = 120;
+		if (!self->speed)
+			self->speed = 600;
+	}
+
+	if (!self->volume)
+		self->volume = 0.75;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
+Fires a blaster bolt in the set direction when triggered.
+
+dmg		default is 15
+speed	default is 1000
+*/
+/* KONIG - depreciated for target_shooter_blaster */
+void SP_target_blaster(edict_t *self)
+{
+	SP_target_shooter_blaster(self);
 }
 
 //==========================================================
@@ -2074,4 +2208,142 @@ void SP_target_story(edict_t *self)
 	}
 
 	self->use = use_target_story;
+}
+
+/* KONIG - NEW TARGET ENTITIES */
+/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8) 
+Sends a center-printed message to all clients.
+"message"	text to print
+*/
+static USE(target_print_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (activator && activator->client && ent->spawnflags.has(4_spawnflag)) {
+		gi.LocClient_Print(activator, PRINT_CENTER, "{}", ent->message);
+		return;
+	}
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
+}
+
+#if 0 //Not finished
+/*QUAKED target_item_remove (1 0 0) (-8 -8 -8) (8 8 8) REMOVE_WEAPONS REMOVE_WEAPONS_BLASTER REMOVE_AMMO REMOVE_POWERUPS
+Takes away all the activator's weapons and ammo (except blaster).
+*/
+constexpr spawnflags_t SPAWNFLAG_REMOVE_WEAPONS = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_REMOVE_WEAPONS_BLASTER = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_REMOVE_AMMO = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_REMOVE_POWERUPS = 8_spawnflag;
+
+static USE(target_item_remove_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (!activator->client)
+		return;
+
+	if (self->spawnflags.has(SPAWNFLAG_REMOVE_WEAPONS))
+	{
+		for (size_t i = 0; i < IT_TOTAL; i++) {
+			if (!activator->client->pers.inventory[i])
+				continue;
+
+			if (itemlist[i].flags & IF_WEAPON | IF_AMMO && itemlist[i].id != IT_WEAPON_BLASTER)
+				activator->client->pers.inventory[i] = 0;
+		}
+
+		NoAmmoWeaponChange(ent, false);
+
+		activator->client->pers.weapon = activator->client->newweapon;
+		if (activator->client->newweapon)
+			activator->client->pers.selected_item = activator->client->newweapon->id;
+		activator->client->newweapon = nullptr;
+		activator->client->pers.lastweapon = activator->client->pers.weapon;
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_WEAPONS_BLASTER))
+	{
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_AMMO))
+	{
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_POWERUPS))
+	{
+	}
+}
+void SP_target_item_remove(edict_t* ent) {
+	ent->use = target_item_remove_use;
+}
+#endif
+
+/* KONIG - Taken from TheMuffinator's MuffMode*/
+/*QUAKED target_item_give (1 0 0) (-8 -8 -8) (8 8 8)
+Gives the activator the targetted item.
+*/
+static USE(target_item_give_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (!activator->client)
+		return;
+
+	ent->item->pickup(ent, other);
+}
+
+void SP_target_item_give(edict_t* ent) {
+	edict_t* target_ent = G_PickTarget(ent->target);
+	if (!target_ent || !target_ent->classname[0]) {
+		gi.Com_PrintFmt("{}: Invalid target entity, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	gitem_t* it = FindItemByClassname(target_ent->classname);
+	if (!it || !it->pickup) {
+		gi.Com_PrintFmt("{}: Targetted entity is not an item, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->item = it;
+	ent->use = target_item_give_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+void SP_target_print(edict_t* ent) {
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+	ent->use = target_print_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_kill (.5 .5 .5) (-8 -8 -8) (8 8 8)
+Kills the activator.
+*/
+
+static USE(target_kill_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
+	if (!activator)
+		return;
+	T_Damage(activator, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+
+}
+
+void SP_target_kill(edict_t* self) {
+	self->use = target_kill_use;
+	self->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_cvar (1 0 0) (-8 -8 -8) (8 8 8)
+When targetted sets a cvar to a value.
+"cvar" : name of cvar to set
+"cvarValue" : value to set cvar to
+*/
+static USE(target_cvar_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
+	if (!activator || !activator->client)
+		return;
+
+	gi.cvar_set(self->cvar, self->cvarvalue);
+}
+
+void SP_target_cvar(edict_t* ent) {
+	if (!ent->cvar[0] || !ent->cvarvalue[0]) {
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->use = target_cvar_use;
 }

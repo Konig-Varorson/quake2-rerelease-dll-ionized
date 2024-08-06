@@ -271,8 +271,12 @@ static void berserk_attack_slam(edict_t *self)
 	self->velocity = {};
 	self->flags |= FL_KILL_VELOCITY;
 
-	/* KONIG - buffed damage from 8 (nerfed from 32) to 16 */
-	T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
+	/*KONIG - Beta version, buffed damage from 8 (nerfed from 32) to 16*/
+
+	if (self->style == 1)
+		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
+	else
+		T_SlamRadiusDamage(tr.endpos, self, self, 8, 300.f, self, 165, MOD_UNKNOWN);
 }
 
 TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
@@ -526,10 +530,11 @@ PAIN(berserk_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(berserk_setskin) (edict_t *self) -> void
 {
+	/* KONIG - new skinnums for Q4 Berserk */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 void berserk_dead(edict_t *self)
@@ -834,4 +839,21 @@ void SP_monster_berserk(edict_t *self)
 	gi.linkentity(self);
 
 	walkmonster_start(self);
+}
+
+/*QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
+ */
+/* KONIG - new berserker beta; Quake 4's Berserker*/
+void SP_monster_berserk2(edict_t* self)
+{
+	SP_monster_berserk(self);
+	self->s.skinnum = 2;
+	self->style = 1;
+
+	self->health = 300 * st.health_multiplier;
+	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
+	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
+
+	if (!self->s.scale)
+		self->s.scale = 1.2f;
 }

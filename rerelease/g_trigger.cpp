@@ -1331,3 +1331,33 @@ void SP_trigger_coop_relay(edict_t *self)
 	self->svflags |= SVF_NOCLIENT;
 	gi.linkentity(self);
 }
+
+/* KONIG - NEW TRIGGER ENTITIES */
+/*QUAKED target_setskill (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Set skill level.
+"message" : skill level to set to (0-3)
+
+Skill levels are:
+0 = Easy
+1 = Medium
+2 = Hard
+3 = Nightmare/Hard+
+*/
+static USE(trigger_setskill_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
+	if (!activator || !activator->client)
+		return;
+
+	int skill_level = clamp(atoi(self->message), 0, 4);
+	gi.cvar_set("skill", G_Fmt("{}", skill_level).data());
+}
+
+void SP_trigger_setskill(edict_t* ent)
+{
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message key set, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->use = trigger_setskill_use;
+}

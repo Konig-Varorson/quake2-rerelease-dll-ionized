@@ -29,8 +29,12 @@ static cached_soundindex sound_step_left;
 static cached_soundindex sound_step_right;
 static cached_soundindex sound_death_hit;
 
+/* KONIG - spawnflag to disable Makron spawn*/
+constexpr spawnflags_t SPAWNFLAG_NO_MAKRON = 8_spawnflag;
+
 void MakronToss(edict_t *self);
-/*KONIG - add powerup copy*/
+/*KONIG - add powerup copy; makron corpse for disable makron spawn*/
+void makron_spawn_torso(edict_t* self);
 void BossPowerups(edict_t* self);
 
 void jorg_attack1_end_sound(edict_t *self)
@@ -548,7 +552,13 @@ void jorg_dead(edict_t *self)
 		{ "models/monsters/boss3/jorg/gibs/head.md2", GIB_SKINNED | GIB_METALLIC | GIB_HEAD }
 	});
 
-	MakronToss(self);
+	/* KONIG - Spawnflag to disable MakronToss */
+	if (self->spawnflags.has(SPAWNFLAG_NO_MAKRON))
+	{
+		makron_spawn_torso(self);
+	}
+	else
+		MakronToss(self);
 }
 
 DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
@@ -617,15 +627,39 @@ void SP_monster_jorg(edict_t *self)
 	self->mins = { -80, -80, 0 };
 	self->maxs = { 80, 80, 140 };
 
-	/*KONIG - reduced health but added body armor; add extra health + armor per skill level, plus even more in co-op*/
-	self->health = (7000 + 500 * skill->integer) * st.health_multiplier;
-	self->monsterinfo.armor_type = IT_ARMOR_BODY;
-	self->monsterinfo.armor_power = (200 + 50 * skill->integer);
-	if (coop->integer)
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	if (self->spawnflags.has(SPAWNFLAG_NO_MAKRON))
 	{
-		self->health += 500 * skill->integer;
-		self->monsterinfo.armor_power += 25 * skill->integer;
+		self->health = max(8000, 8000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = max(600, 600 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 	}
+	else
+	{
+		self->health = max(7000, 7000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
+	}
+
 	self->gib_health = -2000;
 	self->mass = 1000;
 

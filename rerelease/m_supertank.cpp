@@ -683,15 +683,8 @@ void SP_monster_supertank(edict_t *self)
 	self->mins = { -64, -64, 0 };
 	self->maxs = { 64, 64, 112 };
 
-	/* KONIG - reduced health and added combat armor; extra health per difficulty; bonus health and armor in co-op*/
-	self->health = 1250 * st.health_multiplier;
-	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-	self->monsterinfo.armor_power = 100;
-	if (coop->integer)
-	{
-		self->health += 250 * skill->integer;
-		self->monsterinfo.armor_power += 25 * skill->integer;
-	}
+	/* KONIG - added combat armor and extra health per difficulty; bonus health and armor in co-op*/
+	self->health = max(1500, 1000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	self->gib_health = -500;
 	self->mass = 800;
 
@@ -719,7 +712,24 @@ void SP_monster_supertank(edict_t *self)
 		if (!st.was_key_specified("power_armor_type"))
 			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 400;
+			self->monsterinfo.power_armor_power = max(400, 400 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
+	}
+	else
+	{
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		}
 	}
 	// RAFAEL
 
