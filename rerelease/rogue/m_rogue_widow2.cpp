@@ -1026,29 +1026,20 @@ void SP_monster_widow2(edict_t *self)
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 144 };
 
-	/*KONIG - reduced health; added body armor*/
-	self->health = (2350 + 1000 * skill->integer) * st.health_multiplier;
-	self->monsterinfo.armor_type = IT_ARMOR_BODY;
-	self->monsterinfo.armor_power = (200 + 50 * skill->integer);
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	self->health = max(2500, 2500 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
 	if (coop->integer)
-		self->health += 500 * skill->integer;
+	{
+		self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
+		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 	//	self->health = 1;
 	self->gib_health = -900;
 	self->mass = 2500;
-
-	/*	if (skill->integer == 2)
-		{
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-			self->monsterinfo.power_armor_power = 500;
-		}
-		else */
-	if (skill->integer == 3)
-	{
-		if (!st.was_key_specified("power_armor_type"))
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 750;
-	}
 
 	self->yaw_speed = 30;
 

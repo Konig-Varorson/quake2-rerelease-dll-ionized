@@ -370,8 +370,7 @@ MONSTERINFO_RUN(turret_run) (edict_t *self) -> void
 
 constexpr int32_t TURRET_BLASTER_DAMAGE = 8;
 constexpr int32_t TURRET_BULLET_DAMAGE = 2;
-// unused
-// constexpr int32_t TURRET_HEAT_DAMAGE	= 4;
+constexpr int32_t TURRET_HEAT_DAMAGE	= 4;
 
 void TurretFire(edict_t *self)
 {
@@ -428,7 +427,7 @@ void TurretFire(edict_t *self)
 		{
 			// on harder difficulties, randomly fire directly at enemy
 			// more often; makes them more unpredictable
-			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
+			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN) || self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
 				PredictAim(self, self->enemy, start, 0, true, 0.3f, &dir, nullptr);
 			else if (frandom() < skill->integer / 5.f)
 				PredictAim(self, self->enemy, start, (float) rocketSpeed, true, (frandom(3.f - skill->integer) / 3.f) - frandom(0.05f * (3.f - skill->integer)), &dir, nullptr);
@@ -455,6 +454,28 @@ void TurretFire(edict_t *self)
 						self->monsterinfo.melee_debounce_time <= level.time)
 					{
 						monster_fire_bullet(self, start, dir, TURRET_BULLET_DAMAGE, 0, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_TURRET_MACHINEGUN);
+						self->monsterinfo.melee_debounce_time = level.time + 10_hz;
+					}
+
+					if (self->monsterinfo.duck_wait_time < level.time)
+						self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+				}
+			}
+			else if (self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
+			{
+				if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
+				{
+					self->monsterinfo.aiflags |= AI_HOLD_FRAME;
+					self->monsterinfo.duck_wait_time = level.time + 2_sec + gtime_t::from_sec(frandom(skill->value));
+					self->monsterinfo.next_duck_time = level.time + 1_sec;
+					gi.sound(self, CHAN_VOICE, gi.soundindex("weapons/bfg__l1a.wav"), 1, ATTN_NORM, 0);
+				}
+				else
+				{
+					if (self->monsterinfo.next_duck_time < level.time &&
+						self->monsterinfo.melee_debounce_time <= level.time)
+					{
+						monster_fire_heatbeam(self, start, dir, vec3_origin, TURRET_HEAT_DAMAGE, 50, MZ2_TURRET_ROCKET);
 						self->monsterinfo.melee_debounce_time = level.time + 10_hz;
 					}
 
@@ -731,6 +752,7 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void
 
 	stationarymonster_start(ent);
 
+	/* KONIG - skinnum 3 for HEATBEAM */
 	if (ent->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
 	{
 		ent->s.skinnum = 1;
@@ -738,6 +760,10 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void
 	else if (ent->spawnflags.has(SPAWNFLAG_TURRET_ROCKET))
 	{
 		ent->s.skinnum = 2;
+	}
+	else if (ent->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
+	{
+		ent->s.skinnum = 3;
 	}
 
 	// but we do want the death to count
@@ -952,12 +978,6 @@ void SP_monster_turret(edict_t *self)
 	if (!self->spawnflags.has(SPAWNFLAG_TURRET_WEAPONCHOICE))
 		self->spawnflags |= SPAWNFLAG_TURRET_BLASTER;
 
-	if (self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
-	{
-		self->spawnflags &= ~SPAWNFLAG_TURRET_HEATBEAM;
-		self->spawnflags |= SPAWNFLAG_TURRET_BLASTER;
-	}
-
 	if (!self->spawnflags.has(SPAWNFLAG_TURRET_WALL_UNIT))
 	{
 		self->monsterinfo.stand = turret_stand;
@@ -1051,6 +1071,15 @@ void SP_monster_turret(edict_t *self)
 
 		self->spawnflags &= ~SPAWNFLAG_TURRET_WEAPONCHOICE;
 		self->spawnflags |= SPAWNFLAG_TURRET_ROCKET;
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
+	{
+		gi.soundindex("weapons/bfg__l1a.wav");
+		gi.modelindex("models/proj/beam/tris.md2");
+		self->s.skinnum = 3;
+
+		self->spawnflags &= ~SPAWNFLAG_TURRET_WEAPONCHOICE;
+		self->spawnflags |= SPAWNFLAG_TURRET_HEATBEAM;
 	}
 	else
 	{

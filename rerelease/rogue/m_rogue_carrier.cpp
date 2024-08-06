@@ -1093,10 +1093,18 @@ void SP_monster_carrier(edict_t *self)
 	self->maxs = { 56, 56, 44 };
 
 	// 2000 - 4000 health
+
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
 	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
-	// add health in coop (500 * skill)
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
 	if (coop->integer)
-		self->health += 500 * skill->integer;
+	{
+		self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 
 	self->gib_health = -200;
 	self->mass = 1000;

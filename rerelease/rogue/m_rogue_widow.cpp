@@ -1186,25 +1186,30 @@ MONSTERINFO_BLOCKED(widow_blocked) (edict_t *self, float dist) -> bool
 
 void WidowCalcSlots(edict_t *self)
 {
-	switch (skill->integer)
+	/* KONIG - allowing custom spawns; adding arachnid spawn */
+	constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2; monster_protector 4";
+	constexpr int32_t default_monster_slots_base = 3;
+
+	const char* reinforcements = default_reinforcements;
+	void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t & list);
+	std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t * self, int32_t & num_chosen, int32_t max_slots);
+
+	if (!st.was_key_specified("monster_slots"))
+		self->monsterinfo.monster_slots = default_monster_slots_base;
+	if (st.was_key_specified("reinforcements"))
+		reinforcements = st.reinforcements;
+
+	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements)
 	{
-	case 0:
-	case 1:
-		self->monsterinfo.monster_slots = 3;
-		break;
-	case 2:
-		self->monsterinfo.monster_slots = 4;
-		break;
-	case 3:
-		self->monsterinfo.monster_slots = 6;
-		break;
-	default:
-		self->monsterinfo.monster_slots = 3;
-		break;
-	}
-	if (coop->integer)
-	{
-		self->monsterinfo.monster_slots = min(6, self->monsterinfo.monster_slots + (skill->integer * (CountPlayers() - 1)));
+		if (skill->integer)
+			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
+
+		if (coop->integer)
+		{
+			/* KONIG - double spawn cap in coop */
+			self->monsterinfo.monster_slots = min(12, self->monsterinfo.monster_slots + (skill->integer * CountPlayers()));
+		}
+		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
 	}
 }
 
@@ -1217,6 +1222,14 @@ void WidowPrecache()
 	gi.soundindex("stalker/melee1.wav");
 	gi.soundindex("stalker/melee2.wav");
 	gi.soundindex("stalker/idle.wav");
+	/* KONIG - cache in all the arachnid stuff too*/
+	gi.soundindex("insane/insane11.wav");
+	gi.soundindex("gladiator/railgun.wav");
+	gi.soundindex("gladiator/melee3.wav");
+	gi.soundindex("gladiator/melee2.wav");
+	gi.soundindex("arachnid/pain.wav");
+	gi.soundindex("arachnid/death.wav");
+	gi.soundindex("arachnid/sight.wav");
 
 	gi.soundindex("tank/tnkatck3.wav");
 	gi.modelindex("models/objects/laser/tris.md2");
@@ -1262,19 +1275,19 @@ void SP_monster_widow(edict_t *self)
 	self->mins = { -40, -40, 0 };
 	self->maxs = { 40, 40, 144 };
 
-	self->health = (2000 + 1000 * skill->integer) * st.health_multiplier;
+	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	if (!st.was_key_specified("power_armor_type"))
+		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = max(600, 600 + 100 * (skill->integer - 1));
 	if (coop->integer)
-		self->health += 500 * skill->integer;
+	{
+		self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
+		self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+	}
 	self->gib_health = -5000;
 	self->mass = 1500;
-
-	if (skill->integer == 3)
-	{
-		if (!st.was_key_specified("power_armor_type"))
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 500;
-	}
 
 	self->yaw_speed = 30;
 
