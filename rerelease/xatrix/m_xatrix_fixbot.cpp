@@ -1257,7 +1257,8 @@ void fixbot_fire_blaster(edict_t *self)
 	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
-	/*KONIG - Beam attack if Beta*/
+
+	/* KONIG - laser instead of blaster for fixbot2*/
 	if (self->style == 1)
 	{
 		// PMM - changed to wait from pausetime to not interfere with dodge code
@@ -1273,7 +1274,6 @@ void fixbot_fire_blaster(edict_t *self)
 	}
 	else
 		monster_fire_blaster(self, start, dir, 15, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
-
 }
 
 MONSTERINFO_STAND(fixbot_stand) (edict_t *self) -> void
@@ -1423,7 +1423,7 @@ void SP_monster_fixbot2(edict_t* self)
 	SP_monster_fixbot(self);
 
 	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
-	self->monsterinfo.armor_power = 75;
+	self->monsterinfo.armor_power = 50;
 	self->style = 1;
-	self->s.skinnum = 1;
+	self->s.skinnum = 2;
 }
