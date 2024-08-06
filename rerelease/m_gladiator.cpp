@@ -424,7 +424,8 @@ void SP_monster_gladiator(edict_t *self)
 		sound_gunb.assign("weapons/plasshot.wav");
 
 		/* KONIG - slight buff to health; power armor -> screen; reduced armor but scaled on skill & coop*/
-		self->health = 400 * st.health_multiplier;
+		self->health = 500 * st.health_multiplier;
+		self->s.scale = 0.8;
 		self->mass = 350;
 
 		if (!st.was_key_specified("power_armor_type"))

@@ -461,7 +461,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_mimic", SP_monster_mimic },
 	{ "monster_soldier_railgun", SP_monster_soldier_railgun },
 	{ "monster_soldier_glight", SP_monster_soldier_glight },
-	{ "monster_soldier_lightnning", SP_monster_soldier_lightning },
+	{ "monster_soldier_lightning", SP_monster_soldier_lightning },
 
 	// { "monster_flipper2", SP_monster_flipper2 },
 	// { "monster_guardian2", SP_monster_guardian2 },

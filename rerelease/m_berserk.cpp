@@ -274,9 +274,9 @@ static void berserk_attack_slam(edict_t *self)
 	/*KONIG - Beta version, buffed damage from 8 (nerfed from 32) to 16*/
 
 	if (self->style == 1)
-		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
+		T_SlamRadiusDamage(tr.endpos, self, self, 24, 300.f, self, 165, MOD_UNKNOWN);
 	else
-		T_SlamRadiusDamage(tr.endpos, self, self, 8, 300.f, self, 165, MOD_UNKNOWN);
+		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
 }
 
 TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void

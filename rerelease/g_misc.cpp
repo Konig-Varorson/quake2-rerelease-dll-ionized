@@ -1386,8 +1386,6 @@ void SP_misc_easterchick(edict_t *ent)
 
 /*QUAKED misc_easterchick2 (1 .5 0) (-32 -32 0) (32 32 32)
  */
-/* KONIG - Allow both base and heat skin on easter chicks*/
-
 THINK(misc_easterchick2_think) (edict_t *self) -> void
 {
 	if (++self->s.frame < 287)
@@ -3080,7 +3078,6 @@ void SP_misc_model(edict_t *ent)
 }
 
 /* KONIG - Adding rogue and xatrix misc for nuke etc. functionality */
-/* KONIG - Adding rogue_misc's content for nuke */
 USE(misc_nuke_core_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
 {
 	if (self->svflags & SVF_NOCLIENT)

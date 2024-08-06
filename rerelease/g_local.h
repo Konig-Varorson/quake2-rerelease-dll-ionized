@@ -3240,7 +3240,7 @@ struct edict_t
 	// NOTE: if adding new elements, make sure to add them
 	// in g_save.cpp too!
 
-	/* KONIG - borrowed from */
+	/* KONIG - borrowed from muffinator's muffmod */
 	const char* cvar;
 	const char* cvarvalue; 
 };

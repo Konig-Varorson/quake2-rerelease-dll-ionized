@@ -1156,8 +1156,6 @@ void SP_monster_tank(edict_t* self)
 			{
 				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
 			}
-
-
 		}
 		else
 		{

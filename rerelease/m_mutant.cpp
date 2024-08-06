@@ -296,8 +296,16 @@ TOUCH(mutant_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 			normal = self->velocity;
 			normal.normalize();
 			point = self->s.origin + (normal * self->maxs[0]);
-			damage = (int) frandom(40, 50);
-			T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
+			if (strcmp(self->classname, "monster_tank_commander") == 0)
+			{
+				damage = (int)frandom(40, 50);
+				T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
+			}
+			else
+			{
+				damage = (int)frandom(50, 70);
+				T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
+			}
 			self->style = 0;
 		}
 	}
@@ -707,6 +715,7 @@ void SP_monster_mutant(edict_t *self)
 
 	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
 
+	/* KONIG - alphamutant code*/
 	if (strcmp(self->classname, "monster_alphamutant") == 0)
 	{
 		if (!self->s.scale)
@@ -721,7 +730,7 @@ void SP_monster_mutant(edict_t *self)
 			self->health += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
 		}
 		self->gib_health = -180;
-		self->mass = 350;
+		self->mass = 400;
 	}
 	else
 	{

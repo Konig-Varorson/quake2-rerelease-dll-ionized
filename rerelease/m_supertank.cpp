@@ -16,6 +16,9 @@ constexpr spawnflags_t SPAWNFLAG_SUPERTANK_POWERSHIELD = 8_spawnflag;
 // n64
 constexpr spawnflags_t SPAWNFLAG_SUPERTANK_LONG_DEATH = 16_spawnflag;
 
+/* KONIG - separating heat-seeking into two spawnflags*/
+constexpr spawnflags_t SPAWNFLAG_SUPERTANK_HEATSEEKING = 32_spawnflag;
+
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
 static cached_soundindex sound_pain3;
@@ -474,8 +477,8 @@ void supertankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	/* KONIG - use style if statement instead of spawnflag for heat seekers to be more clear for mappers and more consistent for players*/
-	if (self->style == 1)
+	/* KONIG - change spawnflag to be heatseeking instead of powershield*/
+	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_HEATSEEKING))
 	{
 		vec = self->enemy->s.origin;
 		vec[2] += self->enemy->viewheight;
@@ -757,9 +760,8 @@ void SP_monster_supertank(edict_t *self)
 void SP_monster_boss5(edict_t *self)
 {
 	self->spawnflags |= SPAWNFLAG_SUPERTANK_POWERSHIELD;
+	self->spawnflags |= SPAWNFLAG_SUPERTANK_HEATSEEKING;
 	SP_monster_supertank(self);
 	gi.soundindex("weapons/railgr1a.wav");
 	self->s.skinnum = 2;
-	/*KONIG - adding self style flag for beta weapon changes*/
-	self->style = 1;
 }

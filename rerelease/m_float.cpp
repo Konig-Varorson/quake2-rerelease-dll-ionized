@@ -55,7 +55,7 @@ void floater_fire_blaster(edict_t *self)
 
 	/* KONIG - blue blasters for Mimics */
 	if (self->style == 1)
-		monster_fire_blueblaster(self, start, dir, 1, 1000, MZ2_FLOAT_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_BLUEHYPERBLASTER);
+		monster_fire_blueblaster(self, start, dir, 2, 1000, MZ2_FLOAT_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_BLUEHYPERBLASTER);
 	else
 		monster_fire_blaster(self, start, dir, 1, 1000, MZ2_FLOAT_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 }
