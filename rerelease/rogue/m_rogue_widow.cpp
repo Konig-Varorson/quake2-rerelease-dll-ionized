@@ -21,10 +21,16 @@ constexpr int	BLASTER2_DAMAGE = 10;
 constexpr int	WIDOW_RAIL_DAMAGE = 50;
 
 /* KONIG - allowing custom spawns; adding arachnid spawn */
-constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2";
+constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_arachnid 1";
 constexpr int32_t default_monster_slots_base = 3;
+const char* reinforcements = default_reinforcements;
+void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t& list);
+std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t* self, int32_t& num_chosen, int32_t max_slots);
 
-bool infront(edict_t *self, edict_t *other);
+constexpr spawnflags_t SPAWNFLAG_KILL_STALKERS = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_KILL_ARACHNIDS = 16_spawnflag;
+
+bool infront(edict_t* self, edict_t* other);
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
@@ -52,28 +58,28 @@ constexpr vec3_t stalker_maxs = { 28, 28, 18 };
 
 unsigned int widow_damage_multiplier;
 
-void widow_run(edict_t *self);
-void widow_dead(edict_t *self);
-void widow_attack_blaster(edict_t *self);
-void widow_reattack_blaster(edict_t *self);
+void widow_run(edict_t* self);
+void widow_dead(edict_t* self);
+void widow_attack_blaster(edict_t* self);
+void widow_reattack_blaster(edict_t* self);
 
-void widow_start_spawn(edict_t *self);
-void widow_done_spawn(edict_t *self);
-void widow_spawn_check(edict_t *self);
-void widow_prep_spawn(edict_t *self);
-void widow_attack_rail(edict_t *self);
+void widow_start_spawn(edict_t* self);
+void widow_done_spawn(edict_t* self);
+void widow_spawn_check(edict_t* self);
+void widow_prep_spawn(edict_t* self);
+void widow_attack_rail(edict_t* self);
 
-void widow_start_run_5(edict_t *self);
-void widow_start_run_10(edict_t *self);
-void widow_start_run_12(edict_t *self);
+void widow_start_run_5(edict_t* self);
+void widow_start_run_10(edict_t* self);
+void widow_start_run_12(edict_t* self);
 
-void WidowCalcSlots(edict_t *self);
+void WidowCalcSlots(edict_t* self);
 
-MONSTERINFO_SEARCH(widow_search) (edict_t *self) -> void
+MONSTERINFO_SEARCH(widow_search) (edict_t* self) -> void
 {
 }
 
-MONSTERINFO_SIGHT(widow_sight) (edict_t *self, edict_t *other) -> void
+MONSTERINFO_SIGHT(widow_sight) (edict_t* self, edict_t* other) -> void
 {
 	self->monsterinfo.fire_wait = 0_ms;
 }
@@ -83,7 +89,7 @@ extern const mmove_t widow_move_attack_post_blaster_r;
 extern const mmove_t widow_move_attack_post_blaster_l;
 extern const mmove_t widow_move_attack_blaster;
 
-float target_angle(edict_t *self)
+float target_angle(edict_t* self)
 {
 	vec3_t target;
 	float  enemy_yaw;
@@ -100,7 +106,7 @@ float target_angle(edict_t *self)
 	return enemy_yaw;
 }
 
-int WidowTorso(edict_t *self)
+int WidowTorso(edict_t* self)
 {
 	float enemy_yaw = target_angle(self);
 
@@ -160,7 +166,7 @@ int WidowTorso(edict_t *self)
 
 constexpr float VARIANCE = 15.0f;
 
-void WidowBlaster(edict_t *self)
+void WidowBlaster(edict_t* self)
 {
 	vec3_t					 forward, right, target, vec, targ_angles;
 	vec3_t					 start;
@@ -218,7 +224,7 @@ void WidowBlaster(edict_t *self)
 		// clamp it to within 10 degrees of the aiming angle (where she's facing)
 		angles = vectoangles(forward);
 		// give me 100 -> -70
-		aim_angle = (float) (100 - (10 * (flashnum - MZ2_WIDOW_BLASTER_100)));
+		aim_angle = (float)(100 - (10 * (flashnum - MZ2_WIDOW_BLASTER_100)));
 		if (aim_angle <= 0)
 			aim_angle += 360;
 		target_angle = self->s.angles[YAW] - angles[YAW];
@@ -257,10 +263,6 @@ void WidowBlaster(edict_t *self)
 
 void WidowCalcSlots(edict_t* self)
 {
-	const char *reinforcements = default_reinforcements;
-	void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t & list);
-	std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t * self, int32_t & num_chosen, int32_t max_slots);
-
 	if (!st.was_key_specified("monster_slots"))
 		self->monsterinfo.monster_slots = default_monster_slots_base;
 	if (st.was_key_specified("reinforcements"))
@@ -278,10 +280,10 @@ void WidowCalcSlots(edict_t* self)
 	}
 }
 
-void WidowSpawn(edict_t *self)
+void WidowSpawn(edict_t* self)
 {
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
-	edict_t *ent, *designated_enemy;
+	edict_t* ent, * designated_enemy;
 	int		 i;
 	int		 num_summoned;
 
@@ -307,7 +309,8 @@ void WidowSpawn(edict_t *self)
 			if (!ent)
 				continue;
 
-			self->monsterinfo.monster_used++;
+			ent->monsterinfo.monster_slots = reinforcement.strength;
+			self->monsterinfo.monster_used += reinforcement.strength;
 			ent->monsterinfo.commander = self;
 
 			ent->nextthink = level.time;
@@ -346,13 +349,13 @@ void WidowSpawn(edict_t *self)
 	}
 }
 
-void widow_spawn_check(edict_t *self)
+void widow_spawn_check(edict_t* self)
 {
 	WidowBlaster(self);
 	WidowSpawn(self);
 }
 
-void widow_ready_spawn(edict_t *self)
+void widow_ready_spawn(edict_t* self)
 {
 	vec3_t f, r, u, offset, startpoint, spawnpoint;
 	int	   i;
@@ -360,6 +363,9 @@ void widow_ready_spawn(edict_t *self)
 	WidowBlaster(self);
 	AngleVectors(self->s.angles, f, r, u);
 
+	//int num_summoned;
+	//self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, self->monsterinfo.monster_slots);
+	
 	for (i = 0; i < 2; i++)
 	{
 		offset = spawnpoints[i];
@@ -373,7 +379,7 @@ void widow_ready_spawn(edict_t *self)
 	}
 }
 
-void widow_step(edict_t *self)
+void widow_step(edict_t* self)
 {
 	gi.sound(self, CHAN_BODY, gi.soundindex("widow/bwstep3.wav"), 1, ATTN_NORM, 0);
 }
@@ -427,7 +433,7 @@ mframe_t widow_frames_run[] = {
 };
 MMOVE_T(widow_move_run) = { FRAME_walk01, FRAME_walk13, widow_frames_run, nullptr };
 
-void widow_stepshoot(edict_t *self)
+void widow_stepshoot(edict_t* self)
 {
 	gi.sound(self, CHAN_BODY, gi.soundindex("widow/bwstep2.wav"), 1, ATTN_NORM, 0);
 	WidowBlaster(self);
@@ -449,19 +455,19 @@ MMOVE_T(widow_move_run_attack) = { FRAME_run01, FRAME_run08, widow_frames_run_at
 // These three allow specific entry into the run sequence
 //
 
-void widow_start_run_5(edict_t *self)
+void widow_start_run_5(edict_t* self)
 {
 	M_SetAnimation(self, &widow_move_run);
 	self->monsterinfo.nextframe = FRAME_walk05;
 }
 
-void widow_start_run_10(edict_t *self)
+void widow_start_run_10(edict_t* self)
 {
 	M_SetAnimation(self, &widow_move_run);
 	self->monsterinfo.nextframe = FRAME_walk10;
 }
 
-void widow_start_run_12(edict_t *self)
+void widow_start_run_12(edict_t* self)
 {
 	M_SetAnimation(self, &widow_move_run);
 	self->monsterinfo.nextframe = FRAME_walk12;
@@ -526,7 +532,7 @@ extern const mmove_t widow_move_attack_rail;
 extern const mmove_t widow_move_attack_rail_l;
 extern const mmove_t widow_move_attack_rail_r;
 
-void WidowRail(edict_t *self)
+void WidowRail(edict_t* self)
 {
 	vec3_t					 start;
 	vec3_t					 dir;
@@ -556,18 +562,18 @@ void WidowRail(edict_t *self)
 	self->timestamp = level.time + RAIL_TIME;
 }
 
-void WidowSaveLoc(edict_t *self)
+void WidowSaveLoc(edict_t* self)
 {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 };
 
-void widow_start_rail(edict_t *self)
+void widow_start_rail(edict_t* self)
 {
 	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 }
 
-void widow_rail_done(edict_t *self)
+void widow_rail_done(edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
@@ -619,7 +625,7 @@ mframe_t widow_frames_attack_rail_l[] = {
 };
 MMOVE_T(widow_move_attack_rail_l) = { FRAME_firec01, FRAME_firec09, widow_frames_attack_rail_l, widow_run };
 
-void widow_attack_rail(edict_t *self)
+void widow_attack_rail(edict_t* self)
 {
 	float enemy_angle;
 
@@ -633,12 +639,12 @@ void widow_attack_rail(edict_t *self)
 		M_SetAnimation(self, &widow_move_attack_rail);
 }
 
-void widow_start_spawn(edict_t *self)
+void widow_start_spawn(edict_t* self)
 {
 	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 }
 
-void widow_done_spawn(edict_t *self)
+void widow_done_spawn(edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
@@ -689,7 +695,7 @@ mframe_t widow_frames_pain_light[] = {
 };
 MMOVE_T(widow_move_pain_light) = { FRAME_pain201, FRAME_pain203, widow_frames_pain_light, widow_run };
 
-void spawn_out_start(edict_t *self)
+void spawn_out_start(edict_t* self)
 {
 	vec3_t startpoint, f, r, u;
 
@@ -713,7 +719,7 @@ void spawn_out_start(edict_t *self)
 	gi.sound(self, CHAN_VOICE, gi.soundindex("misc/bwidowbeamout.wav"), 1, ATTN_NORM, 0);
 }
 
-void spawn_out_do(edict_t *self)
+void spawn_out_do(edict_t* self)
 {
 	vec3_t startpoint, f, r, u;
 
@@ -777,7 +783,7 @@ mframe_t widow_frames_death[] = {
 };
 MMOVE_T(widow_move_death) = { FRAME_death01, FRAME_death31, widow_frames_death, nullptr };
 
-void widow_attack_kick(edict_t *self)
+void widow_attack_kick(edict_t* self)
 {
 	vec3_t aim = { 100, 0, 4 };
 	if (self->enemy->groundentity)
@@ -799,13 +805,13 @@ mframe_t widow_frames_attack_kick[] = {
 
 MMOVE_T(widow_move_attack_kick) = { FRAME_kick01, FRAME_kick08, widow_frames_attack_kick, widow_run };
 
-MONSTERINFO_STAND(widow_stand) (edict_t *self) -> void
+MONSTERINFO_STAND(widow_stand) (edict_t* self) -> void
 {
 	gi.sound(self, CHAN_WEAPON, gi.soundindex("widow/laugh.wav"), 1, ATTN_NORM, 0);
 	M_SetAnimation(self, &widow_move_stand);
 }
 
-MONSTERINFO_RUN(widow_run) (edict_t *self) -> void
+MONSTERINFO_RUN(widow_run) (edict_t* self) -> void
 {
 	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
@@ -815,12 +821,12 @@ MONSTERINFO_RUN(widow_run) (edict_t *self) -> void
 		M_SetAnimation(self, &widow_move_run);
 }
 
-MONSTERINFO_WALK(widow_walk) (edict_t *self) -> void
+MONSTERINFO_WALK(widow_walk) (edict_t* self) -> void
 {
 	M_SetAnimation(self, &widow_move_walk);
 }
 
-MONSTERINFO_ATTACK(widow_attack) (edict_t *self) -> void
+MONSTERINFO_ATTACK(widow_attack) (edict_t* self) -> void
 {
 	float luck;
 	bool  rail_frames = false, blaster_frames = false, blocked = false, anger = false;
@@ -938,14 +944,14 @@ MONSTERINFO_ATTACK(widow_attack) (edict_t *self) -> void
 	}
 }
 
-void widow_attack_blaster(edict_t *self)
+void widow_attack_blaster(edict_t* self)
 {
 	self->monsterinfo.fire_wait = level.time + random_time(1_sec, 3_sec);
 	M_SetAnimation(self, &widow_move_attack_blaster);
 	self->monsterinfo.nextframe = WidowTorso(self);
 }
 
-void widow_reattack_blaster(edict_t *self)
+void widow_reattack_blaster(edict_t* self)
 {
 	WidowBlaster(self);
 
@@ -963,7 +969,7 @@ void widow_reattack_blaster(edict_t *self)
 	M_SetAnimation(self, &widow_move_attack_post_blaster);
 }
 
-PAIN(widow_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+PAIN(widow_pain) (edict_t* self, edict_t* other, float kick, int damage, const mod_t& mod) -> void
 {
 	if (level.time < self->pain_debounce_time)
 		return;
@@ -1003,7 +1009,7 @@ PAIN(widow_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 	}
 }
 
-MONSTERINFO_SETSKIN(widow_setskin) (edict_t *self) -> void
+MONSTERINFO_SETSKIN(widow_setskin) (edict_t* self) -> void
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -1011,7 +1017,7 @@ MONSTERINFO_SETSKIN(widow_setskin) (edict_t *self) -> void
 		self->s.skinnum = 0;
 }
 
-void widow_dead(edict_t *self)
+void widow_dead(edict_t* self)
 {
 	self->mins = { -56, -56, 0 };
 	self->maxs = { 56, 56, 80 };
@@ -1021,7 +1027,7 @@ void widow_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-DIE(widow_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+DIE(widow_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, const vec3_t& point, const mod_t& mod) -> void
 {
 	self->deadflag = true;
 	self->takedamage = false;
@@ -1032,7 +1038,7 @@ DIE(widow_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 	M_SetAnimation(self, &widow_move_death);
 }
 
-MONSTERINFO_MELEE(widow_melee) (edict_t *self) -> void
+MONSTERINFO_MELEE(widow_melee) (edict_t* self) -> void
 {
 	//	monster_done_dodge (self);
 	M_SetAnimation(self, &widow_move_attack_kick);
@@ -1041,7 +1047,7 @@ MONSTERINFO_MELEE(widow_melee) (edict_t *self) -> void
 /* KONIG - replacing WidowPowerups with BossPowerups*/
 void BossPowerups(edict_t* self);
 
-MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (edict_t *self) -> bool
+MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (edict_t* self) -> bool
 {
 	if (!self->enemy)
 		return false;
@@ -1079,7 +1085,7 @@ MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (edict_t *self) -> bool
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.7f, 0.6f, 0.5f, 0.f);
 }
 
-MONSTERINFO_BLOCKED(widow_blocked) (edict_t *self, float dist) -> bool
+MONSTERINFO_BLOCKED(widow_blocked) (edict_t* self, float dist) -> bool
 {
 	// if we get blocked while we're in our run/attack mode, turn on a meaningless (in this context)AI flag,
 	// and call attack to get a new attack sequence.  make sure to turn it off when we're done.
@@ -1120,6 +1126,7 @@ void WidowPrecache()
 	gi.soundindex("tank/tnkatck3.wav");
 	gi.modelindex("models/objects/laser/tris.md2");
 
+	gi.modelindex("models/monsters/arachnid/tris.md2");
 	gi.modelindex("models/monsters/stalker/tris.md2");
 	gi.modelindex("models/items/spawngro3/tris.md2");
 	gi.modelindex("models/objects/gibs/sm_metal/tris.md2");
@@ -1143,10 +1150,10 @@ void WidowPrecache()
 
 /*QUAKED monster_widow (1 .5 0) (-40 -40 0) (40 40 144) Ambush Trigger_Spawn Sight
  */
-void SP_monster_widow(edict_t *self)
+void SP_monster_widow(edict_t* self)
 {
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 

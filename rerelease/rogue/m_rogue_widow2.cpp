@@ -22,8 +22,14 @@ static cached_soundindex sound_search1;
 static cached_soundindex sound_tentacles_retract;
 
 /* KONIG - allowing custom spawns; adding arachnid spawn */
-constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_stalker 1;monster_arachnid 2; monster_protector 4";
+constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_arachnid 1";
 constexpr int32_t default_monster_slots_base = 3;
+
+void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t& list);
+std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t* self, int32_t& num_chosen, int32_t max_slots);
+
+constexpr spawnflags_t SPAWNFLAG_NOKILL_STALKERS = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_NOKILL_ARACHNIDS = 16_spawnflag;
 
 // sqrt(64*64*2) + sqrt(28*28*2) => 130.1
 constexpr vec3_t spawnpoints[] = {
@@ -41,7 +47,6 @@ constexpr vec3_t stalker_maxs = { 28, 28, 18 };
 bool infront(edict_t *self, edict_t *other);
 void WidowCalcSlots(edict_t *self);
 /*KONIG - Replaced WidowPowerups for new BossPowerUps*/
-//void WidowPowerups(edict_t *self);
 void BossPowerups(edict_t* self);
 
 void widow2_run(edict_t *self);
@@ -155,15 +160,13 @@ void Widow2Spawn(edict_t *self)
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
 	edict_t *ent, *designated_enemy;
 	int		 i;
-	int		 num_summoned;
 
 	AngleVectors(self->s.angles, f, r, u);
 
-	num_summoned = 0;
+	if (self->monsterinfo.chosen_reinforcements[0] == 255)
+		return;
 
-	for (int32_t count = 0; count < MAX_REINFORCEMENTS; count++, num_summoned++)
-		if (self->monsterinfo.chosen_reinforcements[count] == 255)
-			break;
+	auto& reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
 
 	for (i = 0; i < 2; i++)
 	{
@@ -179,13 +182,13 @@ void Widow2Spawn(edict_t *self)
 			if (!ent)
 				continue;
 
-			self->monsterinfo.monster_used++;
-			ent->monsterinfo.commander = self;
-
 			ent->nextthink = level.time;
 			ent->think(ent);
 
 			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+			ent->monsterinfo.commander = self;
+			ent->monsterinfo.monster_slots = reinforcement.strength;
+			self->monsterinfo.monster_used += reinforcement.strength;
 
 			if (!coop->integer)
 			{
@@ -231,6 +234,9 @@ void widow2_ready_spawn(edict_t *self)
 
 	Widow2Beam(self);
 	AngleVectors(self->s.angles, f, r, u);
+
+	//int num_summoned;
+	//self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, self->monsterinfo.monster_slots);
 
 	for (i = 0; i < 2; i++)
 	{
@@ -903,13 +909,15 @@ void KillChildren(edict_t *self)
 
 	while (1)
 	{
-		ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
-		if (!ent)
-			return;
+		if (!self->spawnflags.has(SPAWNFLAG_NOKILL_STALKERS))
+		{
+			ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
+			if (!ent)
+				return;
 
-		// FIXME - may need to stagger
-		if ((ent->inuse) && (ent->health > 0))
-			T_Damage(ent, self, self, vec3_origin, self->enemy->s.origin, vec3_origin, (ent->health + 1), 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
+			if ((ent->inuse) && (ent->health > 0))
+				T_Damage(ent, self, self, vec3_origin, self->enemy->s.origin, vec3_origin, (ent->health + 1), 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
+		}
 	}
 }
 
@@ -999,6 +1007,7 @@ void Widow2Precache()
 	gi.soundindex("weapons/disint2.wav");
 
 	gi.modelindex("models/monsters/stalker/tris.md2");
+	gi.modelindex("models/monsters/arachnid/tris.md2");
 	gi.modelindex("models/items/spawngro3/tris.md2");
 	gi.modelindex("models/objects/gibs/sm_metal/tris.md2");
 	gi.modelindex("models/objects/laser/tris.md2");
