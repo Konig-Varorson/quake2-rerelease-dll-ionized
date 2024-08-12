@@ -50,7 +50,6 @@ Quake II: Ionized is a mod designed with three purposes in mind.
      * target_print: allows printing messages to all clients regardless of who triggers, to bypass messages only being shown if players trigger things.
      * target_give: gives the player an item of mapper's choice.
      * target_kill: automatically kills the activator (easier than target_hurt).
-     * target_cvar: allows mapper to set a cvar.
      * INCOMPLETE: target_remove: removes an item from player's inventory.
 * g_trigger.cpp:
   * Added new entities:
@@ -156,7 +155,7 @@ Quake II: Ionized is a mod designed with three purposes in mind.
   * Separated functionality of N64 Guardian spawnflag between Tank and Tank Commander and rebalance non-Guardian Tank and Tank Commander:
     * Tank: has blue blaster with reduced speed (800->600).
     * Tank Commander: Increased machinegun damage (20->25) and blaster damage (30->35), all Commanders have heat-seeking rockets now, added Combat armor (default 100, scaled on difficulty and coop)
-    * Tank Guardian: has green blaster with higher damage (30->35), grenade launcher replaces machinegun (pending to change on balance check), and Combat armor (default 100, scaled on difficulty and coop)
+    * Tank Guardian: Increased blaster damage (30->35), grenade launcher replaces machinegun (pending to change on balance check), and Combat armor (default 100, scaled on difficulty and coop)
     * Tank Commander Guardian: has green blaster with higher damage (30->40), railgun replaces machinegun that deal more damage (25->50), always has heat-seeking rockets now, increased health (2000, scaled on difficulty and coop), and Body armor (default 100, scaled on difficulty and coop)
   * Added spawnflags for monster_tank_stand to allow using any non-pain skin. Default is the Tank Commander Guardian (skin 6).
 * p_client.cpp:
@@ -174,13 +173,13 @@ Quake II: Ionized is a mod designed with three purposes in mind.
 * rogue/g_widow.cpp:
   * Replaced old powerup copy code with new boss powerup code.
   * Completely rebalanced reinforcement spawns:
-     * Expanded roster to include monster_arachnid and monster_protector.
+     * ~~Expanded roster to include monster_arachnid.~~ (removed from v0.1 due to game crashing bug, hope to have fixed later)
      * Now uses same system as carrier for number of spawns.
   * Added code for a standing version of the Black Widow Guardian (modified from monster_tank_stand).
 * rogue/g_widow2.cpp:
   * Replaced old powerup copy code with new boss powerup code.
   * Completely rebalanced reinforcement spawns:
-     * Expanded roster to include monster_arachnid and monster_protector.
+     * ~~Expanded roster to include monster_arachnid.~~ (removed from v0.1 due to game crashing bug, hope to have fixed later)
      * Now uses same system as carrier for number of spawns.
   * Added Body Armor (200, scales to difficulty and coop).
   * Rebalanced health (2800->3000 default; easy and normal health is the same); rebalanced coop health scaling.
@@ -198,9 +197,9 @@ Short term goals:
 * Make MP powerups available in SP
 * Replace ambient music swap from track11 (which is boss2's track) to tracks 64-76 (N64 tracks)
 * Add spawning effect (from Medic Commander/Black Widow) to spawn triggered foes
-* Add green outline (power armor) and gray segmented (armor) to healthbar; add numbers for exact amount
+* See if possible to add green outline (power armor) and gray segmented (armor) to healthbar; add numbers for exact amount
 * Rework Hunter Sphere to be usable in SP.
-* Add additional attacks/abilities to enemies in Nightmare difficulty.
+* Add additional attacks/abilities to enemies in Nightmare difficulty / Co-Op.
 
 Long term goals:
 * Add entities from Quake 1, Zaero, and Oblivion - dependent on legalities.
