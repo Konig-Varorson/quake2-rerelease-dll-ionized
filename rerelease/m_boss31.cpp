@@ -34,7 +34,8 @@ constexpr spawnflags_t SPAWNFLAG_NO_MAKRON = 8_spawnflag;
 
 void MakronToss(edict_t *self);
 /*KONIG - add powerup copy; makron corpse for disable makron spawn*/
-void makron_spawn_torso(edict_t* self);
+void jorg_spawn_torso(edict_t* self);
+void makron_torso(edict_t* self);
 void BossPowerups(edict_t* self);
 
 void jorg_attack1_end_sound(edict_t *self)
@@ -555,12 +556,20 @@ void jorg_dead(edict_t *self)
 	/* KONIG - Spawnflag to disable MakronToss */
 	if (self->spawnflags.has(SPAWNFLAG_NO_MAKRON))
 	{
-		makron_spawn_torso(self);
+		jorg_spawn_torso(self);
 	}
 	else
 		MakronToss(self);
 }
-
+void jorg_spawn_torso(edict_t* self)
+{
+	edict_t* tempent = ThrowGib(self, "models/monsters/boss3/rider/tris.md2", 0, GIB_NONE, self->s.scale);
+	tempent->s.origin = self->s.origin;
+	tempent->s.angles = self->s.angles;
+	self->maxs[2] -= tempent->maxs[2];
+	tempent->s.origin[2] += self->maxs[2] - 15;
+	makron_torso(tempent);
+}
 DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);

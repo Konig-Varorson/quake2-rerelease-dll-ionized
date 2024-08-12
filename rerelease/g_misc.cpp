@@ -1858,7 +1858,7 @@ void SP_misc_gib_gekk(edict_t* ent)
 	gi.linkentity(ent);
 
 	if (ent->spawnflags.has(SPAWNFLAG_GIB_ARM))
-		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
+		gi.setmodel(ent, "models/objects/gekkgibs/arm/tris.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CLAW))
 		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HEAD))
@@ -1871,7 +1871,7 @@ void SP_misc_gib_gekk(edict_t* ent)
 		gi.setmodel(ent, "models/objects/gekkgibs/leg/tris.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gekkgibs/claw/tris.md2");
+		gi.setmodel(ent, "models/objects/gekkgibs/arm/tris.md2");
 }
 
 /*QUAKED misc_gib_strogg1(1 0 0) (-8 - 8 - 8) (8 8 8)
@@ -1930,7 +1930,7 @@ void SP_misc_gib_strogg1(edict_t* ent)
 		gi.setmodel(ent, "models/monsters/gladiatr/gibs/thigh.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/berserk/gibs/hammer.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
@@ -2002,7 +2002,7 @@ void SP_misc_gib_strogg2(edict_t* ent)
 		gi.setmodel(ent, "models/monsters/medic/gibs/leg.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/gunner/gibs/garm.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
@@ -2074,7 +2074,7 @@ void SP_misc_gib_strogg3(edict_t* ent)
 		gi.setmodel(ent, "models/monsters/tank/gibs/thigh.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/parasite/gibs/fleg.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
@@ -2103,14 +2103,14 @@ void SP_misc_gib_mutant(edict_t* ent)
 	if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_ARM))
 		gi.setmodel(ent, "models/monsters/mutant/gibs/hand.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_HEAD))
-		gi.setmodel(ent, "models/monsters/mutant/gibs/chest.md2");
+		gi.setmodel(ent, "models/monsters/mutant/gibs/head.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_CHEST))
 		gi.setmodel(ent, "models/monsters/mutant/gibs/chest.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_MUTANT_LEG))
 		gi.setmodel(ent, "models/monsters/mutant/gibs/foot.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/mutant/gibs/hand.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
@@ -2183,7 +2183,7 @@ void SP_misc_gib_strogg_big1(edict_t* ent)
 		gi.setmodel(ent, "models/monsters/carrier/gibs/thigh.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/boss1/gibs/cgun.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
@@ -2208,18 +2208,6 @@ void SP_misc_gib_strogg_big2(edict_t* ent)
 	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_HEAD = 2_spawnflag;
 	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_CHEST = 4_spawnflag;
 	constexpr spawnflags_t SPAWNFLAG_GIB_GUARD_LEG = 8_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_ARM = 16_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_HEAD = 32_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_CHEST = 64_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW_LEG = 128_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_ARM = 65536_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_HEAD = 131072_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_CHEST = 262144_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_WIDOW2_LEG = 524288_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_ARM = 1048576_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_HEAD = 2097152_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_CHEST = 4194304_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_GIB_LEG = 8388608_spawnflag;
 
 	if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_ARM))
 		gi.setmodel(ent, "models/monsters/guardian/gib5.md2");
@@ -2229,33 +2217,9 @@ void SP_misc_gib_strogg_big2(edict_t* ent)
 		gi.setmodel(ent, "models/monsters/guardian/gib4.md2");
 	else if (ent->spawnflags.has(SPAWNFLAG_GIB_GUARD_LEG))
 		gi.setmodel(ent, "models/monsters/guardian/gib6.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_ARM))
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_HEAD))
-		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_CHEST))
-		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW_LEG))
-		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_ARM))
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_HEAD))
-		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_CHEST))
-		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_WIDOW2_LEG))
-		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_ARM))
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_HEAD))
-		gi.setmodel(ent, "models/objects/gibs/head/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_CHEST))
-		gi.setmodel(ent, "models/objects/gibs/chest/tris.md2");
-	else if (ent->spawnflags.has(SPAWNFLAG_GIB_LEG))
-		gi.setmodel(ent, "models/objects/gibs/leg/tris.md2");
 	else
 		//NOTE: MAKE RANDOM SPAWNFLAG!
-		gi.setmodel(ent, "models/objects/gibs/arm/tris.md2");
+		gi.setmodel(ent, "models/monsters/guardian/gib5.md2");
 
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
