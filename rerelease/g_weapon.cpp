@@ -3469,3 +3469,78 @@ void fire_trap(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int spe
 
 	trap->timestamp = level.time + 30_sec;
 }
+
+
+/*
+=================
+fire_lightning
+
+Fires a single lightning  bolt. Used by the thunderbolt.
+=================
+*/
+TOUCH(light_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
+{
+	if (other == self->owner)
+		return;
+
+	if (tr.surface && (tr.surface->flags & SURF_SKY))
+	{
+		G_FreeEdict(self);
+		return;
+	}
+
+	// PMM - crash prevention
+	if (self->owner && self->owner->client)
+		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
+
+	if (other->takedamage)
+		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY, static_cast<mod_id_t>(self->style));
+	else
+	{
+		gi.WriteByte(svc_temp_entity);
+		gi.WriteByte(TE_LIGHTNING);
+		gi.WritePosition(self->s.origin);
+		gi.WriteDir(tr.plane.normal);
+		gi.multicast(self->s.origin, MULTICAST_PHS, false);
+	}
+
+	G_FreeEdict(self);
+}
+
+void fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, effects_t effect, mod_t mod)
+{
+	edict_t* bolt;
+	trace_t	 tr;
+
+	bolt = G_Spawn();
+	bolt->svflags = SVF_PROJECTILE;
+	bolt->s.origin = start;
+	bolt->s.old_origin = start;
+	bolt->s.angles = vectoangles(dir);
+	bolt->velocity = dir * speed;
+	bolt->movetype = MOVETYPE_FLYMISSILE;
+	bolt->clipmask = MASK_PROJECTILE;
+	// [Paril-KEX]
+	if (self->client && !G_ShouldPlayersCollide(true))
+		bolt->clipmask &= ~CONTENTS_PLAYER;
+	bolt->flags |= FL_DODGE;
+	bolt->solid = SOLID_BBOX;
+	bolt->s.effects |= effect;
+	bolt->s.modelindex = gi.modelindex("models/proj/lightning/tris.md2");
+	bolt->s.sound = gi.soundindex("weapons/lhitwav");
+	bolt->owner = self;
+	bolt->touch = blaster_touch;
+	bolt->nextthink = level.time + 2_sec;
+	bolt->think = G_FreeEdict;
+	bolt->dmg = damage;
+	bolt->classname = "bolt";
+	bolt->style = mod.id;
+	gi.linkentity(bolt);
+
+	tr = gi.traceline(self->s.origin, bolt->s.origin, bolt, bolt->clipmask);
+	if (tr.fraction < 1.0f)
+	{
+		bolt->s.origin = tr.endpos + (tr.plane.normal * 1.f);
+		bolt->touch(bolt, tr.ent, tr, false);
+	}
+}

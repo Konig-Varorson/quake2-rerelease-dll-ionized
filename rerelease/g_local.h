@@ -2193,6 +2193,8 @@ void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimd
 						  monster_muzzleflash_id_t flashtype);
 void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
 					  float damage_radius, monster_muzzleflash_id_t flashtype);
+void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
+	monster_muzzleflash_id_t flashtype, effects_t effect);
 bool M_CheckClearShot(edict_t *self, const vec3_t &offset);
 bool M_CheckClearShot(edict_t *self, const vec3_t &offset, vec3_t &start);
 vec3_t M_ProjectFlashSource(edict_t *self, const vec3_t &offset, const vec3_t &forward, const vec3_t &right);
@@ -2334,6 +2336,9 @@ edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int 
 				 int radius_damage);
 void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick);
 void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius);
+void light_touch(edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self);
+void fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, effects_t effect,
+	mod_t mod);
 // RAFAEL
 void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect);
 void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
@@ -3548,7 +3553,7 @@ struct fmt::formatter<edict_t>
 	}
 
     template<typename FormatContext>
-    auto format(const edict_t &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const edict_t &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
 		if (p.linked)
 			return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, (p.absmax + p.absmin) * 0.5f);

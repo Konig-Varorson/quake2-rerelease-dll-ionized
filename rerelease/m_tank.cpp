@@ -405,7 +405,7 @@ void TankBlaster(edict_t *self)
 	else
 	{
 		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_blaster2(self, start, dir, 35, 800, flash_number, EF_BLASTER);
+			monster_fire_blaster(self, start, dir, 35, 800, flash_number, EF_BLASTER);
 		else
 			monster_fire_blueblaster(self, start, dir, 30, 600, flash_number, EF_BLUEHYPERBLASTER);
 	}
@@ -560,14 +560,14 @@ void TankMachineGun(edict_t *self)
 	if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
 		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_railgun(self, start, forward, 50, 100, MZ2_GLADIATOR_RAILGUN_1);
+			monster_fire_railgun(self, start, forward, 35, 100, flash_number);
 		else
 			monster_fire_bullet(self, start, forward, 25, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	}
 	else
 	{
 		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_grenade(self, start, forward, 50, 500, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+			monster_fire_grenade(self, start, forward, 35, 500, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
 		else
 			monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	}

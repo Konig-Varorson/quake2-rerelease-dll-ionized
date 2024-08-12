@@ -35,6 +35,10 @@ void floater_run(edict_t *self);
 void floater_wham(edict_t *self);
 void floater_zap(edict_t *self);
 
+/* KONIG - Mimic stuff*/
+void float_mimic_explode(edict_t* self);
+void float_mimic_check(edict_t* self);
+
 void floater_fire_blaster(edict_t *self)
 {
 	vec3_t	  start;
@@ -567,6 +571,8 @@ MONSTERINFO_ATTACK(floater_attack) (edict_t *self) -> void
 
 MONSTERINFO_MELEE(floater_melee) (edict_t *self) -> void
 {
+	if (self->style == 1)
+		float_mimic_explode(self);
 	if (frandom() < 0.5f)
 		M_SetAnimation(self, &floater_move_attack3);
 	else
@@ -607,6 +613,10 @@ MONSTERINFO_SETSKIN(floater_setskin) (edict_t *self) -> void
 	/* KONIG - new skinnums for Mimic */
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
+		if (self->style == 1)
+		{
+			self->s.effects |= EF_BARREL_EXPLODING;
+		}
 	else
 		self->s.skinnum &= ~1;
 }
@@ -640,6 +650,19 @@ DIE(floater_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 		{ "models/monsters/float/gibs/base.md2", GIB_SKINNED },
 		{ "models/monsters/float/gibs/jar.md2", GIB_SKINNED | GIB_HEAD }
 	});
+}
+
+void float_mimic_explode(edict_t* self)
+{
+	vec3_t dir;
+
+	if (self->enemy)
+		{
+			dir = self->enemy->s.origin - self->s.origin;
+			T_Damage(self->enemy, self, self, dir, self->s.origin, vec3_origin, (int)100, (int)100, DAMAGE_RADIUS, MOD_UNKNOWN);
+		}
+
+	floater_die(self, nullptr, nullptr, 0, dir, MOD_EXPLOSIVE);
 }
 
 static void float_set_fly_parameters(edict_t *self)
@@ -733,5 +756,4 @@ void SP_monster_mimic(edict_t* self)
 
 	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
 	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
-	
 }

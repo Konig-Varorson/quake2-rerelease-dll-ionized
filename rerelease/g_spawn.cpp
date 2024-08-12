@@ -49,6 +49,8 @@ void SP_trigger_flashlight(edict_t *self); // [Paril-KEX]
 void SP_trigger_fog(edict_t *self); // [Paril-KEX]
 void SP_trigger_coop_relay(edict_t *self); // [Paril-KEX]
 void SP_trigger_health_relay(edict_t *self); // [Paril-KEX]
+/* KONIG */
+void SP_trigger_setskill(edict_t *ent);
 
 void SP_target_temp_entity(edict_t *ent);
 void SP_target_speaker(edict_t *ent);
@@ -81,6 +83,13 @@ void SP_target_autosave(edict_t *self); // [Paril-KEX]
 void SP_target_sky(edict_t *self); // [Paril-KEX]
 void SP_target_achievement(edict_t *self); // [Paril-KEX]
 void SP_target_story(edict_t *self); // [Paril-KEX]
+/* KONIG - new targets*/
+void SP_target_print(edict_t* ent);
+void SP_target_shooter_blaster(edict_t* ent);
+void SP_target_shooter_rockets(edict_t* ent);
+void SP_target_item_give(edict_t* ent);
+void SP_target_cvar(edict_t* ent);
+
 
 void SP_worldspawn(edict_t *ent);
 
@@ -483,6 +492,14 @@ static const std::initializer_list<spawn_t> spawns = {
 	// { "monster_knight", SP_monster_knight },
 	// { "monster_zombie", SP_monster_zombie },
 	// { "monster_chthon", SP_monster_chthon },
+
+	{ "trigger_setskill", SP_trigger_setskill },
+
+	{ "target_print", SP_target_print },
+	{ "target_item_give", SP_target_item_give },
+	{ "target_shooter_blaster", SP_target_shooter_blaster },
+	{ "target_shooter_rockets", SP_target_shooter_rockets },
+	{ "target_cvar", SP_target_cvar },
 
 	{ "monster_commander_body", SP_monster_commander_body },
 

@@ -76,10 +76,17 @@ void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimd
 	monster_muzzleflash(self, start, flashtype);
 }
 
-void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
-					  float damage_radius, monster_muzzleflash_id_t flashtype)
+void monster_fire_bfg(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, int kick,
+	float damage_radius, monster_muzzleflash_id_t flashtype)
 {
 	fire_bfg(self, start, aimdir, damage, speed, damage_radius);
+	monster_muzzleflash(self, start, flashtype);
+}
+
+void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
+	monster_muzzleflash_id_t flashtype, effects_t effect)
+{
+	fire_lightning(self, start, dir, damage, speed, effect, MOD_BLUEBLASTER);
 	monster_muzzleflash(self, start, flashtype);
 }
 

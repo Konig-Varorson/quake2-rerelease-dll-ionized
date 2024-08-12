@@ -805,15 +805,15 @@ void soldier_fire_konig(edict_t* self, int flash_number, bool angle_limited)
 
 	if (self->count <= 1)
 	{
-		monster_fire_railgun(self, start, dir, 50, 100, flash_index);
+		monster_fire_railgun(self, start, aim, 50, 100, flash_index);
 	}
 	else if (self->count <= 3)
 	{
-		monster_fire_blaster2(self, start, aim, 5, 600, flash_index, EF_BLASTER);
+		monster_fire_blaster2(self, start, aim, 5, 700, flash_index, EF_BLASTER);
 	}
 	else
 	{
-		fire_bullet(self, start, aim, 8, 15, 0, 0, MOD_TESLA);
+		monster_fire_lightning(self, start, aim, 5, 750, flash_index, EF_PLASMA);
 	}
 }
 
@@ -822,7 +822,7 @@ void soldier_fire(edict_t* self, int flash_number, bool angle_limited)
 	// RAFAEL
 	if (self->style == 1)
 		soldier_fire_xatrix(self, flash_number, angle_limited);
-	else if (self->style == 1)
+	else if (self->style == 2)
 		soldier_fire_konig(self, flash_number, angle_limited);
 	else
 		// RAFAEL
@@ -2219,7 +2219,8 @@ void SP_monster_soldier_lightning(edict_t* self)
 
 	sound_pain_ss.assign("soldier/solpain3.wav");
 	sound_death_ss.assign("soldier/soldeth3.wav");
-	gi.soundindex("soldier/solatck3.wav");
+	gi.soundindex("weapons/lhit.wav");
+	gi.soundindex("eel/eatt1.wav");
 
 	self->s.skinnum = 16;
 	self->count = self->s.skinnum - 12;

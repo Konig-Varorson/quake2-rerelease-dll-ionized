@@ -245,8 +245,6 @@ void protector_rockets(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
 
-	rocketSpeed = 500;
-
 	if (blindfire)
 		target = self->monsterinfo.blind_fire_target;
 	else
@@ -271,7 +269,7 @@ void protector_rockets(edict_t *self)
 	}
 
 	if ((!blindfire) && ((frandom() < (0.2f + ((3 - skill->integer) * 0.15f)))))
-		PredictAim(self, self->enemy, start, rocketSpeed, false, 0, &dir, &vec);
+		PredictAim(self, self->enemy, start, 500, false, 0, &dir, &vec);
 
 	dir.normalize();
 	//copied from m_chick
@@ -281,12 +279,7 @@ void protector_rockets(edict_t *self)
 		// blindfire has different fail criteria for the trace
 		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 		{
-			// RAFAEL
-			if (self->s.skinnum > 1)
-				monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
-			else
-				// RAFAEL
-				monster_fire_rocket(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1);
+			monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
 		}
 		else
 		{
@@ -297,7 +290,7 @@ void protector_rockets(edict_t *self)
 			trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
 			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 			{
-				monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
+				monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
 			}
 			else
 			{
@@ -308,7 +301,7 @@ void protector_rockets(edict_t *self)
 				trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
 				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 				{
-					monster_fire_heat(self, start, dir, 60, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
+					monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
 				}
 			}
 		}
@@ -317,7 +310,7 @@ void protector_rockets(edict_t *self)
 	{
 		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
 		{
-			monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.15f);
+			monster_fire_heat(self, start, dir, 50, 500, id, 0.15f);
 		}
 	}
 }

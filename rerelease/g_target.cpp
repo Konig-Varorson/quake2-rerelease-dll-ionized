@@ -2224,6 +2224,16 @@ static USE(target_print_use) (edict_t* ent, edict_t* other, edict_t* activator) 
 	gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
 }
 
+void SP_target_print(edict_t* ent) {
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+	ent->use = target_print_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
 #if 0 //Not finished
 /*QUAKED target_item_remove (1 0 0) (-8 -8 -8) (8 8 8) REMOVE_WEAPONS REMOVE_WEAPONS_BLASTER REMOVE_AMMO REMOVE_POWERUPS
 Takes away all the activator's weapons and ammo (except blaster).
@@ -2298,16 +2308,6 @@ void SP_target_item_give(edict_t* ent) {
 
 	ent->item = it;
 	ent->use = target_item_give_use;
-	ent->svflags = SVF_NOCLIENT;
-}
-
-void SP_target_print(edict_t* ent) {
-	if (!ent->message[0]) {
-		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
-		G_FreeEdict(ent);
-		return;
-	}
-	ent->use = target_print_use;
 	ent->svflags = SVF_NOCLIENT;
 }
 
