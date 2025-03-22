@@ -3,11 +3,143 @@ Source code for a Quake II Remaster mod.
 
 ## What is Ionized?
 Quake II: Ionized is a mod designed with three purposes in mind.
-* First, to rebalance the core gameplay loop to make more use of under-utilized elements, such as expanding the Black Widow Guardians' powerup copy to other bosses.
+* First, to rebalance the core gameplay loop to make more use of under-utilized elements.
 * Second, to finish and implement cut content present in the code and idVault, such as the gnorta and shocker.
-* Third, to add additional resources for mappers, such as new enemies and new of triggers.
+* Third, to add additional resources for mappers, such as making the grapple and trap's meatcubes worldspawns.
+
+### What's Next?
+Version 0.2 began encorporating compatibilities with Unseen, Zaero, Citadel, and 25th Anniversary Mappack.
+Version 0.3 will be focused on finishing Zaero compatbility and finishing Quake 4 Demake entities. It will also make some progress on porting choice Quake 1 enemies, and restoring some cut content, but this won't be the focus.
+
+Ionized won't be doing a full compatibility with Unseen, as most of the remaining content ranges from silly to limited. Several concepts will be carried over with Q4 demakes (for example: Sauron->Heavy Hover Tank, Dathren and Assassin -> Tacticals), however.
 
 ## Changelog
+### Version 0.2
+* Remade foundation using Paril's PSX Mod: https://www.moddb.com/mods/quake-ii-psx All code was redone from scratch.
+* bg_local.h:
+  * Added some needed array listings for new ammos and powerups.
+* g_items.cpp:
+  * WIP of Disintegrator, Discharger (PSX Cut weapon), FlameGun (PSX Cut weapon, redubbed Immolator), and some Zaero weapon integrations
+  * New ammo types: Flares (Zaero), Fuel (Cut PSX) and Battery (Cut PSX)
+  * New keys: Clearance Pass (Zaero), Lab Key (Zaero), Landing Area Pass (Zaero), Slime Key (Zaero), Lava Key (Zaero), Energy Key (Zaero), and an alternative Green Key (PSX)
+* g_local.h:
+  * Prepped Zaero, Oblivion, and cut weapons and powerups.
+* g_misc.cpp:
+  * Removed spawnflags for skin changes on misc_eastertank, misc_easterchick, and misc_easterchick2 - found out that you can use rgba key in editor to alter skin of models, will use this in FGD instead
+  * Added misc_crate, misc_crate_medium, misc_crate_small, and misc_seat as movable objects from Zaero
+  * Added misc_commdish from Zaero
+  * Added misc_bulldog_s, misc_bulldog_m, and misc_bulldog_l (models from Zaero) as new trains/objects like misc_stroggship and misc_bigviper.
+  * Reworked spawnable gibs to be randomized based on enemy. New gibs can be spawned via misc_gib_(enemy) as depicted in FGD.
+* g_monster.cpp:
+  * Copied PSX Guardian's boss powerup response for use on all bosses, which adds power shields to bosses when players use powerups (Quad, Double, Dualfire, Invulnerability for now)
+  * Removed old Widow's powerup copy (didn't actually work properly before I found out, code has been moved to Jorg and Makron instead).
+  * Added Gladiator Beta's phalanx attack, Gekk spit attack, and a new lightning attack for universal use. (TODO: add guardian rockets here too)
+* g_spawn.cpp:
+  * Added ability to spawn new misc objects and enemies. Full list of finished spawnables in FGD.
+  * Removed monster_guardian_stand and monster_widow_stand (truth be told, their function can be done by mappers; might readd later)
+* g_target.cpp:
+  * Removed target_give, target_remove, and target_kill as they weren't functioning properly. Plan to re-add later.
+* g_weapon.cpp:
+  * Added code for Gekk Acid Spit, and prototypes of Discharger and Oblivion's PlasmaPistol/PlasmaRifle's attacks.
+* m_boss2.cpp:
+  * Changed boss powerup to PSX Guardian's.
+  * Rebalanced health and armor for standard Hornet and Hornet Guardian (N64 Hornet).
+  * New spawnable: monster_boss2_guardian. Spawns a monster_boss2 with Spawnflag 8 behavior.
+  * New monster: Hornet Titan, monster_boss2_titan (from Citadel)
+    * Scaled 1.5x in size
+    * Has body armor and power shield, scaled health by skill and player count
+    * Fires classic-styled bullets and N64-styled homing rockets.
+* m_boss31.cpp:
+  * Revamped Powerup Copying.
+  * Rebalanced health and armor.
+* m_boss32.cpp:
+  * Revamped Powerup Copying.
+  * Rebalanced health and armor.
+* m_brain.cpp:
+  * Added multiple skins code.
+* m_flipper.cpp:
+  * Added multiple skins code.
+* m_gladiator.cpp
+  * New monster: BFGladiator, monster_bfgladiator (from 25th Anniversary Mappack)
+    * Scaled 1.15x
+    * Has 500 health, 100 Body Armor.
+    * Fires a BFG.
+* m_guardian.cpp
+  * Added multiple skins code.
+* m_gunner.cpp
+  * Added multiple skins code.
+* m_guncmdr.cpp
+  * Added multiple skins code.
+  * Removed scaling on power screen.
+* m_hound.cpp + m_hound.h
+  * Hellhound enemy, ported from Zaero.
+  * Fast speed, medium damage, low health.
+* m_infantry.cpp
+  * Added multiple skins code.
+  * New enemy: Handler Infantry, monster_infantry_handler.
+    * Uses idVault camo skin with custom pain skin.
+    * Fires flechettes instead of bullets.
+  * New enemy: Heavy Infantry, monster_heavy, from Unseen.
+    * Scaled 1.15x
+    * Has 160 health, 100 combat armor.
+    * Fires rockets instead of bullets.
+* m_medic.cpp
+  * Removed scaling on Medic Commander's armor.
+* m_mutant.cpp:
+  * Removed alpha mutant's health scaling on difficulty and coop.
+* m_shambler.cpp:
+  * Removed health scaling on difficulty and coop.
+* m_sentien.cpp + m_sentien.h:
+  * Sentien enemy, ported from Zaero.
+  * Slow speed, hitscan damage, high health. Tank alternative.
+* m_soldier.cpp:
+  * New enemy: Light Soldier P, monster_psoldier_light, from Unseen.
+    * Copy of Light Soldier with new skin, 30 health, and 100 combat armor.
+  * New enemy: Shotgun Soldier P, monster_psoldier, from Unseen.
+    * Copy of Shotgun Soldier with new skin, 40 health, and 100 combat armor.
+  * New enemy: Machinegun Soldier P, monster_psoldier_ss, from Unseen.
+    * Copy of Machinegun Soldier with new skin, 50 health, and 100 combat armor.
+  * New enemy: Hyper Light Soldier P, monster_psoldier_special, from Unseen.
+    * Rapid fire Light Soldier, has 50 health and 100 combat armor.
+  * New enemy: Hyper Shotgun Soldier P, monster_psoldier_elite, from Unseen.
+    * Rapid fire Shotgun Soldier, has 50 health and 100 combat armor.
+  * Changed monster_soldier_railgun to monster_psoldier_death, from Unseen.
+  * New enemy: Soldier Captain P, monster_psoldier_captain, from Unseen.
+    * Miniboss version of psoldier_death.
+    * Fires more accurate rails, has 240 health, 100 combat armor, and 100 power screen.
+  * Changed monster_soldier_glight to monster_soldier_cobalt, from Citadel. Changed combat armor to power screen.
+  * New enemy: Disruptor Soldier, monster_soldier_dist, from 25th Anniversary Mappack
+     * Fires a disruptor tracker. Has 80 health, 100 power screen.
+  * New enemy: Deatomizer Soldier, monster_soldier_deatom, from Oblivion.
+     * Fires a disruptor tracker (temporary). Has 80 health, 100 combat armor.
+* m_supertank.cpp:
+  * Changed boss powerup to PSX Guardian's.
+  * New monster: Super Tank Gamma Class, monster_boss5_gamma, from Citadel.
+    * Scaled at 1.25x
+    * Has both Body Armor and Power Shield.
+    * Currently fires bullets, grenades, and heat-seeking rockets.
+* m_tank.cpp:
+  * Merged Tank Guardian and Tank Commander Guardian into one. Skin will change if map is placed in /q64/ folder.
+  * New spawnable: monster_tank_guardian. Spawns a monster_tank with Spawnflag 8 behavior.
+* p_weapon.cpp:
+  * Prepping weapons from Zaero and cut content.
+* rogue/g_carrier.cpp:
+  * Changed boss powerup to PSX Guardian's.
+  * Added multiple skins code.
+  * Rebalanced health and armor.
+* rogue/g_turret.cpp:
+  * Finished code for Heatbeam turrets and added skin code for it.
+* rogue/g_widow.cpp:
+  * Restored and simplified old powerup copy code.
+  * Added multiple skins code.
+  * Rebalanced health and armor.
+* rogue/g_widow2.cpp:
+  * Copied simplified powerup copy to fix bug that prevented widow2's damage from increasing when copying double or quad powerups.
+  * Added multiple skins code.
+  * Rebalanced health and armor.
+* xatrix/m_xatrix_gekk.cpp:
+  * Added multiple skins code.
+
 ### Version 0.1
 * g_items.cpp:
   * Pickup_Bandolier and Pickup_Pack now increase ammo cap for Tesla and Trap.
@@ -191,16 +323,3 @@ Quake II: Ionized is a mod designed with three purposes in mind.
   * Initial files for restoring/finishing Gnorta
 * ionized/g_shocker.cpp:
   * Initial files for restoring/finishing Shocker.
-
-## What's Next?
-Short term goals:
-* Make MP powerups available in SP
-* Replace ambient music swap from track11 (which is boss2's track) to tracks 64-76 (N64 tracks)
-* Add spawning effect (from Medic Commander/Black Widow) to spawn triggered foes
-* See if possible to add green outline (power armor) and gray segmented (armor) to healthbar; add numbers for exact amount
-* Rework Hunter Sphere to be usable in SP.
-* Add additional attacks/abilities to enemies in Nightmare difficulty / Co-Op.
-
-Long term goals:
-* Add entities from Quake 1, Zaero, and Oblivion - dependent on legalities.
-* Demake choice Quake 4 enemies.
