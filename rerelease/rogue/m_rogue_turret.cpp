@@ -427,7 +427,7 @@ void TurretFire(edict_t *self)
 		{
 			// on harder difficulties, randomly fire directly at enemy
 			// more often; makes them more unpredictable
-			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN) || self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
+			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
 				PredictAim(self, self->enemy, start, 0, true, 0.3f, &dir, nullptr);
 			else if (frandom() < skill->integer / 5.f)
 				PredictAim(self, self->enemy, start, (float) rocketSpeed, true, (frandom(3.f - skill->integer) / 3.f) - frandom(0.05f * (3.f - skill->integer)), &dir, nullptr);
@@ -460,7 +460,7 @@ void TurretFire(edict_t *self)
 					if (self->monsterinfo.duck_wait_time < level.time)
 						self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 				}
-			}
+			}/* KONIG - adding Heatbeam */
 			else if (self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
 			{
 				if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
@@ -750,9 +750,8 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void
 
 	gi.linkentity(ent);
 
-	stationarymonster_start(ent);
+	stationarymonster_start(ent, spawn_temp_t::empty);
 
-	/* KONIG - skinnum 3 for HEATBEAM */
 	if (ent->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
 	{
 		ent->s.skinnum = 1;
@@ -760,7 +759,7 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void
 	else if (ent->spawnflags.has(SPAWNFLAG_TURRET_ROCKET))
 	{
 		ent->s.skinnum = 2;
-	}
+	}/* KONIG - adding Heatbeam */
 	else if (ent->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
 	{
 		ent->s.skinnum = 3;
@@ -942,6 +941,7 @@ When activated, wall units move 32 units in the direction they're facing.
 */
 void SP_monster_turret(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	int angle;
 
 	if ( !M_AllowSpawn( self ) ) {
@@ -1050,7 +1050,7 @@ void SP_monster_turret(edict_t *self)
 	}
 	else
 	{
-		stationarymonster_start(self);
+		stationarymonster_start(self, ED_GetSpawnTemp());
 	}
 
 	if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
@@ -1071,7 +1071,7 @@ void SP_monster_turret(edict_t *self)
 
 		self->spawnflags &= ~SPAWNFLAG_TURRET_WEAPONCHOICE;
 		self->spawnflags |= SPAWNFLAG_TURRET_ROCKET;
-	}
+	}/* KONIG - adding Heatbeam */
 	else if (self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
 	{
 		gi.soundindex("weapons/bfg__l1a.wav");

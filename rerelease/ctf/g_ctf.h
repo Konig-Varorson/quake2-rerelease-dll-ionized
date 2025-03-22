@@ -1,10 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#define CTF_VERSION 1.52
-#define CTF_VSTRING2(x) #x
-#define CTF_VSTRING(x) CTF_VSTRING2(x)
-#define CTF_STRING_VERSION CTF_VSTRING(CTF_VERSION)
+constexpr const char *CTF_VERSION_STRING = "1.52";
 
 enum ctfteam_t
 {

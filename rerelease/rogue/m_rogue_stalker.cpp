@@ -58,7 +58,7 @@ bool stalker_ok_to_transition(edict_t *self)
 	else
 	{
 		// her stalkers are just better
-		if (self->monsterinfo.aiflags & AI_SPAWNED_WIDOW)
+		if (self->monsterinfo.commander && self->monsterinfo.commander->inuse && !strncmp(self->monsterinfo.commander->classname, "monster_widow", 13))
 			max_dist = 256;
 		else
 			max_dist = 180;
@@ -427,10 +427,11 @@ PAIN(stalker_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(stalker_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 // ******************
@@ -974,6 +975,8 @@ constexpr spawnflags_t SPAWNFLAG_STALKER_NOJUMPING = 16_spawnflag;
 
 void SP_monster_stalker(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

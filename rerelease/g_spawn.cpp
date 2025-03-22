@@ -49,8 +49,7 @@ void SP_trigger_flashlight(edict_t *self); // [Paril-KEX]
 void SP_trigger_fog(edict_t *self); // [Paril-KEX]
 void SP_trigger_coop_relay(edict_t *self); // [Paril-KEX]
 void SP_trigger_health_relay(edict_t *self); // [Paril-KEX]
-/* KONIG */
-void SP_trigger_setskill(edict_t *ent);
+void SP_trigger_safe_fall(edict_t *ent); // [Paril-KEX]
 
 void SP_target_temp_entity(edict_t *ent);
 void SP_target_speaker(edict_t *ent);
@@ -83,13 +82,6 @@ void SP_target_autosave(edict_t *self); // [Paril-KEX]
 void SP_target_sky(edict_t *self); // [Paril-KEX]
 void SP_target_achievement(edict_t *self); // [Paril-KEX]
 void SP_target_story(edict_t *self); // [Paril-KEX]
-/* KONIG - new targets*/
-void SP_target_print(edict_t* ent);
-void SP_target_shooter_blaster(edict_t* ent);
-void SP_target_shooter_rockets(edict_t* ent);
-void SP_target_item_give(edict_t* ent);
-void SP_target_cvar(edict_t* ent);
-
 
 void SP_worldspawn(edict_t *ent);
 
@@ -158,48 +150,6 @@ void SP_monster_tank_stand(edict_t *self);
 void SP_monster_guardian(edict_t *self);
 void SP_monster_arachnid(edict_t *self);
 void SP_monster_guncmdr(edict_t *self);
-/*KONIG*/
-//boss stands
-void SP_monster_guardian_stand(edict_t* self);
-void SP_monster_widow_stand(edict_t* self);
-//cut monsters restored
-void SP_monster_shocker(edict_t* self);
-void SP_monster_gnorta(edict_t* self);
-//q4 demake enemies
-//void SP_monster_tactical_male(edict_t* self);
-//void SP_monster_tactical_female(edict_t* self);
-//void SP_monster_tactical_cyborg(edict_t* self);
-void SP_monster_berserk2(edict_t* self);
-void SP_monster_dropper(edict_t* self);
-void SP_monster_protector(edict_t* self);
-void SP_monster_fixbot2(edict_t* self);
-//void SP_monster_valkaryne(edict_t* self);
-//void SP_monster_valkaryne2(edict_t* self);
-//beta enemies
-void SP_monster_soldier_railgun(edict_t* self);
-void SP_monster_soldier_glight(edict_t* self);
-void SP_monster_soldier_lightning(edict_t* self);
-void SP_monster_mimic(edict_t* self);
-// void SP_monster_flipper2(edict_t* self);
-// void SP_monster_guardian2(edict_t* self);
-// void SP_monster_brain2(edict_t* self);
-// void SP_monster_jorg2(edict_t* self);
-// void SP_monster_rider2(edict_t* self);
-// void SP_monster_gekk2(edict_t* self);
-// void SP_monster_carrier2(edict_t* self);
-// zaero enemies
-// void SP_monster_hound(edict_t* self);
-// void SP_monster_sentien(edict_t* self);
-// void SP_monster_turretz(edict_t* self);
-// void SP_monster_zboss(edict_t* self);
-// quake 1 shareware enemies
-// void SP_monster_grunt(edict_t* self);
-// void SP_monster_ogre(edict_t* self);
-// void SP_monster_scrag(edict_t* self);
-// void SP_monster_fiend(edict_t* self);
-// void SP_monster_knight(edict_t* self);
-// void SP_monster_zombie(edict_t* self);
-// void SP_monster_chthon(edict_t* self);
 
 void SP_monster_commander_body(edict_t *self);
 
@@ -268,23 +218,125 @@ void SP_info_ctf_teleport_destination(edict_t *self);
 
 void SP_monster_shambler(edict_t* self);
 
-/*KONIG - new spawns*/
+/*KONIG*/
+//ZAERO
+//void SP_misc_lasertripbomb(edict_t* self);
+//void SP_load_mirrorlevel(edict_t* self);
+//void SP_monster_autocannon(edict_t* self);
+//void SP_monster_autocannon_floor(edict_t* self);
+void SP_monster_sentien(edict_t* self);
+//void SP_misc_securitycamera(edict_t* self);
+void SP_monster_hound(edict_t* self);
+void SP_monster_handler(edict_t* self);
+void SP_misc_commdish(edict_t* self);
+void SP_misc_crate(edict_t* self);
+void SP_misc_crate_medium(edict_t* self);
+void SP_misc_crate_small(edict_t* self);
+//void SP_monster_zboss(edict_t* self);
+//void SP_target_zboss_target(edict_t* self);
+//void SP_func_barrier(edict_t* self);
+void SP_misc_seat(edict_t* self);
+//ZAERO INSPIRED
+void SP_misc_bulldog_s(edict_t* self);
+void SP_misc_bulldog_m(edict_t* self);
+void SP_misc_bulldog_l(edict_t* self);
+//OBLIVION
+//void SP_misc_camera(edict_t* self);
+//void SP_misc_camera_target(edict_t* self);
+//void SP_misc_screenfade(edict_t* self);
+//void SP_func_rotate_train(edict_t* self);
+//void SP_trigger_misc_camera(edict_t* self);
+//void SP_monster_kigrax(edict_t* self);
+//void SP_monster_sentinel(edict_t* self);
+//void SP_monster_tick(edict_t* self);
+void SP_monster_soldier_deatom(edict_t* self);
+//void SP_monster_cyborg(edict_t* self);
+//UNSEEN
+void SP_monster_psoldier(edict_t* self);
+void SP_monster_psoldier_light(edict_t* self);
+void SP_monster_psoldier_ss(edict_t* self);
+void SP_monster_psoldier_special(edict_t* self);
+void SP_monster_psoldier_elite(edict_t* self);
+void SP_monster_psoldier_death(edict_t* self);
+void SP_monster_psoldier_captain(edict_t* self);
+void SP_monster_heavy(edict_t* self);
+//PSX
+//void SP_misc_dropship(edict_t* self);
+//void SP_misc_fighter(edict_t* self);
+//void SP_monster_flamer(edict_t* self);
+//void SP_monster_blitz(edict_t* self);
+//Q1
+// void SP_monster_grunt(edict_t* self);
+// void SP_monster_ogre(edict_t* self);
+// void SP_monster_ogre_marksman(edict_t* self);
+// void SP_monster_scrag(edict_t* self);
+// void SP_monster_fiend(edict_t* self);
+// void SP_monster_knight(edict_t* self);
+// void SP_monster_zombie(edict_t* self);
+// void SP_monster_chthon(edict_t* self);
+// CITADEL
+void SP_monster_soldier_cobalt(edict_t* self);
+void SP_monster_boss5_gamma(edict_t* self);
+void SP_monster_boss2_titan(edict_t* self);
+// Q25
+void SP_monster_bfgladiator(edict_t* self);
+void SP_monster_soldier_dist(edict_t* self);
+//IONIZED
+void SP_trigger_setskill(edict_t* ent);
+void SP_target_print(edict_t* ent);
+void SP_target_shooter_blaster(edict_t* ent);
+void SP_target_shooter_rockets(edict_t* ent);
 void SP_item_foodcube(edict_t* self);
 void SP_ammo_shells_small(edict_t* self);
 void SP_ammo_bullets_small(edict_t* self);
 void SP_ammo_rockets_small(edict_t* self);
 void SP_ammo_cells_small(edict_t* self);
 void SP_ammo_slugs_small(edict_t* self);
-void SP_misc_gib(edict_t* self);
+void SP_ammo_flechettes_small(edict_t* self);
+void SP_ammo_prox_small(edict_t* self);
+void SP_ammo_magslugs_small(edict_t* self);
+void SP_ammo_rounds_small(edict_t* self);
+void SP_misc_gib_head2(edict_t* self);
+void SP_misc_gib_chest(edict_t* self);
 void SP_misc_gib_gekk(edict_t* self);
 void SP_misc_gib_mutant(edict_t* self);
-void SP_misc_gib_technician(edict_t* self);
-void SP_misc_gib_strogg1(edict_t* self);
-void SP_misc_gib_strogg2(edict_t* self);
-void SP_misc_gib_strogg3(edict_t* self);
-void SP_misc_gib_strogg_big1(edict_t* self);
-void SP_misc_gib_strogg_big2(edict_t* self);
+void SP_misc_gib_berserk(edict_t* self);
+void SP_misc_gib_chick(edict_t* self);
+void SP_misc_gib_brain(edict_t* self);
+void SP_misc_gib_glad(edict_t* self);
+void SP_misc_gib_gunner(edict_t* self);
+void SP_misc_gib_hover(edict_t* self);
+void SP_misc_gib_infantry(edict_t* self);
+void SP_misc_gib_medic(edict_t* self);
+void SP_misc_gib_parasite(edict_t* self);
+void SP_misc_gib_soldier(edict_t* self);
+void SP_misc_gib_stalker(edict_t* self);
+void SP_misc_gib_tank(edict_t* self);
+void SP_misc_gib_boss1(edict_t* self);
+void SP_misc_gib_boss2(edict_t* self);
+void SP_misc_gib_boss3(edict_t* self);
+void SP_misc_gib_carrier(edict_t* self);
+void SP_misc_gib_strider(edict_t* self);
 void SP_misc_gib_shambler(edict_t* self);
+//cut monsters restored
+void SP_monster_shocker(edict_t* self);
+void SP_monster_gnorta(edict_t* self);
+//DEMAKES
+//void SP_monster_tactical_male(edict_t* self);
+//void SP_monster_tactical_female(edict_t* self);
+//void SP_monster_tactical_cyborg(edict_t* self);
+void SP_monster_berserk2(edict_t* self);
+void SP_monster_dropper(edict_t* self);
+void SP_monster_protector(edict_t* self);
+void SP_monster_fixbot2(edict_t* self);
+// void SP_monster_voss(edict_t* self);
+// void SP_monster_reject(edict_t* self);
+//beta enemies
+void SP_monster_soldier_discharger(edict_t* self);
+void SP_monster_infantry_handler(edict_t* self);
+void SP_monster_mimic(edict_t* self);
+void SP_monster_tank_guardian(edict_t* self);
+void SP_monster_boss2_guardian(edict_t* self);
 
 // clang-format off
 static const std::initializer_list<spawn_t> spawns = {
@@ -328,6 +380,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "trigger_fog", SP_trigger_fog }, // [Paril-KEX]
 	{ "trigger_coop_relay", SP_trigger_coop_relay }, // [Paril-KEX]
 	{ "trigger_health_relay", SP_trigger_health_relay }, // [Paril-KEX]
+	{ "trigger_safe_fall", SP_trigger_safe_fall }, // [Paril-KEX]
 
 	{ "target_temp_entity", SP_target_temp_entity },
 	{ "target_speaker", SP_target_speaker },
@@ -400,23 +453,6 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "misc_flare", SP_misc_flare }, // [Sam-KEX]
 	{ "misc_hologram", SP_misc_hologram }, // Paril
 	{ "misc_lavaball", SP_misc_lavaball }, // Paril
-	/*KONIG*/
-	{ "item_foodcube", SP_item_foodcube },
-	{ "ammo_shells_small", SP_ammo_shells_small },
-	{ "ammo_bullets_small", SP_ammo_bullets_small },
-	{ "ammo_rockets_small", SP_ammo_rockets_small },
-	{ "ammo_cells_small", SP_ammo_cells_small },
-	{ "ammo_slugs_small", SP_ammo_slugs_small },
-	{ "misc_gib", SP_misc_gib },
-	{ "misc_gib_gekk", SP_misc_gib_gekk },
-	{ "misc_gib_mutant", SP_misc_gib_mutant },
-	{ "misc_gib_tecnician", SP_misc_gib_technician },
-	{ "misc_gib_shambler", SP_misc_gib_shambler },
-	{ "misc_gib_strogg1", SP_misc_gib_strogg1 },
-	{ "misc_gib_strogg2", SP_misc_gib_strogg2 },
-	{ "misc_gib_strogg3", SP_misc_gib_strogg3 },
-	{ "misc_gib_strogg_big1", SP_misc_gib_strogg_big1 },
-	{ "misc_gib_strogg_big2", SP_misc_gib_strogg_big2 },
 
 	{ "monster_berserk", SP_monster_berserk },
 	{ "monster_gladiator", SP_monster_gladiator },
@@ -448,58 +484,6 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_guardian", SP_monster_guardian },
 	{ "monster_arachnid", SP_monster_arachnid },
 	{ "monster_guncmdr", SP_monster_guncmdr },
-	/*KONIG*/
-	// boss stands
-	{ "monster_guardian_stand", SP_monster_guardian_stand },
-	{ "monster_widow_stand", SP_monster_widow_stand },
-	// cut monsters restored
-	{ "monster_gnorta", SP_monster_gnorta },
-	{ "monster_shocker", SP_monster_shocker },
-	// q4 demake enemies
-	// { "monster_tactical_male", SP_monster_tactical_male },
-	// { "monster_tactical_female", SP_monster_tactical_female },
-	// { "monster_tactical_cyborg", SP_monster_tactical_cyborg },
-	 { "monster_berserk2", SP_monster_berserk2 },
-	 { "monster_dropper", SP_monster_dropper },
-	 { "monster_protector", SP_monster_protector },
-	 { "monster_fixbot2", SP_monster_fixbot2 },
-	// { "monster_valkaryne", SP_monster_valkaryne },
-	// { "monster_valkaryne2", SP_monster_valkaryne2 },
-	// beta enemies
-	{ "monster_alphamutant", SP_monster_mutant },
-	{ "monster_mimic", SP_monster_mimic },
-	{ "monster_soldier_railgun", SP_monster_soldier_railgun },
-	{ "monster_soldier_glight", SP_monster_soldier_glight },
-	{ "monster_soldier_lightning", SP_monster_soldier_lightning },
-
-	// { "monster_flipper2", SP_monster_flipper2 },
-	// { "monster_guardian2", SP_monster_guardian2 },
-	// { "monster_brain2", SP_monster_brain2 },
-	// { "monster_jorg2", SP_monster_jorg2 },
-	// { "monster_rider2", SP_monster_rider2 },
-	// { "monster_gekk2", SP_monster_gekk2 },
-	// { "monster_carrier2", SP_monster_carrier2 },
-	// zaero enemies
-	// { "monster_hound", SP_monster_hound },
-	// { "monster_sentinel", SP_monster_sentinel },
-	// { "monster_turretz", SP_monster_turretz },
-	// { "monster_zsentinel", SP_monster_zsentiel },
-	// quake 1 shareware enemies
-	// { "monster_grunt", SP_monster_grunt },
-	// { "monster_ogre", SP_monster_ogre },
-	// { "monster_scrag", SP_monster_scrag },
-	// { "monster_fiend", SP_monster_fiend },
-	// { "monster_knight", SP_monster_knight },
-	// { "monster_zombie", SP_monster_zombie },
-	// { "monster_chthon", SP_monster_chthon },
-
-	{ "trigger_setskill", SP_trigger_setskill },
-
-	{ "target_print", SP_target_print },
-	{ "target_item_give", SP_target_item_give },
-	{ "target_shooter_blaster", SP_target_shooter_blaster },
-	{ "target_shooter_rockets", SP_target_shooter_rockets },
-	{ "target_cvar", SP_target_cvar },
 
 	{ "monster_commander_body", SP_monster_commander_body },
 
@@ -571,9 +555,157 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "info_player_team2", SP_info_player_team2 },
 	// ZOID
 
-	{ "monster_shambler", SP_monster_shambler }
+	{ "monster_shambler", SP_monster_shambler },
+
+	//KONIG
+	//ZAERO
+	//{ "misc_ired", SP_misc_lasertripbomb },
+	//{ "monster_autocannon", SP_monster_autocannon },
+	//{ "monster_autocannon_floor", SP_monster_autocannon_floor },
+	{ "monster_sentien", SP_monster_sentien },
+	//{ "misc_securitycamera", SP_misc_securitycamera },
+	{ "monster_hound", SP_monster_hound },
+	//{ "monster_handler", SP_monster_handler },
+	//{ "monster_zboss", SP_monster_zboss },
+	{ "misc_crate", SP_misc_crate },
+	{ "misc_crate_medium", SP_misc_crate_medium },
+	{ "misc_crate_small", SP_misc_crate_small },
+	{ "misc_seat", SP_misc_seat },
+	{ "misc_commdish", SP_misc_commdish },
+	//{ "load_mirrorlevel", SP_load_mirrorlevel },
+	//{ "func_barrier", SP_func_barrier },
+	//{ "target_zboss_target", SP_target_zboss_target }
+	// ZAERO INSPIRED
+	{ "misc_bulldog_s", SP_misc_bulldog_s },
+	{ "misc_bulldog_m", SP_misc_bulldog_m },
+	{ "misc_bulldog_l", SP_misc_bulldog_l },
+	//OBLIVION
+	//{ "misc_camera", SP_misc_camera },
+	//{ "misc_camera_target", SP_misc_camera_target },
+	//{ "misc_screenfade", SP_misc_screenfade },
+	//{ "func_rotate_train", SP_func_rotate_train },
+	//{ "trigger_misc_camera", SP_trigger_misc_camera },
+	//{ "monster_kigrax", SP_monster_kigrax },
+	//{ "monster_sentinel", SP_monster_sentinel },
+	//{ "monster_badass", SP_monster_sentinel }, //old compatibility
+	//{ "monster_tick", SP_monster_tick },
+	//{ "monster_spider", SP_monster_tick }, //old compatibility
+	//{ "monster_soldier_deatom", SP_monster_soldier_deatom },
+	//{ "monster_cyborg", SP_monster_cyborg },
+	//UNSEEN
+	{ "monster_psoldier_light", SP_monster_psoldier_light },
+	{ "monster_psoldier", SP_monster_psoldier },
+	{ "monster_psoldier_ss", SP_monster_psoldier_ss },
+	{ "monster_psoldier_elite", SP_monster_psoldier_elite },
+	{ "monster_psoldier_special", SP_monster_psoldier_special },
+	{ "monster_psoldier_death", SP_monster_psoldier_death },
+	{ "monster_psoldier_captain", SP_monster_psoldier_captain },
+	{ "monster_heavy", SP_monster_heavy },
+	//{ "monster_gunner2", SP_monster_guncmdr },
+	//{ "monster_sauron", SP_monster_sauron },
+	//{ "monster_droid", SP_monster_droid },
+	//{ "monster_assassin", SP_monster_assassin },
+	//{ "monster_datran", SP_monster_datran },
+	//PSX
+	//{ "misc_dropship", SP_misc_dropship },
+	//{ "misc_fighter", SP_misc_fighter },
+	//{ "monster_flamer", SP_monster_flamer },
+	//{ "monster_blitz", SP_monster_blitz },
+	//Q1
+	//{ "light_flame_large_yellow", SP_light_flame_large_yellow },
+	//{ "light_flame_small_yellow", SP_light_flame_small_yellow },
+	//{ "light_flame_small_white", SP_light_flame_small_yellow },
+	//{ "monster_grunt", SP_monster_grunt },
+	//{ "monster_ogre", SP_monster_ogre },
+	//{ "monster_ogre_marksman", SP_monster_ogre_marksman },
+	//{ "monster_scrag", SP_monster_scrag },
+	//{ "monster_fiend", SP_monster_fiend },
+	//{ "monster_knight", SP_monster_knight },
+	//{ "monster_zombie", SP_monster_zombie },
+	//{ "monster_chthon", SP_monster_chthon },
+	//CITADEL
+	{ "monster_soldier_cobalt", SP_monster_soldier_cobalt },
+	{ "monster_gunner_elite", SP_monster_guncmdr }, //Citadel compatibility
+	{ "monster_chick_beta", SP_monster_chick_heat }, //Citadel compatibility
+	{ "monster_gladiator_beta", SP_monster_gladb }, //Citadel compatibility
+	{ "monster_boss5_gamma", SP_monster_boss5_gamma },
+	{ "monster_boss2_titan", SP_monster_boss2_titan },
+	//Q25
+	{ "monster_bfgladiator", SP_monster_bfgladiator },
+	{ "monster_soldier_dist", SP_monster_soldier_dist },
+	//IONIZED
+	{ "item_foodcube", SP_item_foodcube },
+	{ "ammo_shells_small", SP_ammo_shells_small },
+	{ "ammo_bullets_small", SP_ammo_bullets_small },
+	{ "ammo_rockets_small", SP_ammo_rockets_small },
+	{ "ammo_cells_small", SP_ammo_cells_small },
+	{ "ammo_slugs_small", SP_ammo_slugs_small },
+	{ "ammo_flechettes_small", SP_ammo_flechettes_small },
+	{ "ammo_prox_small", SP_ammo_prox_small },
+	{ "ammo_magslugs_small", SP_ammo_magslugs_small },
+	{ "ammo_rounds_small", SP_ammo_rounds_small },
+
+	{ "misc_gib_head2", SP_misc_gib_head2 },
+	{ "misc_gib_chest", SP_misc_gib_chest },
+	{ "misc_gib_gekk", SP_misc_gib_gekk },
+	{ "misc_gib_mutant", SP_misc_gib_mutant },
+	{ "misc_gib_berserk", SP_misc_gib_berserk },
+	{ "misc_gib_chick", SP_misc_gib_chick },
+	{ "misc_gib_brain", SP_misc_gib_brain },
+	{ "misc_gib_glad", SP_misc_gib_glad },
+	{ "misc_gib_gunner", SP_misc_gib_gunner },
+	{ "misc_gib_hover", SP_misc_gib_hover },
+	{ "misc_gib_infantry", SP_misc_gib_infantry },
+	{ "misc_gib_medic", SP_misc_gib_medic },
+	{ "misc_gib_parasite", SP_misc_gib_parasite },
+	{ "misc_gib_soldier", SP_misc_gib_soldier },
+	{ "misc_gib_stalker", SP_misc_gib_stalker },
+	{ "misc_gib_strider", SP_misc_gib_strider },
+	{ "misc_gib_tank", SP_misc_gib_tank },
+	{ "misc_gib_boss1", SP_misc_gib_boss1 },
+	{ "misc_gib_boss2", SP_misc_gib_boss2 },
+	{ "misc_gib_boss3", SP_misc_gib_boss3 },
+	{ "misc_gib_carrier", SP_misc_gib_carrier },
+	{ "misc_gib_shambler", SP_misc_gib_shambler },
+	{ "target_shooter_blaster", SP_target_shooter_blaster },
+	{ "target_shooter_rockets", SP_target_shooter_rockets },
+	//Cut monsters restored
+	//{ "monster_gnorta", SP_monster_gnorta },
+	//{ "monster_shocker", SP_monster_shocker },
+	//Q4 demake enemies
+	//{ "monster_tactical_male", SP_monster_tactical_male },
+	//{ "monster_tactical_female", SP_monster_tactical_female },
+	//{ "monster_tactical_cyborg", SP_monster_tactical_cyborg },
+	{ "monster_berserk2", SP_monster_berserk2 },
+	{ "monster_dropper", SP_monster_dropper },
+	{ "monster_protector", SP_monster_protector },
+	{ "monster_fixbot2", SP_monster_fixbot2 },
+	//{ "monster_voss", SP_monster_voss },
+	//{ "monster_reject", SP_monster_reject },
+	//Beta enemies
+	{ "monster_alphamutant", SP_monster_mutant },
+	{ "monster_infantry_handler", SP_monster_infantry_handler },
+	{ "monster_mimic", SP_monster_mimic },
+	{ "monster_soldier_discharger", SP_monster_soldier_discharger },
+	{ "monster_tank_guardian", SP_monster_tank_guardian }, //shortcut to monster_tank or monster_tank_commander spawnflags 8
+	{ "monster_boss2_guardian", SP_monster_boss2_guardian } //shortcut to monster_boss2 spawnflags 8
+
 };
 // clang-format on
+
+static const spawn_temp_t *current_st;
+/*static*/ const spawn_temp_t spawn_temp_t::empty = {};
+
+const spawn_temp_t &ED_GetSpawnTemp()
+{
+	if (!current_st)
+	{
+		gi.Com_Print("WARNING: empty spawntemp accessed; this is probably a code bug.\n");
+		return spawn_temp_t::empty;
+	}
+
+	return *current_st;
+}
 
 /*
 ===============
@@ -582,7 +714,7 @@ ED_CallSpawn
 Finds the spawn function for the entity and calls it
 ===============
 */
-void ED_CallSpawn(edict_t *ent)
+void ED_CallSpawn(edict_t *ent, const spawn_temp_t &spawntemp)
 {
 	gitem_t *item;
 	int		 i;
@@ -593,6 +725,8 @@ void ED_CallSpawn(edict_t *ent)
 		G_FreeEdict(ent);
 		return;
 	}
+
+	current_st = &spawntemp;
 
 	// PGM - do this before calling the spawn function so it can be overridden.
 	ent->gravityVector[0] = 0.0;
@@ -632,7 +766,12 @@ void ED_CallSpawn(edict_t *ent)
 				}
 			}
 
-			SpawnItem(ent, item);
+			SpawnItem(ent, item, spawntemp);
+
+			if (level.is_psx)
+				ent->s.origin[2] += 15.f - (15.f * PSX_PHYSICS_SCALAR);
+
+			current_st = nullptr;
 			return;
 		}
 	}
@@ -647,12 +786,21 @@ void ED_CallSpawn(edict_t *ent)
 			// Paril: swap classname with stored constant if we didn't change it
 			if (strcmp(ent->classname, s.name) == 0)
 				ent->classname = s.name;
+
+			current_st = nullptr;
 			return;
 		}
 	}
 
 	gi.Com_PrintFmt("{} doesn't have a spawn function\n", *ent);
 	G_FreeEdict(ent);
+	current_st = nullptr;
+}
+
+// Quick redirect to use empty spawntemp
+void  ED_CallSpawn(edict_t *ent)
+{
+	ED_CallSpawn(ent, spawn_temp_t::empty);
 }
 
 /*
@@ -883,7 +1031,7 @@ static const std::initializer_list<field_t> entity_fields = {
 
 	// [Paril-KEX] func_eye stuff
 	FIELD_AUTO_NAMED("eye_position", move_origin),
-	FIELD_AUTO_NAMED("vision_cone", yaw_speed),
+	FIELD_AUTO(vision_cone),
 
 	// [Paril-KEX] for trigger_coop_relay
 	FIELD_AUTO_NAMED("message2", map),
@@ -905,7 +1053,7 @@ static const std::initializer_list<field_t> entity_fields = {
 
 	// [Paril-KEX] customizable power armor stuff
 	FIELD_AUTO_NAMED("power_armor_power", monsterinfo.power_armor_power),
-	{ "power_armor_type", [](edict_t* s, const char* v)
+	{ "power_armor_type", [](edict_t *s, const char *v)
 		{
 			int32_t type = atoi(v);
 
@@ -934,7 +1082,6 @@ static const std::initializer_list<field_t> entity_fields = {
 				s->monsterinfo.armor_type = IT_ARMOR_BODY;
 		}
 	},
-
 	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 
@@ -995,13 +1142,21 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(start_items),
 	FIELD_AUTO(no_grapple),
 	FIELD_AUTO(health_multiplier),
+	FIELD_AUTO(physics_flags_sp),
+	FIELD_AUTO(physics_flags_dm),
 
 	FIELD_AUTO(reinforcements),
 	FIELD_AUTO(noise_start),
 	FIELD_AUTO(noise_middle),
 	FIELD_AUTO(noise_end),
 
-	FIELD_AUTO(loop_count)
+	FIELD_AUTO(loop_count),
+
+	FIELD_AUTO(primary_objective_string),
+	FIELD_AUTO(secondary_objective_string),
+
+	FIELD_AUTO(primary_objective_title),
+	FIELD_AUTO(secondary_objective_title)
 };
 // clang-format on
 
@@ -1013,7 +1168,7 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-void ED_ParseField(const char *key, const char *value, edict_t *ent)
+void ED_ParseField(const char *key, const char *value, edict_t *ent, spawn_temp_t &st)
 {
 	// check st first
 	for (auto &f : temp_fields)
@@ -1060,14 +1215,13 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-const char *ED_ParseEdict(const char *data, edict_t *ent)
+const char *ED_ParseEdict(const char *data, edict_t *ent, spawn_temp_t &st)
 {
 	bool  init;
 	char  keyname[256];
 	const char *com_token;
 
 	init = false;
-	st = {};
 	
 	// go through all the dictionary pairs
 	while (1)
@@ -1102,7 +1256,7 @@ const char *ED_ParseEdict(const char *data, edict_t *ent)
 			continue;
 		}
 
-		ED_ParseField(keyname, com_token, ent);
+		ED_ParseField(keyname, com_token, ent, st);
 	}
 
 	if (!init)
@@ -1289,6 +1443,8 @@ static void G_PrecacheStartItems()
 	}
 }
 
+#include <map>
+
 /*
 ==============
 SpawnEntities
@@ -1299,6 +1455,8 @@ parsing textual entity definitions out of an ent file.
 */
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint)
 {
+	level.is_spawning = true;
+
 	// clear cached indices
 	cached_soundindex::clear_all();
 	cached_modelindex::clear_all();
@@ -1330,6 +1488,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
+	level.is_psx = strncmp(level.mapname, "psx/", 4) == 0;
 
 	level.coop_scale_players = 0;
 	level.coop_health_scaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
@@ -1364,7 +1523,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			ent = g_edicts;
 		else
 			ent = G_Spawn();
-		entities = ED_ParseEdict(entities, ent);
+
+		spawn_temp_t st {};
+
+		entities = ED_ParseEdict(entities, ent, st);
 
 		// remove things (except the world) from different skill levels or deathmatch
 		if (ent != g_edicts)
@@ -1387,7 +1549,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		ent->gravityVector[1] = 0.0;
 		ent->gravityVector[2] = -1.0;
 		// PGM
-		ED_CallSpawn(ent);
+
+		ED_CallSpawn(ent, st);
 
 		ent->s.renderfx |= RF_IR_VISIBLE; // PGM
 	}
@@ -1427,6 +1590,61 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	// ROGUE
 
 	setup_shadow_lights();
+
+	if (gi.cvar("g_print_spawned_entities", "0", CVAR_NOFLAGS)->integer)
+	{
+		std::map<std::string, int> entities;
+		int total_monster_health = 0;
+
+		for (size_t i = 0; i < globals.num_edicts; i++)
+		{
+			edict_t *e = &globals.edicts[i];
+
+			if (!e->inuse)
+				continue;
+			else if (!e->item && !e->monsterinfo.stand)
+				continue;
+
+			const char *cn = e->classname ? e->classname : "noclass";
+
+			if (auto f = entities.find(cn); f != entities.end())
+			{
+				f->second++;
+			}
+			else
+			{
+				entities.insert({ cn, 1 });
+			}
+
+			if (e->monsterinfo.stand)
+			{
+				total_monster_health += e->health;
+			}
+
+			if (e->item && strcmp(e->classname, e->item->classname))
+			{
+				cn = e->item->classname ? e->item->classname : "noclass";
+
+				if (auto f = entities.find(cn); f != entities.end())
+				{
+					f->second++;
+				}
+				else
+				{
+					entities.insert({ cn, 1 });
+				}
+			}
+		}
+
+		gi.Com_PrintFmt("total monster health: {}\n", total_monster_health);
+		
+		for (auto &e : entities)
+		{
+			gi.Com_PrintFmt("{}: {}\n", e.first, e.second);
+		}
+	}
+
+	level.is_spawning = false;
 }
 
 //===================================================================
@@ -1580,6 +1798,8 @@ void SP_worldspawn(edict_t *ent)
 	ent->s.modelindex = MODELINDEX_WORLD;
 	ent->gravity = 1.0f;
 
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (st.hub_map)
 	{
 		level.hub_map = true;
@@ -1669,11 +1889,47 @@ void SP_worldspawn(edict_t *ent)
 
 	gi.configstring(CS_MAXCLIENTS, G_Fmt("{}", game.maxclients).data());
 
-	if (level.is_n64 && !deathmatch->integer)
+	int override_physics = gi.cvar("g_override_physics_flags", "-1", CVAR_NOFLAGS)->integer;
+
+	if (override_physics == -1)
 	{
-		gi.configstring(CONFIG_N64_PHYSICS, "1");
-		pm_config.n64_physics = true;
+		if (deathmatch->integer && st.was_key_specified("physics_flags_dm"))
+			override_physics = st.physics_flags_dm;
+		else if (!deathmatch->integer && st.was_key_specified("physics_flags_sp"))
+			override_physics = st.physics_flags_sp;
 	}
+
+	if (override_physics >= 0)
+		pm_config.physics_flags = (physics_flags_t) override_physics;
+	else
+	{
+		if (level.is_n64)
+			pm_config.physics_flags |= PHYSICS_N64_MOVEMENT;
+
+		if (level.is_psx)
+			pm_config.physics_flags |= PHYSICS_PSX_MOVEMENT | PHYSICS_PSX_SCALE;
+
+		if (deathmatch->integer)
+			pm_config.physics_flags |= PHYSICS_DEATHMATCH;
+	}
+
+	gi.configstring(CONFIG_PHYSICS_FLAGS, G_Fmt("{}", (int) pm_config.physics_flags).data());
+	
+	level.primary_objective_string = "$g_primary_mission_objective";
+	level.secondary_objective_string = "$g_secondary_mission_objective";
+
+	if (st.primary_objective_string && st.primary_objective_string[0])
+		level.primary_objective_string = st.primary_objective_string;
+	if (st.secondary_objective_string && st.secondary_objective_string[0])
+		level.secondary_objective_string = st.secondary_objective_string;
+	
+	level.primary_objective_title = "$g_pc_primary_objective";
+	level.secondary_objective_title = "$g_pc_secondary_objective";
+
+	if (st.primary_objective_title && st.primary_objective_title[0])
+		level.primary_objective_title = st.primary_objective_title;
+	if (st.secondary_objective_title && st.secondary_objective_title[0])
+		level.secondary_objective_title = st.secondary_objective_title;
 
 	// statusbar prog
 	G_InitStatusbar();
@@ -1788,6 +2044,10 @@ void SP_worldspawn(edict_t *ent)
 	gi.soundindex("player/wade1.wav");
 	gi.soundindex("player/wade2.wav");
 	gi.soundindex("player/wade3.wav");
+
+	gi.soundindex("player/breathout1.wav");
+	gi.soundindex("player/breathout2.wav");
+	gi.soundindex("player/breathout3.wav");
 
 	gi.soundindex("items/pkup.wav");   // bonus item pickup
 	gi.soundindex("world/land.wav");   // landing thud

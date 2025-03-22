@@ -21,16 +21,6 @@ static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 static cached_soundindex sound_tentacles_retract;
 
-/* KONIG - allowing custom spawns; adding arachnid spawn */
-constexpr const char* default_reinforcements = "monster_stalker 1;monster_stalker 1;monster_arachnid 1";
-constexpr int32_t default_monster_slots_base = 3;
-
-void M_SetupReinforcements(const char* reinforcements, reinforcement_list_t& list);
-std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t* self, int32_t& num_chosen, int32_t max_slots);
-
-constexpr spawnflags_t SPAWNFLAG_NOKILL_STALKERS = 8_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_NOKILL_ARACHNIDS = 16_spawnflag;
-
 // sqrt(64*64*2) + sqrt(28*28*2) => 130.1
 constexpr vec3_t spawnpoints[] = {
 	{ 30, 135, 0 },
@@ -46,8 +36,7 @@ constexpr vec3_t stalker_maxs = { 28, 28, 18 };
 
 bool infront(edict_t *self, edict_t *other);
 void WidowCalcSlots(edict_t *self);
-/*KONIG - Replaced WidowPowerups for new BossPowerUps*/
-void BossPowerups(edict_t* self);
+unsigned int widow2_damage_multiplier;
 
 void widow2_run(edict_t *self);
 void widow2_dead(edict_t *self);
@@ -122,7 +111,7 @@ void Widow2Beam(edict_t *self)
 		target[2] += self->enemy->viewheight - 10;
 		forward = target - start;
 		forward.normalize();
-		monster_fire_heatbeam(self, start, forward, vec3_origin, 10, 50, flashnum);
+		monster_fire_heatbeam(self, start, forward, vec3_origin, 10 * widow2_damage_multiplier, 50, flashnum);
 	}
 	else if ((self->s.frame >= FRAME_spawn04) && (self->s.frame <= FRAME_spawn14))
 	{
@@ -138,7 +127,7 @@ void Widow2Beam(edict_t *self)
 		vec[YAW] -= sweep_angles[flashnum - MZ2_WIDOW2_BEAM_SWEEP_1];
 
 		AngleVectors(vec, forward, nullptr, nullptr);
-		monster_fire_heatbeam(self, start, forward, vec3_origin, 10, 50, flashnum);
+		monster_fire_heatbeam(self, start, forward, vec3_origin, 10 * widow2_damage_multiplier, 50, flashnum);
 	}
 	else
 	{
@@ -151,7 +140,7 @@ void Widow2Beam(edict_t *self)
 		forward = target - start;
 		forward.normalize();
 
-		monster_fire_heatbeam(self, start, forward, vec3_origin, 10, 50, MZ2_WIDOW2_BEAM_SWEEP_1);
+		monster_fire_heatbeam(self, start, forward, vec3_origin, 10 * widow2_damage_multiplier, 50, MZ2_WIDOW2_BEAM_SWEEP_1);
 	}
 }
 
@@ -163,32 +152,27 @@ void Widow2Spawn(edict_t *self)
 
 	AngleVectors(self->s.angles, f, r, u);
 
-	if (self->monsterinfo.chosen_reinforcements[0] == 255)
-		return;
-
-	auto& reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
-
 	for (i = 0; i < 2; i++)
 	{
-		auto& reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[i]];
 		offset = spawnpoints[i];
 
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
 
 		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64))
 		{
-			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, reinforcement.classname, 256);
+			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, "monster_stalker", 256);
 
 			if (!ent)
 				continue;
 
+			self->monsterinfo.monster_used++;
+			ent->monsterinfo.commander = self;
+			ent->monsterinfo.slots_from_commander = 1;
+
 			ent->nextthink = level.time;
 			ent->think(ent);
 
-			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
-			ent->monsterinfo.commander = self;
-			ent->monsterinfo.monster_slots = reinforcement.strength;
-			self->monsterinfo.monster_used += reinforcement.strength;
+			ent->monsterinfo.aiflags |= AI_SPAWNED_COMMANDER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 
 			if (!coop->integer)
 			{
@@ -234,9 +218,6 @@ void widow2_ready_spawn(edict_t *self)
 
 	Widow2Beam(self);
 	AngleVectors(self->s.angles, f, r, u);
-
-	//int num_summoned;
-	//self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, self->monsterinfo.monster_slots);
 
 	for (i = 0; i < 2; i++)
 	{
@@ -330,12 +311,12 @@ void WidowDisrupt(edict_t *self)
 		dir = self->pos1 - start;
 		dir.normalize();
 
-		monster_fire_tracker(self, start, dir, 20, 500, self->enemy, MZ2_WIDOW_DISRUPTOR);
+		monster_fire_tracker(self, start, dir, 20 * widow2_damage_multiplier, 500, self->enemy, MZ2_WIDOW_DISRUPTOR);
 	}
 	else
 	{
 		PredictAim(self, self->enemy, start, 1200, true, 0, &dir, nullptr);
-		monster_fire_tracker(self, start, dir, 20, 1200, nullptr, MZ2_WIDOW_DISRUPTOR);
+		monster_fire_tracker(self, start, dir, 20 * widow2_damage_multiplier, 1200, nullptr, MZ2_WIDOW_DISRUPTOR);
 	}
 
 	widow2_step(self);
@@ -531,11 +512,11 @@ void Widow2Crunch(edict_t *self)
 	// 70 + 32
 	aim = { 150, 0, 4 };
 	if (self->s.frame != FRAME_tongs07)
-		fire_hit(self, aim, irandom(20, 26), 0);
+		fire_hit(self, aim, irandom(20, 26) * widow2_damage_multiplier, 0);
 	else if (self->enemy->groundentity)
-		fire_hit(self, aim, irandom(20, 26), 500);
+		fire_hit(self, aim, irandom(20, 26) * widow2_damage_multiplier, 500);
 	else // not as much kick if they're in the air .. makes it harder to land on her head
-		fire_hit(self, aim, irandom(20, 26), 250);
+		fire_hit(self, aim, irandom(20, 26) * widow2_damage_multiplier, 250);
 }
 
 void Widow2Toss(edict_t *self)
@@ -893,10 +874,11 @@ PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(widow2_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 void widow2_dead(edict_t *self)
@@ -909,15 +891,13 @@ void KillChildren(edict_t *self)
 
 	while (1)
 	{
-		if (!self->spawnflags.has(SPAWNFLAG_NOKILL_STALKERS))
-		{
-			ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
-			if (!ent)
-				return;
+		ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
+		if (!ent)
+			return;
 
-			if ((ent->inuse) && (ent->health > 0))
-				T_Damage(ent, self, self, vec3_origin, self->enemy->s.origin, vec3_origin, (ent->health + 1), 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
-		}
+		// FIXME - may need to stagger
+		if ((ent->inuse) && (ent->health > 0))
+			T_Damage(ent, self, self, vec3_origin, self->enemy->s.origin, vec3_origin, (ent->health + 1), 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
 	}
 }
 
@@ -972,14 +952,120 @@ DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	M_SetAnimation(self, &widow2_move_death);
 }
 
+void Widow2GoinQuad(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	widow2_damage_multiplier = 4;
+}
+
+void Widow2Double(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.double_time = time;
+	widow2_damage_multiplier = 2;
+}
+
+void Widow2Pent(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invincible_time = time;
+}
+
+void Widow2PowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	// I don't like this, but it works
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	if (coop->integer)
+		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
+}
+
+void Widow2RespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD)
+	{
+		Widow2PowerArmor(self);
+		if (skill->integer >= 1)
+			Widow2GoinQuad(self, other->client->quad_time);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		Widow2PowerArmor(self);
+		if (skill->integer >= 1)
+			Widow2Double(self, other->client->double_time);
+	}
+	else
+		widow2_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		if (skill->integer >= 2)
+			Widow2Pent(self, other->client->invincible_time);
+		else if (skill->integer == 1)
+			Widow2PowerArmor(self);
+	}
+}
+
+void Widow2Powerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		Widow2RespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		// in coop, check for pents, then quads, then doubles
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				Widow2RespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				Widow2RespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				Widow2RespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
+}
+
 MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool
 {
 	if (!self->enemy)
 		return false;
 
-	/*KONIG - replaced WidowPowerups for BossPowerups*/
-	//WidowPowerups(self);
-	BossPowerups(self);
+	Widow2Powerups(self);
 
 	if ((frandom() < 0.8f) && (M_SlotsLeft(self) >= 2) && (realrange(self, self->enemy) > 150))
 	{
@@ -1007,7 +1093,6 @@ void Widow2Precache()
 	gi.soundindex("weapons/disint2.wav");
 
 	gi.modelindex("models/monsters/stalker/tris.md2");
-	gi.modelindex("models/monsters/arachnid/tris.md2");
 	gi.modelindex("models/items/spawngro3/tris.md2");
 	gi.modelindex("models/objects/gibs/sm_metal/tris.md2");
 	gi.modelindex("models/objects/laser/tris.md2");
@@ -1027,6 +1112,8 @@ void Widow2Precache()
  */
 void SP_monster_widow2(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -1047,18 +1134,16 @@ void SP_monster_widow2(edict_t *self)
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 144 };
 
-	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
-	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	self->health = max(2500, 2500 + 1250 * (skill->integer - 1)) * st.health_multiplier;
 	if (!st.was_key_specified("armor_type"))
 		self->monsterinfo.armor_type = IT_ARMOR_BODY;
 	if (!st.was_key_specified("armor_power"))
-		self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
+		self->monsterinfo.armor_power = max(500, 500 + 150 * (skill->integer - 1));
 	if (coop->integer)
 	{
-		self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
-		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		self->health += (500 * skill->integer) + (500 * (CountPlayers() - 1));
+		self->monsterinfo.armor_power += (250 * skill->integer) + (250 * (CountPlayers() - 1));
 	}
-	//	self->health = 1;
 	self->gib_health = -900;
 	self->mass = 2500;
 

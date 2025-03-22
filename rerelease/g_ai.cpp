@@ -428,13 +428,31 @@ bool visible(edict_t *self, edict_t *other, bool through_glass)
     spot2 = other->s.origin;
     spot2[2] += other->viewheight;
 
-    contents_t mask = MASK_OPAQUE;
+    contents_t mask = MASK_OPAQUE | CONTENTS_PROJECTILECLIP;
 
     if (!through_glass)
         mask |= CONTENTS_WINDOW;
 
     trace = gi.traceline(spot1, spot2, self, mask);
     return trace.fraction == 1.0f || trace.ent == other; // PGM
+}
+
+/*
+=============
+infront_cone
+
+returns 1 if the entity is in front (in sight) of self
+=============
+*/
+bool infront_cone(edict_t *self, edict_t *other, float cone)
+{
+    vec3_t forward;
+
+    AngleVectors(self->s.angles, forward, nullptr, nullptr);
+
+    vec3_t vec = (other->s.origin - self->s.origin).normalized();
+
+    return vec.dot(forward) > cone;
 }
 
 /*
@@ -446,21 +464,19 @@ returns 1 if the entity is in front (in sight) of self
 */
 bool infront(edict_t *self, edict_t *other)
 {
-    vec3_t vec;
-    float  dot;
-    vec3_t forward;
+    float cone = self->vision_cone;
 
-    AngleVectors(self->s.angles, forward, nullptr, nullptr);
-    vec = other->s.origin - self->s.origin;
-    vec.normalize();
-    dot = vec.dot(forward);
+    if (self->vision_cone < -1.0f)
+    {
+        // [Paril-KEX] if we're an ambush monster, reduce our cone of
+        // vision to not ruin surprises, unless we already had an enemy.
+        if (self->spawnflags.has(SPAWNFLAG_MONSTER_AMBUSH) && !self->monsterinfo.trail_time && !self->enemy)
+            cone = 0.15f;
+        else
+            cone = -0.30f;
+    }
 
-    // [Paril-KEX] if we're an ambush monster, reduce our cone of
-    // vision to not ruin surprises, unless we already had an enemy.
-    if (self->spawnflags.has(SPAWNFLAG_MONSTER_AMBUSH) && !self->monsterinfo.trail_time && !self->enemy)
-        return dot > 0.15f;
-
-    return dot > -0.30f;
+    return infront_cone(self, other, cone);
 }
 
 //============================================================================
@@ -935,7 +951,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
             spot2[2] += self->enemy->viewheight;
 
             tr = gi.traceline(spot1, spot2, self,
-                MASK_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_SLIME | CONTENTS_LAVA);
+                MASK_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_SLIME | CONTENTS_LAVA | CONTENTS_PROJECTILECLIP);
         }
         else
         {

@@ -70,6 +70,8 @@ USE(Use_Target_Speaker) (edict_t *ent, edict_t *other, edict_t *activator) -> vo
 
 void SP_target_speaker(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (!st.noise)
 	{
 		gi.Com_PrintFmt("{}: no noise set\n", *ent);
@@ -154,6 +156,8 @@ When fired, the "message" key becomes the current personal computer string, and 
 */
 void SP_target_help(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(ent);
@@ -204,6 +208,8 @@ THINK(G_VerifyTargetted) (edict_t *ent) -> void
 
 void SP_target_secret(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(ent);
@@ -215,8 +221,9 @@ void SP_target_secret(edict_t *ent)
 
 	ent->use = use_target_secret;
 	if (!st.noise)
-		st.noise = "misc/secret.wav";
-	ent->noise_index = gi.soundindex(st.noise);
+		ent->noise_index = gi.soundindex("misc/secret.wav");
+	else
+		ent->noise_index = gi.soundindex(st.noise);
 	ent->svflags = SVF_NOCLIENT;
 	level.total_secrets++;
 }
@@ -285,7 +292,7 @@ void G_PlayerNotifyGoal(edict_t *player)
 
 		if (*game.helpmessage1)
 			// [Sam-KEX] Print objective to screen
-			gi.LocClient_Print(player, PRINT_TYPEWRITER, "$g_primary_mission_objective", game.helpmessage1);
+			gi.LocClient_Print(player, PRINT_TYPEWRITER, level.primary_objective_string, game.helpmessage1);
 	}
 	
 	if (player->client->pers.game_help2changed != game.help2changed)
@@ -296,7 +303,7 @@ void G_PlayerNotifyGoal(edict_t *player)
 
 		if (*game.helpmessage2)
 			// [Sam-KEX] Print objective to screen
-			gi.LocClient_Print(player, PRINT_TYPEWRITER, "$g_secondary_mission_objective", game.helpmessage2);
+			gi.LocClient_Print(player, PRINT_TYPEWRITER, level.secondary_objective_string, game.helpmessage2);
 	}
 }
 
@@ -311,12 +318,13 @@ USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 	gi.sound(ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_goals++;
-	/* KONIG - swaps muting to n64 level complete music*/
+
 	if (level.found_goals == level.total_goals && !ent->spawnflags.has(SPAWNFLAG_GOAL_KEEP_MUSIC))
 	{
 		if (ent->sounds)
 			gi.configstring (CS_CDTRACK, G_Fmt("{}", ent->sounds).data() );
 		else
+			/* KONIG - swaps muting to vanilla ambient track */
 			gi.configstring(CS_CDTRACK, "78");
 	}
 
@@ -336,6 +344,8 @@ USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 
 void SP_target_goal(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(ent);
@@ -344,8 +354,9 @@ void SP_target_goal(edict_t *ent)
 
 	ent->use = use_target_goal;
 	if (!st.noise)
-		st.noise = "misc/secret.wav";
-	ent->noise_index = gi.soundindex(st.noise);
+		ent->noise_index = gi.soundindex("misc/secret.wav");
+	else
+		ent->noise_index = gi.soundindex(st.noise);
 	ent->svflags = SVF_NOCLIENT;
 	level.total_goals++;
 }
@@ -537,20 +548,16 @@ For gibs:
 	speed how fast it should be moving otherwise it
 	will just be dropped
 */
-void ED_CallSpawn(edict_t *ent);
 
 USE(use_target_spawner) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
-	edict_t *ent;
-
-	ent = G_Spawn();
+	edict_t *ent = G_Spawn();
 	ent->classname = self->target;
 	// RAFAEL
 	ent->flags = self->flags;
 	// RAFAEL
 	ent->s.origin = self->s.origin;
 	ent->s.angles = self->s.angles;
-	st = {};
 
 	// [Paril-KEX] although I fixed these in our maps, this is just
 	// in case anybody else does this by accident. Don't count these monsters
@@ -560,7 +567,9 @@ USE(use_target_spawner) (edict_t *self, edict_t *other, edict_t *activator) -> v
 	ED_CallSpawn(ent);
 	gi.linkentity(ent);
 
-	KillBox(ent, false);
+	if (ent->solid == SOLID_BBOX || (G_GetClipMask(ent) & (CONTENTS_PLAYER)))
+		KillBox(ent, false);
+
 	if (self->speed)
 		ent->velocity = self->movedir;
 
@@ -578,9 +587,10 @@ void SP_target_spawner(edict_t *self)
 	}
 }
 
+
 //==========================================================
 
-/* KONIG - NEW TARGET ENTITIES */
+/* KONIG - NEW TARGET ENTITIES; up high for below */
 /*QUAKED target_shooter_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS BLUEBLASTER GREENBLASTER NAILS RIPPER
 Fires a projectile attack in the set direction when triggered.
 
@@ -667,79 +677,7 @@ void SP_target_shooter_blaster(edict_t* self)
 
 	self->svflags = SVF_NOCLIENT;
 }
-
-/*QUAKED target_shooter_rockets (1 0 0) (-8 -8 -8) (8 8 8) GRENADE PHALANX BFG
-Fires an explosive projectile in the set direction when triggered.
-
-dmg		default is 15
-speed	default is 1000
-volume  default is 0.75
-*/
-constexpr spawnflags_t SPAWNFLAG_GRENADE = 1_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_PHALANX = 2_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_BFG = 4_spawnflag;
-
-USE(use_target_shooter_rockets) (edict_t* self, edict_t* other, edict_t* activator) -> void
-{
-	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
-	{
-		fire_grenade(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 2.5_sec, self->dmg, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), true);
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
-	{
-		fire_plasma(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_BFG))
-	{
-		fire_bfg(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 1000);
-	}
-	else
-	{
-		fire_rocket(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, self->dmg, self->dmg);
-	}
-
-	gi.sound(self, CHAN_VOICE, self->noise_index, self->volume, ATTN_NORM, 0);
-}
-
-void SP_target_shooter_rockets(edict_t* self)
-{
-	self->use = use_target_shooter_rockets;
-	G_SetMovedir(self->s.angles, self->movedir);
-
-	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
-	{
-		self->noise_index = gi.soundindex("weapons/grenlf1a.wav");
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
-	{
-		self->noise_index = gi.soundindex("weapons/plasshot.wav");
-		if (!self->dmg)
-			self->dmg = 80;
-		if (!self->speed)
-			self->speed = 725;
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_BFG))
-	{
-		self->noise_index = gi.soundindex("makron/bfg_fire.wav");
-		if (!self->dmg)
-			self->dmg = deathmatch->integer ? 200 : 500;;
-		if (!self->speed)
-			self->speed = 400;
-	}
-	else
-	{
-		self->noise_index = gi.soundindex("weapons/rocklf1a.wav");
-		if (!self->dmg)
-			self->dmg = 120;
-		if (!self->speed)
-			self->speed = 600;
-	}
-
-	if (!self->volume)
-		self->volume = 0.75;
-
-	self->svflags = SVF_NOCLIENT;
-}
+//==========================================================
 
 /*QUAKED target_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
 Fires a blaster bolt in the set direction when triggered.
@@ -748,7 +686,7 @@ dmg		default is 15
 speed	default is 1000
 */
 /* KONIG - depreciated for target_shooter_blaster */
-void SP_target_blaster(edict_t *self)
+void SP_target_blaster(edict_t* self)
 {
 	SP_target_shooter_blaster(self);
 }
@@ -831,7 +769,12 @@ struct laser_pierce_t : pierce_args_t
 		if (self->dmg > 0 && (tr.ent->takedamage) && !(tr.ent->flags & FL_IMMUNE_LASER) && self->damage_debounce_time <= level.time)
 		{
 			damaged_thing = true;
-			T_Damage(tr.ent, self, self->activator, self->movedir, tr.endpos, vec3_origin, self->dmg, 1, DAMAGE_ENERGY, MOD_TARGET_LASER);
+			damageflags_t dmg = DAMAGE_ENERGY;
+
+			if (self->spawnflags.has(SPAWNFLAG_LASER_NO_PROTECTION))
+				dmg |= DAMAGE_NO_PROTECTION;
+
+			T_Damage(tr.ent, self, self->activator, self->movedir, tr.endpos, vec3_origin, self->dmg, 1, dmg, MOD_TARGET_LASER);
 		}
 
 		// if we hit something that's not a monster or player or is immune to lasers, we're done
@@ -889,6 +832,9 @@ THINK(target_laser_think) (edict_t *self) -> void
 	};
 
 	contents_t mask = self->spawnflags.has(SPAWNFLAG_LASER_STOPWINDOW) ? MASK_SHOT : (CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
+
+	if (!self->dmg)
+		mask &= ~(CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
 
 	pierce_trace(start, end, self, args, mask);
 
@@ -948,22 +894,9 @@ THINK(target_laser_start) (edict_t *self) -> void
 		}
 	}
 
-	if (self->spawnflags.has(SPAWNFLAG_LASER_LIGHTNING))
-	{
-		self->s.renderfx |= RF_BEAM_LIGHTNING; // tell renderer it is lightning
-
-		if (!self->s.skinnum)
-			self->s.skinnum = 0xf3f3f1f1; // default lightning color
-	}
-
-	// set the beam diameter
-	// [Paril-KEX] lab has this set prob before lightning was implemented
-	if (!level.is_n64 && self->spawnflags.has(SPAWNFLAG_LASER_FAT))
-		self->s.frame = 16;
-	else
-		self->s.frame = 4;
-
 	// set the color
+	// [Paril-KEX] moved it here so that color takes place
+	// before lightning/reactor check
 	if (!self->s.skinnum)
 	{
 		if (self->spawnflags.has(SPAWNFLAG_LASER_RED))
@@ -977,6 +910,26 @@ THINK(target_laser_start) (edict_t *self) -> void
 		else if (self->spawnflags.has(SPAWNFLAG_LASER_ORANGE))
 			self->s.skinnum = 0xe0e1e2e3;
 	}
+
+	if (self->spawnflags.has(SPAWNFLAG_LASER_REACTOR))
+		self->spawnflags |= SPAWNFLAG_LASER_LIGHTNING;
+
+	if (self->spawnflags.has(SPAWNFLAG_LASER_LIGHTNING))
+	{
+		self->s.renderfx |= RF_BEAM_LIGHTNING; // tell renderer it is lightning
+
+		if (!self->s.skinnum)
+			self->s.skinnum = 0xf3f3f1f1; // default lightning color
+	}
+	/*
+	else if (self->spawnflags.has(SPAWNFLAG_LASER_REACTOR))
+	{
+		self->s.renderfx |= RF_BEAM_REACTOR;
+
+		if (!self->s.skinnum)
+			self->s.skinnum = 0xf3f3f1f1; // default reactor color
+	}
+	*/
 
 	if (!self->enemy)
 	{
@@ -1003,9 +956,6 @@ THINK(target_laser_start) (edict_t *self) -> void
 	self->use = target_laser_use;
 	self->think = target_laser_think;
 
-	if (!self->dmg)
-		self->dmg = 1;
-
 	self->mins = { -8, -8, -8 };
 	self->maxs = { 8, 8, 8 };
 	gi.linkentity(self);
@@ -1018,6 +968,33 @@ THINK(target_laser_start) (edict_t *self) -> void
 
 void SP_target_laser(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
+	// set the beam diameter
+	// [Paril-KEX] lab has this set prob before lightning was implemented
+	// [Paril-KEX] moved this here because st
+	if (!st.was_key_specified("frame"))
+	{
+		if (!level.is_n64 && self->spawnflags.has(SPAWNFLAG_LASER_FAT))
+			self->s.frame = 16;
+		else
+			self->s.frame = 4;
+	}
+
+	// [Paril-KEX] upper 2 bytes of reactor laser are count
+	/*
+	if (self->spawnflags.has(SPAWNFLAG_LASER_REACTOR))
+	{
+		self->s.frame &= 0xFFFF;
+
+		self->s.frame |= (self->count << 16) & 0xFFFF0000;
+	}
+	*/
+
+	// [Paril-KEX] moved this here because st
+	if (!st.was_key_specified("dmg"))
+		self->dmg = 1;
+
 	// let everything else get spawned before we start firing
 	self->think = target_laser_start;
 	self->flags |= FL_TRAP_LASER_FIELD;
@@ -1383,17 +1360,16 @@ THINK(update_target_camera) (edict_t *self) -> void
     self->nextthink = level.time + FRAME_TIME_S;
 }
 
-void G_SetClientFrame(edict_t *ent);
-
-extern float xyspeed;
-
 THINK(target_camera_dummy_think) (edict_t *self) -> void
 {
 	// bit of a hack, but this will let the dummy
 	// move like a player
 	self->client = self->owner->client;
-	xyspeed = sqrtf(self->velocity[0] * self->velocity[0] + self->velocity[1] * self->velocity[1]);
-	G_SetClientFrame(self);
+
+	step_parameters_t step {};
+	step.xyspeed = sqrtf(self->velocity[0] * self->velocity[0] + self->velocity[1] * self->velocity[1]);
+	G_SetClientFrame(self, step);
+
 	self->client = nullptr;
 
 	// alpha fade out for voops
@@ -1510,6 +1486,8 @@ USE(use_target_gravity) (edict_t *self, edict_t *other, edict_t *activator) -> v
 
 void SP_target_gravity(edict_t* self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->use = use_target_gravity;
 	self->gravity = atof(st.gravity);
 }
@@ -1531,6 +1509,8 @@ USE(use_target_soundfx) (edict_t *self, edict_t *other, edict_t *activator) -> v
 
 void SP_target_soundfx(edict_t* self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (!self->volume)
 		self->volume = 1.0;
 
@@ -1663,6 +1643,8 @@ USE(target_light_use) (edict_t *self, edict_t *other, edict_t *activator) -> voi
 
 void SP_target_light(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->s.modelindex = 1;
 	self->s.renderfx = RF_CUSTOM_LIGHT;
 	self->s.frame = st.radius ? st.radius : 150;
@@ -1756,18 +1738,34 @@ static float distance_to_poi(vec3_t start, vec3_t end)
 
 USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 {
+	bool debug = !!g_debug_poi->integer;
+
+	if (debug)
+		gi.Com_PrintFmt("POI {} used by {}\n", *ent, *other);
+
 	// we were disabled, so remove the disable check
 	if (ent->spawnflags.has(SPAWNFLAG_POI_DISABLED))
+	{
 		ent->spawnflags &= ~SPAWNFLAG_POI_DISABLED;
+		if (debug)
+			gi.Com_Print(" - POI was disabled, made re-enabled\n");
+	}
 
 	// early stage check
 	if (ent->count && level.current_poi_stage > ent->count)
+	{
+		if (debug)
+			gi.Com_PrintFmt(" - POI count is {}, current stage {}, early exit\n", ent->count, level.current_poi_stage);
 		return;
+	}
 
 	// teamed POIs work a bit differently
 	if (ent->team)
 	{
 		edict_t *poi_master = ent->teammaster;
+
+		if (debug)
+			gi.Com_PrintFmt(" - teamed POI \"{}\"; master is {}\n", ent->team, *poi_master);
 
 		// unset ent, since we need to find one that matches
 		ent = nullptr;
@@ -1779,42 +1777,79 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 
 		for (edict_t *poi = poi_master; poi; poi = poi->teamchain)
 		{
+			if (debug)
+				gi.Com_PrintFmt("  - checking team member {}\n", *poi);
+
 			// currently disabled
 			if (poi->spawnflags.has(SPAWNFLAG_POI_DISABLED))
+			{
+				if (debug)
+					gi.Com_Print("  - disabled, skipping\n");
+
 				continue;
+			}
 
 			// ignore dummy POI
 			if (poi->spawnflags.has(SPAWNFLAG_POI_DUMMY))
 			{
+				if (debug)
+					gi.Com_Print("  - dummy, skipping (but storing as fallback)\n");
+
 				dummy_fallback = poi;
 				continue;
 			}
 			// POI is not part of current stage
 			else if (poi->count && level.current_poi_stage > poi->count)
+			{
+				if (debug)
+					gi.Com_PrintFmt("  - staged POI; level stage {} = POI count {}, skipping\n", level.current_poi_stage, poi->count);
+
 				continue;
 			// POI isn't the right style
+			}
 			else if (poi->style > best_style)
+			{
+				if (debug)
+					gi.Com_PrintFmt("  - style {} > current best style {}, skipping\n", poi->style, best_style);
+
 				continue;
+			}
 
 			float dist = distance_to_poi(activator->s.origin, poi->s.origin);
+
+			if (debug)
+				gi.Com_PrintFmt("  - resolved distance as {} (used for nearest)\n", dist);
 
 			// we have one already and it's farther away, don't bother
 			if (poi_master->spawnflags.has(SPAWNFLAG_POI_NEAREST) &&
 				ent &&
 				dist > best_distance)
+			{
+				if (debug)
+					gi.Com_PrintFmt("  - nearest used; distance > best distance of {}, skipping\n", best_distance);
 				continue;
+			}
 
 			// found a better style; overwrite dist
 			if (poi->style < best_style)
 			{
+				if (debug)
+					gi.Com_PrintFmt("  - style {} < current best style {} - potentially better pick\n", poi->style, best_style);
+
 				// unless we weren't reachable...
 				if (poi_master->spawnflags.has(SPAWNFLAG_POI_NEAREST) && std::isinf(dist))
+				{
+					if (debug)
+						gi.Com_Print("  - not reachable; skipped\n");
 					continue;
+				}
 
 				best_style = poi->style;
 				if (poi_master->spawnflags.has(SPAWNFLAG_POI_NEAREST))
 					best_distance = dist;
 				ent = poi;
+				if (debug)
+					gi.Com_Print("  - marked as current best due to style\n");
 				continue;
 			}
 
@@ -1825,6 +1860,8 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 				{
 					best_distance = dist;
 					ent = poi;
+					if (debug)
+						gi.Com_Print("  - marked as current best due to distance\n");
 					continue;
 				}
 			}
@@ -1832,6 +1869,8 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 			{
 				// not picking by distance, so it's order of appearance
 				ent = poi;
+				if (debug)
+					gi.Com_Print("  - marked as current best due to order of appearance\n");
 			}
 		}
 
@@ -1840,36 +1879,66 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 		if (!ent)
 		{
 			if (dummy_fallback && dummy_fallback->spawnflags.has(SPAWNFLAG_POI_DYNAMIC))
+			{
+				if (debug)
+					gi.Com_Print(" - no valid POI found, but we had a dummy fallback\n");
 				ent = dummy_fallback;
+			}
 			else
+			{
+				if (debug)
+					gi.Com_Print(" - no valid POI found, skipping\n");
 				return;
+			}
 		}
 
 		// copy over POI stage value
 		if (ent->count)
 		{
 			if (level.current_poi_stage <= ent->count)
+			{
 				level.current_poi_stage = ent->count;
+				if (debug)
+					gi.Com_PrintFmt(" - current POI stage set to {}\n", ent->count);
+			}
 		}
 	}
 	else
 	{
+		if (debug)
+			gi.Com_Print(" - non-teamed POI\n");
+
 		if (ent->count)
 		{
 			if (level.current_poi_stage <= ent->count)
+			{
 				level.current_poi_stage = ent->count;
+				if (debug)
+					gi.Com_PrintFmt(" - level stage {} <= POI count {}, using new stage value\n", level.current_poi_stage, ent->count);
+			}
 			else
+			{
+				if (debug)
+					gi.Com_PrintFmt(" - level stage {} <= POI count {}, not part of current stage, skipping\n", level.current_poi_stage, ent->count);
 				return; // this POI is not part of our current stage
+			}
 		}
 	}
 
 	// dummy POI; not valid
 	if (!strcmp(ent->classname, "target_poi") && ent->spawnflags.has(SPAWNFLAG_POI_DUMMY) && !ent->spawnflags.has(SPAWNFLAG_POI_DYNAMIC))
+	{
+		if (debug)
+			gi.Com_Print(" - POI is target_poi, dummy & not dynamic; not a valid POI\n");
 		return;
+	}
 
 	level.valid_poi = true;
 	level.current_poi = ent->s.origin;
 	level.current_poi_image = ent->noise_index;
+	
+	if (debug)
+		gi.Com_Print(" - got valid POI!\n");
 
 	if (!strcmp(ent->classname, "target_poi") && ent->spawnflags.has(SPAWNFLAG_POI_DYNAMIC))
 	{
@@ -1882,11 +1951,13 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 			if (m->spawnflags.has(SPAWNFLAG_POI_DUMMY))
 			{
 				level.current_dynamic_poi = m;
+				if (debug)
+					gi.Com_Print(" - setting dynamic POI\n");
 				break;
 			}
 
 		if (!level.current_dynamic_poi)
-			gi.Com_PrintFmt("can't activate poi for {}; need DUMMY in chain\n", *ent);
+			gi.Com_PrintFmt("can't activate dynamic poi for {}; need DUMMY in chain\n", *ent);
 	}
 	else
 		level.current_dynamic_poi = nullptr;
@@ -1911,6 +1982,8 @@ THINK(target_poi_setup) (edict_t *self) -> void
 
 void SP_target_poi(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(self);
@@ -2091,6 +2164,8 @@ USE(use_target_sky) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_target_sky(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->use = use_target_sky;
 	if (st.was_key_specified("sky"))
 		self->map = st.sky;
@@ -2179,6 +2254,8 @@ USE(use_target_achievement) (edict_t *self, edict_t *other, edict_t *activator) 
 
 void SP_target_achievement(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{
 		G_FreeEdict(self);
@@ -2210,8 +2287,498 @@ void SP_target_story(edict_t *self)
 	self->use = use_target_story;
 }
 
-/* KONIG - NEW TARGET ENTITIES */
-/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8) 
+/*QUAKED target_mal_laser (1 0 0) (-4 -4 -4) (4 4 4) START_ON RED GREEN BLUE YELLOW ORANGE FAT
+Mal's laser
+*/
+void target_mal_laser_on(edict_t* self)
+{
+	if (!self->activator)
+		self->activator = self;
+	self->spawnflags |= SPAWNFLAG_LASER_ZAP | SPAWNFLAG_LASER_ON;
+	self->svflags &= ~SVF_NOCLIENT;
+	self->flags |= FL_TRAP;
+	// target_laser_think (self);
+	self->nextthink = level.time + gtime_t::from_sec(self->wait + self->delay);
+}
+
+USE(target_mal_laser_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	self->activator = activator;
+	if (self->spawnflags.has(SPAWNFLAG_LASER_ON))
+		target_laser_off(self);
+	else
+		target_mal_laser_on(self);
+}
+
+void mal_laser_think(edict_t* self);
+
+THINK(mal_laser_think2) (edict_t* self) -> void
+{
+	self->svflags |= SVF_NOCLIENT;
+	self->think = mal_laser_think;
+	self->nextthink = level.time + gtime_t::from_sec(self->wait);
+	self->spawnflags |= SPAWNFLAG_LASER_ZAP;
+}
+
+THINK(mal_laser_think) (edict_t* self) -> void
+{
+	self->svflags &= ~SVF_NOCLIENT;
+	target_laser_think(self);
+	self->think = mal_laser_think2;
+	self->nextthink = level.time + 100_ms;
+}
+
+void SP_target_mal_laser(edict_t* self)
+{
+	self->movetype = MOVETYPE_NONE;
+	self->solid = SOLID_NOT;
+	self->s.renderfx |= RF_BEAM;
+	self->s.modelindex = MODELINDEX_WORLD; // must be non-zero
+	self->flags |= FL_TRAP_LASER_FIELD;
+
+	// set the beam diameter
+	if (self->spawnflags.has(SPAWNFLAG_LASER_FAT))
+		self->s.frame = 16;
+	else
+		self->s.frame = 4;
+
+	// set the color
+	if (self->spawnflags.has(SPAWNFLAG_LASER_RED))
+		self->s.skinnum = 0xf2f2f0f0;
+	else if (self->spawnflags.has(SPAWNFLAG_LASER_GREEN))
+		self->s.skinnum = 0xd0d1d2d3;
+	else if (self->spawnflags.has(SPAWNFLAG_LASER_BLUE))
+		self->s.skinnum = 0xf3f3f1f1;
+	else if (self->spawnflags.has(SPAWNFLAG_LASER_YELLOW))
+		self->s.skinnum = 0xdcdddedf;
+	else if (self->spawnflags.has(SPAWNFLAG_LASER_ORANGE))
+		self->s.skinnum = 0xe0e1e2e3;
+
+	G_SetMovedir(self->s.angles, self->movedir);
+
+	if (!self->delay)
+		self->delay = 0.1f;
+
+	if (!self->wait)
+		self->wait = 0.1f;
+
+	if (!self->dmg)
+		self->dmg = 5;
+
+	self->mins = { -8, -8, -8 };
+	self->maxs = { 8, 8, 8 };
+
+	self->nextthink = level.time + gtime_t::from_sec(self->delay);
+	self->think = mal_laser_think;
+
+	self->use = target_mal_laser_use;
+
+	gi.linkentity(self);
+
+	if (self->spawnflags.has(SPAWNFLAG_LASER_ON))
+		target_mal_laser_on(self);
+	else
+		target_laser_off(self);
+}
+// END	15-APR-98
+
+
+//==========================================================
+
+/*QUAKED target_steam (1 0 0) (-8 -8 -8) (8 8 8)
+Creates a steam effect (particles w/ velocity in a line).
+
+  speed = velocity of particles (default 50)
+  count = number of particles (default 32)
+  sounds = color of particles (default 8 for steam)
+	 the color range is from this color to this color + 6
+  wait = seconds to run before stopping (overrides default
+	 value derived from func_timer)
+
+  best way to use this is to tie it to a func_timer that "pokes"
+  it every second (or however long you set the wait time, above)
+
+  note that the width of the base is proportional to the speed
+  good colors to use:
+  6-9 - varying whites (darker to brighter)
+  224 - sparks
+  176 - blue water
+  80  - brown water
+  208 - slime
+  232 - blood
+*/
+
+USE(use_target_steam) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	// FIXME - this needs to be a global
+	static int nextid;
+	vec3_t	   point;
+
+	if (nextid > 20000)
+		nextid = nextid % 20000;
+
+	nextid++;
+
+	// automagically set wait from func_timer unless they set it already, or
+	// default to 1000 if not called by a func_timer (eek!)
+	if (!self->wait)
+	{
+		if (other)
+			self->wait = other->wait * 1000;
+		else
+			self->wait = 1000;
+	}
+
+	if (self->enemy)
+	{
+		point = (self->enemy->absmin + self->enemy->absmax) * 0.5f;
+		self->movedir = point - self->s.origin;
+		self->movedir.normalize();
+	}
+
+	point = self->s.origin + (self->movedir * (self->style * 0.5f));
+	if (self->wait > 100)
+	{
+		gi.WriteByte(svc_temp_entity);
+		gi.WriteByte(TE_STEAM);
+		gi.WriteShort(nextid);
+		gi.WriteByte(self->count);
+		gi.WritePosition(self->s.origin);
+		gi.WriteDir(self->movedir);
+		gi.WriteByte(self->sounds & 0xff);
+		gi.WriteShort((short int)(self->style));
+		gi.WriteLong((int)(self->wait));
+		gi.multicast(self->s.origin, MULTICAST_PVS, false);
+	}
+	else
+	{
+		gi.WriteByte(svc_temp_entity);
+		gi.WriteByte(TE_STEAM);
+		gi.WriteShort((short int)-1);
+		gi.WriteByte(self->count);
+		gi.WritePosition(self->s.origin);
+		gi.WriteDir(self->movedir);
+		gi.WriteByte(self->sounds & 0xff);
+		gi.WriteShort((short int)(self->style));
+		gi.multicast(self->s.origin, MULTICAST_PVS, false);
+	}
+}
+
+THINK(target_steam_start) (edict_t* self) -> void
+{
+	edict_t* ent;
+
+	self->use = use_target_steam;
+
+	if (self->target)
+	{
+		ent = G_FindByString<&edict_t::targetname>(nullptr, self->target);
+		if (!ent)
+			gi.Com_PrintFmt("{}: target {} not found\n", *self, self->target);
+		self->enemy = ent;
+	}
+	else
+	{
+		G_SetMovedir(self->s.angles, self->movedir);
+	}
+
+	if (!self->count)
+		self->count = 32;
+	if (!self->style)
+		self->style = 75;
+	if (!self->sounds)
+		self->sounds = 8;
+	if (self->wait)
+		self->wait *= 1000; // we want it in milliseconds, not seconds
+
+	// paranoia is good
+	self->sounds &= 0xff;
+	self->count &= 0xff;
+
+	self->svflags = SVF_NOCLIENT;
+
+	gi.linkentity(self);
+}
+
+void SP_target_steam(edict_t* self)
+{
+	self->style = (int)self->speed;
+
+	if (self->target)
+	{
+		self->think = target_steam_start;
+		self->nextthink = level.time + 1_sec;
+	}
+	else
+		target_steam_start(self);
+}
+
+//==========================================================
+// target_anger
+//==========================================================
+
+USE(target_anger_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	edict_t* target;
+	edict_t* t;
+
+	t = nullptr;
+	target = G_FindByString<&edict_t::targetname>(t, self->killtarget);
+
+	if (target && self->target)
+	{
+		// Make whatever a "good guy" so the monster will try to kill it!
+		if (!(target->svflags & SVF_MONSTER))
+		{
+			target->monsterinfo.aiflags |= AI_GOOD_GUY | AI_DO_NOT_COUNT;
+			target->svflags |= SVF_MONSTER;
+			target->health = 300;
+		}
+
+		t = nullptr;
+		while ((t = G_FindByString<&edict_t::targetname>(t, self->target)))
+		{
+			if (t == self)
+			{
+				gi.Com_Print("WARNING: entity used itself.\n");
+			}
+			else
+			{
+				if (t->use)
+				{
+					if (t->health <= 0)
+						return;
+
+					t->enemy = target;
+					t->monsterinfo.aiflags |= AI_TARGET_ANGER;
+					FoundTarget(t);
+				}
+			}
+			if (!self->inuse)
+			{
+				gi.Com_Print("entity was removed while using targets\n");
+				return;
+			}
+		}
+	}
+}
+
+/*QUAKED target_anger (1 0 0) (-8 -8 -8) (8 8 8)
+This trigger will cause an entity to be angry at another entity when a player touches it. Target the
+entity you want to anger, and killtarget the entity you want it to be angry at.
+
+target - entity to piss off
+killtarget - entity to be pissed off at
+*/
+void SP_target_anger(edict_t* self)
+{
+	if (!self->target)
+	{
+		gi.Com_Print("target_anger without target!\n");
+		G_FreeEdict(self);
+		return;
+	}
+	if (!self->killtarget)
+	{
+		gi.Com_Print("target_anger without killtarget!\n");
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->use = target_anger_use;
+	self->svflags = SVF_NOCLIENT;
+}
+
+// ***********************************
+// target_killplayers
+// ***********************************
+
+USE(target_killplayers_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	level.deadly_kill_box = true;
+
+	edict_t* ent, * player;
+
+	// kill any visible monsters
+	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++)
+	{
+		if (!ent->inuse)
+			continue;
+		if (ent->health < 1)
+			continue;
+		if (!ent->takedamage)
+			continue;
+
+		for (uint32_t i = 0; i < game.maxclients; i++)
+		{
+			player = &g_edicts[1 + i];
+			if (!player->inuse)
+				continue;
+
+			if (gi.inPVS(player->s.origin, ent->s.origin, false))
+			{
+				T_Damage(ent, self, self, vec3_origin, ent->s.origin, vec3_origin,
+					ent->health, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+				break;
+			}
+		}
+	}
+
+	// kill the players
+	for (uint32_t i = 0; i < game.maxclients; i++)
+	{
+		player = &g_edicts[1 + i];
+		if (!player->inuse)
+			continue;
+
+		// nail it
+		T_Damage(player, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+	}
+
+	level.deadly_kill_box = false;
+}
+
+/*QUAKED target_killplayers (1 0 0) (-8 -8 -8) (8 8 8)
+When triggered, this will kill all the players on the map.
+*/
+void SP_target_killplayers(edict_t* self)
+{
+	self->use = target_killplayers_use;
+	self->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_blacklight (1 0 1) (-16 -16 -24) (16 16 24)
+Pulsing black light with sphere in the center
+*/
+THINK(blacklight_think) (edict_t* self) -> void
+{
+	self->s.angles[0] += frandom(10);
+	self->s.angles[1] += frandom(10);
+	self->s.angles[2] += frandom(10);
+	self->nextthink = level.time + FRAME_TIME_MS;
+}
+
+void SP_target_blacklight(edict_t* ent)
+{
+	if (deathmatch->integer)
+	{ // auto-remove for deathmatch
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->mins = {};
+	ent->maxs = {};
+
+	ent->s.effects |= (EF_TRACKERTRAIL | EF_TRACKER);
+	ent->think = blacklight_think;
+	ent->s.modelindex = gi.modelindex("models/items/spawngro3/tris.md2");
+	ent->s.scale = 6.f;
+	ent->s.skinnum = 0;
+	ent->nextthink = level.time + FRAME_TIME_MS;
+	gi.linkentity(ent);
+}
+
+/*QUAKED target_orb (1 0 1) (-16 -16 -24) (16 16 24)
+Translucent pulsing orb with speckles
+*/
+void SP_target_orb(edict_t* ent)
+{
+	if (deathmatch->integer)
+	{ // auto-remove for deathmatch
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->mins = {};
+	ent->maxs = {};
+
+	//	ent->s.effects |= EF_TRACKERTRAIL;
+	ent->think = blacklight_think;
+	ent->nextthink = level.time + 10_hz;
+	ent->s.skinnum = 1;
+	ent->s.modelindex = gi.modelindex("models/items/spawngro3/tris.md2");
+	ent->s.frame = 2;
+	ent->s.scale = 8.f;
+	ent->s.effects |= EF_SPHERETRANS;
+	gi.linkentity(ent);
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_rockets (1 0 0) (-8 -8 -8) (8 8 8) GRENADE PHALANX BFG
+Fires an explosive projectile in the set direction when triggered.
+
+dmg		default is 15
+speed	default is 1000
+volume  default is 0.75
+*/
+constexpr spawnflags_t SPAWNFLAG_GRENADE = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_PHALANX = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_BFG = 4_spawnflag;
+
+USE(use_target_shooter_rockets) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
+	{
+		fire_grenade(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 2.5_sec, self->dmg, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), true);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
+	{
+		fire_plasma(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BFG))
+	{
+		fire_bfg(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 1000);
+	}
+	else
+	{
+		fire_rocket(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, self->dmg, self->dmg);
+	}
+
+	gi.sound(self, CHAN_VOICE, self->noise_index, self->volume, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_rockets(edict_t* self)
+{
+	self->use = use_target_shooter_rockets;
+	G_SetMovedir(self->s.angles, self->movedir);
+
+	if (self->spawnflags.has(SPAWNFLAG_GRENADE))
+	{
+		self->noise_index = gi.soundindex("weapons/grenlf1a.wav");
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_PHALANX))
+	{
+		self->noise_index = gi.soundindex("weapons/plasshot.wav");
+		if (!self->dmg)
+			self->dmg = 80;
+		if (!self->speed)
+			self->speed = 725;
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_BFG))
+	{
+		self->noise_index = gi.soundindex("makron/bfg_fire.wav");
+		if (!self->dmg)
+			self->dmg = deathmatch->integer ? 200 : 500;;
+		if (!self->speed)
+			self->speed = 400;
+	}
+	else
+	{
+		self->noise_index = gi.soundindex("weapons/rocklf1a.wav");
+		if (!self->dmg)
+			self->dmg = 120;
+		if (!self->speed)
+			self->speed = 600;
+	}
+
+	if (!self->volume)
+		self->volume = 0.75;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8)
 Sends a center-printed message to all clients.
 "message"	text to print
 */
@@ -2232,118 +2799,4 @@ void SP_target_print(edict_t* ent) {
 	}
 	ent->use = target_print_use;
 	ent->svflags = SVF_NOCLIENT;
-}
-
-#if 0 //Not finished
-/*QUAKED target_item_remove (1 0 0) (-8 -8 -8) (8 8 8) REMOVE_WEAPONS REMOVE_WEAPONS_BLASTER REMOVE_AMMO REMOVE_POWERUPS
-Takes away all the activator's weapons and ammo (except blaster).
-*/
-constexpr spawnflags_t SPAWNFLAG_REMOVE_WEAPONS = 1_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_REMOVE_WEAPONS_BLASTER = 2_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_REMOVE_AMMO = 4_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_REMOVE_POWERUPS = 8_spawnflag;
-
-static USE(target_item_remove_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
-	if (!activator->client)
-		return;
-
-	if (self->spawnflags.has(SPAWNFLAG_REMOVE_WEAPONS))
-	{
-		for (size_t i = 0; i < IT_TOTAL; i++) {
-			if (!activator->client->pers.inventory[i])
-				continue;
-
-			if (itemlist[i].flags & IF_WEAPON | IF_AMMO && itemlist[i].id != IT_WEAPON_BLASTER)
-				activator->client->pers.inventory[i] = 0;
-		}
-
-		NoAmmoWeaponChange(ent, false);
-
-		activator->client->pers.weapon = activator->client->newweapon;
-		if (activator->client->newweapon)
-			activator->client->pers.selected_item = activator->client->newweapon->id;
-		activator->client->newweapon = nullptr;
-		activator->client->pers.lastweapon = activator->client->pers.weapon;
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_WEAPONS_BLASTER))
-	{
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_AMMO))
-	{
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_REMOVE_POWERUPS))
-	{
-	}
-}
-void SP_target_item_remove(edict_t* ent) {
-	ent->use = target_item_remove_use;
-}
-#endif
-
-/* KONIG - Taken from TheMuffinator's MuffMode*/
-/*QUAKED target_item_give (1 0 0) (-8 -8 -8) (8 8 8)
-Gives the activator the targetted item.
-*/
-static USE(target_item_give_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
-	if (!activator->client)
-		return;
-
-	ent->item->pickup(ent, other);
-}
-
-void SP_target_item_give(edict_t* ent) {
-	edict_t* target_ent = G_PickTarget(ent->target);
-	if (!target_ent || !target_ent->classname[0]) {
-		gi.Com_PrintFmt("{}: Invalid target entity, removing.\n", *ent);
-		G_FreeEdict(ent);
-		return;
-	}
-
-	gitem_t* it = FindItemByClassname(target_ent->classname);
-	if (!it || !it->pickup) {
-		gi.Com_PrintFmt("{}: Targetted entity is not an item, removing.\n", *ent);
-		G_FreeEdict(ent);
-		return;
-	}
-
-	ent->item = it;
-	ent->use = target_item_give_use;
-	ent->svflags = SVF_NOCLIENT;
-}
-
-/*QUAKED target_kill (.5 .5 .5) (-8 -8 -8) (8 8 8)
-Kills the activator.
-*/
-
-static USE(target_kill_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
-	if (!activator)
-		return;
-	T_Damage(activator, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
-
-}
-
-void SP_target_kill(edict_t* self) {
-	self->use = target_kill_use;
-	self->svflags = SVF_NOCLIENT;
-}
-
-/*QUAKED target_cvar (1 0 0) (-8 -8 -8) (8 8 8)
-When targetted sets a cvar to a value.
-"cvar" : name of cvar to set
-"cvarValue" : value to set cvar to
-*/
-static USE(target_cvar_use) (edict_t* self, edict_t* other, edict_t* activator) -> void {
-	if (!activator || !activator->client)
-		return;
-
-	gi.cvar_set(self->cvar, self->cvarvalue);
-}
-
-void SP_target_cvar(edict_t* ent) {
-	if (!ent->cvar[0] || !ent->cvarvalue[0]) {
-		G_FreeEdict(ent);
-		return;
-	}
-
-	ent->use = target_cvar_use;
 }

@@ -20,13 +20,13 @@ local_game_import_t  gi;
 /*static*/ std::array<const char*, MAX_LOCALIZATION_ARGS> local_game_import_t::buffer_ptrs;
 
 game_export_t  globals;
-spawn_temp_t   st;
 
 cached_modelindex		sm_meat_index;
 cached_soundindex		snd_fry;
 
 edict_t *g_edicts;
 
+cvar_t *developer;
 cvar_t *deathmatch;
 cvar_t *coop;
 cvar_t *skill;
@@ -69,6 +69,7 @@ cvar_t *sv_cheats;
 
 cvar_t *g_debug_monster_paths;
 cvar_t *g_debug_monster_kills;
+cvar_t *g_debug_poi;
 
 cvar_t *bot_debug_follow_actor;
 cvar_t *bot_debug_move_to_point;
@@ -168,6 +169,7 @@ is loaded.
 */
 void PreInitGame()
 {
+	developer = gi.cvar("developer", "0", CVAR_NOFLAGS);
 	maxclients = gi.cvar("maxclients", G_Fmt("{}", MAX_SPLIT_PLAYERS).data(), CVAR_SERVERINFO | CVAR_LATCH);
 	deathmatch = gi.cvar("deathmatch", "0", CVAR_LATCH);
 	coop = gi.cvar("coop", "0", CVAR_LATCH);
@@ -259,6 +261,7 @@ void InitGame()
 
 	g_debug_monster_paths = gi.cvar("g_debug_monster_paths", "0", CVAR_NOFLAGS);
 	g_debug_monster_kills = gi.cvar("g_debug_monster_kills", "0", CVAR_LATCH);
+	g_debug_poi = gi.cvar("g_debug_poi", "0", CVAR_NOFLAGS);
 
 	bot_debug_follow_actor = gi.cvar("bot_debug_follow_actor", "0", CVAR_NOFLAGS);
 	bot_debug_move_to_point = gi.cvar("bot_debug_move_to_point", "0", CVAR_NOFLAGS);

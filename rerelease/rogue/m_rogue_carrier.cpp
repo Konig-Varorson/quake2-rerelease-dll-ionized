@@ -29,8 +29,6 @@ bool inback(edict_t *self, edict_t *other);
 bool below(edict_t *self, edict_t *other);
 void drawbbox(edict_t *self);
 
-void ED_CallSpawn(edict_t *ent);
-
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
 static cached_soundindex sound_pain3;
@@ -43,10 +41,10 @@ static cached_soundindex sound_cg_down, sound_cg_loop, sound_cg_up;
 
 float orig_yaw_speed;
 
-void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &list);
-std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t *self, int32_t &num_chosen, int32_t max_slots);
-
 extern const mmove_t flyer_move_attack2, flyer_move_attack3, flyer_move_kamikaze;
+
+/* KONIG - universal boss powerup copy */
+void BossPowerups(edict_t* self);
 
 void carrier_run(edict_t *self);
 void carrier_dead(edict_t *self);
@@ -62,9 +60,6 @@ void carrier_prep_spawn(edict_t *self);
 
 void CarrierMachineGunHold(edict_t *self);
 void CarrierRocket(edict_t *self);
-
-/*KONIG - add powerup copy*/
-void MBossPowerups(edict_t* self);
 
 MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void
 {
@@ -359,9 +354,9 @@ void CarrierSpawn(edict_t *self)
 		ent->nextthink = level.time;
 		ent->think(ent);
 
-		ent->monsterinfo.aiflags |= AI_SPAWNED_CARRIER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+		ent->monsterinfo.aiflags |= AI_SPAWNED_COMMANDER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 		ent->monsterinfo.commander = self;
-		ent->monsterinfo.monster_slots = reinforcement.strength;
+		ent->monsterinfo.slots_from_commander = reinforcement.strength;
 		self->monsterinfo.monster_used += reinforcement.strength;
 
 		if ((self->enemy->inuse) && (self->enemy->health > 0))
@@ -957,10 +952,11 @@ PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(carrier_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 void carrier_dead(edict_t *self)
@@ -1025,6 +1021,8 @@ MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool
 		}
 	}
 
+	BossPowerups(self);
+	
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.5f, 0.f);
 }
 
@@ -1058,6 +1056,8 @@ void CarrierPrecache()
  */
 void SP_monster_carrier(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -1096,17 +1096,16 @@ void SP_monster_carrier(edict_t *self)
 	self->maxs = { 56, 56, 44 };
 
 	// 2000 - 4000 health
-
-	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	/* KONIG - add body armor; new coop scaling*/
 	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	if (!st.was_key_specified("armor_type"))
 		self->monsterinfo.armor_type = IT_ARMOR_BODY;
 	if (!st.was_key_specified("armor_power"))
-		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+		self->monsterinfo.armor_power = max(250, 250 + 100 * (skill->integer - 1));
 	if (coop->integer)
 	{
-		self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		self->health += (250 * (CountPlayers() - 1));
+		self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
 	}
 
 	self->gib_health = -200;

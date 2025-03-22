@@ -1,5 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
+
 #include "g_local.h"
 #include "bots/bot_includes.h"
 
@@ -37,11 +38,19 @@ void monster_fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimd
 	monster_muzzleflash(self, start, flashtype);
 }
 
-void monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+edict_t *monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 						  monster_muzzleflash_id_t flashtype, effects_t effect)
 {
-	fire_blaster(self, start, dir, damage, speed, effect, MOD_BLASTER);
+	#if 0
+		if (EMPNukeCheck(self, self->s.origin))
+		{
+			gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+			return;
+		}
+	#endif
+	edict_t *e = fire_blaster(self, start, dir, damage, speed, effect, MOD_BLASTER);
 	monster_muzzleflash(self, start, flashtype);
+	return e;
 }
 
 void monster_fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
@@ -65,28 +74,37 @@ void monster_fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, 
 	monster_muzzleflash(self, start, flashtype);
 }
 
-void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
+bool monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
 						  monster_muzzleflash_id_t flashtype)
 {
-	if (gi.pointcontents(start) & MASK_SOLID)
+	#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
 		return;
+	}
+	#endif
+	if (gi.pointcontents(start) & MASK_SOLID)
+		return false;
 
-	fire_rail(self, start, aimdir, damage, kick);
+	bool hit = fire_rail(self, start, aimdir, damage, kick);
 
 	monster_muzzleflash(self, start, flashtype);
+
+	return hit;
 }
 
-void monster_fire_bfg(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, int kick,
-	float damage_radius, monster_muzzleflash_id_t flashtype)
+void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
+					  float damage_radius, monster_muzzleflash_id_t flashtype)
 {
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
 	fire_bfg(self, start, aimdir, damage, speed, damage_radius);
-	monster_muzzleflash(self, start, flashtype);
-}
-
-void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
-	monster_muzzleflash_id_t flashtype, effects_t effect)
-{
-	fire_lightning(self, start, dir, damage, speed, effect, MOD_BLUEBLASTER);
 	monster_muzzleflash(self, start, flashtype);
 }
 
@@ -148,6 +166,10 @@ void M_CheckGround(edict_t *ent, contents_t mask)
 {
 	vec3_t	point;
 	trace_t trace;
+
+	// [Paril-KEX]
+	if (ent->no_gravity_time > level.time)
+		return;
 
 	if (ent->flags & (FL_SWIM | FL_FLY))
 		return;
@@ -245,43 +267,31 @@ void M_WorldEffects(edict_t *ent)
 
 	if (ent->health > 0)
 	{
+		bool take_drown_damage = false;
+
 		if (!(ent->flags & FL_SWIM))
 		{
 			if (ent->waterlevel < WATER_UNDER)
-			{
 				ent->air_finished = level.time + 12_sec;
-			}
 			else if (ent->air_finished < level.time)
-			{ // drown!
-				if (ent->pain_debounce_time < level.time)
-				{
-					dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
-					if (dmg > 15)
-						dmg = 15;
-					T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
-							 MOD_WATER);
-					ent->pain_debounce_time = level.time + 1_sec;
-				}
-			}
+				take_drown_damage = true;
 		}
 		else
 		{
 			if (ent->waterlevel > WATER_NONE)
-			{
 				ent->air_finished = level.time + 9_sec;
-			}
 			else if (ent->air_finished < level.time)
-			{ // suffocate!
-				if (ent->pain_debounce_time < level.time)
-				{
-					dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
-					if (dmg > 15)
-						dmg = 15;
-					T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
-							 MOD_WATER);
-					ent->pain_debounce_time = level.time + 1_sec;
-				}
-			}
+				take_drown_damage = true;
+		}
+
+		if (take_drown_damage && ent->pain_debounce_time < level.time)
+		{
+			dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
+			if (dmg > 15)
+				dmg = 15;
+			T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
+						MOD_WATER);
+			ent->pain_debounce_time = level.time + 1_sec;
 		}
 	}
 
@@ -459,12 +469,6 @@ void M_SetEffects(edict_t *ent)
 	{
 		if (G_PowerUpExpiring(ent->monsterinfo.invincible_time))
 			ent->s.effects |= EF_PENT;
-	}
-	/*KONIG - Add quadfire effect for monsters*/
-	if (ent->monsterinfo.quadfire_time > level.time)
-	{
-		if (G_PowerUpExpiring(ent->monsterinfo.quadfire_time))
-			ent->s.effects |= EF_DUALFIRE;
 	}
 }
 
@@ -679,30 +683,16 @@ void M_ProcessPain(edict_t *e)
 		}
 		// ROGUE
 
+		bool dead_commander_check = false;
+
 		if (!e->deadflag)
 		{
 			e->enemy = e->monsterinfo.damage_attacker;
 
 			// ROGUE
 			// ROGUE - free up slot for spawned monster if it's spawned
-			if (e->monsterinfo.aiflags & AI_SPAWNED_CARRIER)
-			{
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse &&
-					!strcmp(e->monsterinfo.commander->classname, "monster_carrier"))
-					e->monsterinfo.commander->monsterinfo.monster_slots++;
-				e->monsterinfo.commander = nullptr;
-			}
-			if (e->monsterinfo.aiflags & AI_SPAWNED_WIDOW)
-			{
-				// need to check this because we can have variable numbers of coop players
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse &&
-					!strncmp(e->monsterinfo.commander->classname, "monster_widow", 13))
-				{
-					if (e->monsterinfo.commander->monsterinfo.monster_used > 0)
-						e->monsterinfo.commander->monsterinfo.monster_used--;
-					e->monsterinfo.commander = nullptr;
-				}
-			}
+			if ((e->monsterinfo.aiflags & AI_SPAWNED_COMMANDER) && !(e->monsterinfo.aiflags & AI_SPAWNED_NEEDS_GIB))
+				dead_commander_check = true;
 
 			if (!(e->monsterinfo.aiflags & AI_DO_NOT_COUNT) && !(e->spawnflags & SPAWNFLAG_MONSTER_DEAD))
 				G_MonsterKilled(e);
@@ -716,13 +706,18 @@ void M_ProcessPain(edict_t *e)
 		// [Paril-KEX] medic commander only gets his slots back after the monster is gibbed, since we can revive them
 		if (e->health <= e->gib_health)
 		{
-			if (e->monsterinfo.aiflags & AI_SPAWNED_MEDIC_C)
-			{
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse && !strcmp(e->monsterinfo.commander->classname, "monster_medic_commander"))
-					e->monsterinfo.commander->monsterinfo.monster_used -= e->monsterinfo.monster_slots;
+			if ((e->monsterinfo.aiflags & AI_SPAWNED_COMMANDER) && (e->monsterinfo.aiflags & AI_SPAWNED_NEEDS_GIB))
+				dead_commander_check = true;
+		}
 
-				e->monsterinfo.commander = nullptr;
-			}
+		if (dead_commander_check)
+		{
+			edict_t *&commander = e->monsterinfo.commander;
+
+			if (commander && commander->inuse)
+				commander->monsterinfo.monster_used = max(0, commander->monsterinfo.monster_used - e->monsterinfo.slots_from_commander);
+
+			commander = nullptr;
 		}
 
 		if (e->inuse && e->health > e->gib_health && e->s.frame == e->monsterinfo.active_move->lastframe)
@@ -1165,7 +1160,7 @@ enemy as activator.
 void monster_death_use(edict_t *self)
 {
 	self->flags &= ~(FL_FLY | FL_SWIM);
-	self->monsterinfo.aiflags &= (AI_DOUBLE_TROUBLE | AI_GOOD_GUY | AI_STINKY | AI_SPAWNED_MASK);
+	self->monsterinfo.aiflags &= AI_DEATH_MASK;
 
 	if (self->item)
 	{
@@ -1189,8 +1184,10 @@ void monster_death_use(edict_t *self)
 	// [Paril-KEX] fire health target
 	if (self->healthtarget)
 	{
+		const char *target = self->target;
 		self->target = self->healthtarget;
 		G_UseTargets(self, self->enemy);
+		self->target = target;
 	}
 }
 
@@ -1234,7 +1231,7 @@ void G_Monster_CheckCoopHealthScaling()
 //============================================================================
 constexpr spawnflags_t SPAWNFLAG_MONSTER_FUBAR = 4_spawnflag;
 
-bool monster_start(edict_t *self)
+bool monster_start(edict_t *self, const spawn_temp_t &st)
 {
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
@@ -1297,6 +1294,9 @@ bool monster_start(edict_t *self)
 		self->mass *= self->s.scale;
 	}
 
+	if (level.is_psx)
+		self->s.origin[2] -= self->mins[2] - (self->mins[2] * PSX_PHYSICS_SCALAR);
+
 	// set combat style if unset
 	if (self->monsterinfo.combat_style == COMBAT_UNKNOWN)
 	{
@@ -1339,6 +1339,12 @@ bool monster_start(edict_t *self)
 	// [Paril-KEX] co-op health scale
 	G_Monster_ScaleCoopHealth(self);
 
+	// set vision cone
+	if (!st.was_key_specified("vision_cone"))
+	{
+		self->vision_cone = -2.0f; // special value to use old algorithm
+	}
+
 	return true;
 }
 
@@ -1354,7 +1360,7 @@ stuck_result_t G_FixStuckObject(edict_t *self, vec3_t check)
 
 	self->s.origin = check;
 
-	if (result == stuck_result_t::FIXED)
+	if (result == stuck_result_t::FIXED && developer->integer)
 		gi.Com_PrintFmt("fixed stuck {}\n", *self);
 
 	return result;
@@ -1582,7 +1588,7 @@ THINK(walkmonster_start_go) (edict_t *self) -> void
 void walkmonster_start(edict_t *self)
 {
 	self->think = walkmonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 THINK(flymonster_start_go) (edict_t *self) -> void
@@ -1600,7 +1606,7 @@ void flymonster_start(edict_t *self)
 {
 	self->flags |= FL_FLY;
 	self->think = flymonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 THINK(swimmonster_start_go) (edict_t *self) -> void
@@ -1618,7 +1624,7 @@ void swimmonster_start(edict_t *self)
 {
 	self->flags |= FL_SWIM;
 	self->think = swimmonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 USE(trigger_health_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
@@ -1662,93 +1668,315 @@ void SP_trigger_health_relay(edict_t *self)
 	self->use = trigger_health_relay_use;
 }
 
-/*KONIG - Widow's Powerup copying universal*/
-unsigned int boss_damage_multiplier;
-
-void BossGoinQuad(edict_t* self, gtime_t time)
+// RAFAEL
+void monster_fire_blueblaster(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect)
 {
-	self->monsterinfo.quad_time = time;
-	boss_damage_multiplier = 4;
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	fire_blueblaster(self, start, dir, damage, speed, effect);
+	monster_muzzleflash(self, start, flashtype);
 }
 
-void BossDouble(edict_t* self, gtime_t time)
+// RAFAEL
+void monster_fire_ionripper(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect)
 {
-	self->monsterinfo.double_time = time;
-	boss_damage_multiplier = 2;
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	fire_ionripper(self, start, dir, damage, speed, effect);
+	monster_muzzleflash(self, start, flashtype);
 }
 
-void BossInvul(edict_t* self, gtime_t time)
+// RAFAEL
+void monster_fire_heat(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype, float turn_fraction)
 {
-	self->monsterinfo.invincible_time = time;
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		fire_rocket(self, start, dir, damage, speed, (float)damage, damage);
+		return;
+	}
+#endif
+	fire_heat(self, start, dir, damage, speed, (float)damage, damage, turn_fraction);
+	monster_muzzleflash(self, start, flashtype);
 }
 
-void BossAccel(edict_t* self, gtime_t time)
+// RAFAEL
+struct dabeam_pierce_t : pierce_args_t
 {
-	self->monsterinfo.quadfire_time = time;
+	edict_t* self;
+	bool damage;
+
+	inline dabeam_pierce_t(edict_t* self, bool damage) :
+		pierce_args_t(),
+		self(self),
+		damage(damage)
+	{
+	}
+
+	// we hit an entity; return false to stop the piercing.
+	// you can adjust the mask for the re-trace (for water, etc).
+	virtual bool hit(contents_t& mask, vec3_t& end) override
+	{
+		if (damage)
+		{
+			// hurt it if we can
+			if (self->dmg > 0 && (tr.ent->takedamage) && !(tr.ent->flags & FL_IMMUNE_LASER) && (tr.ent != self->owner))
+				T_Damage(tr.ent, self, self->owner, self->movedir, tr.endpos, vec3_origin, self->dmg, skill->integer, DAMAGE_ENERGY, MOD_TARGET_LASER);
+
+			if (self->dmg < 0) // healer ray
+			{
+				// when player is at 100 health
+				// just undo health fix
+				// keeping fx
+				if (tr.ent->health < tr.ent->max_health)
+					tr.ent->health = min(tr.ent->max_health, tr.ent->health - self->dmg);
+			}
+		}
+
+		// if we hit something that's not a monster or player or is immune to lasers, we're done
+		if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
+		{
+			if (damage)
+			{
+				gi.WriteByte(svc_temp_entity);
+				gi.WriteByte(TE_LASER_SPARKS);
+				gi.WriteByte(10);
+				gi.WritePosition(tr.endpos);
+				gi.WriteDir(tr.plane.normal);
+				gi.WriteByte(self->s.skinnum);
+				gi.multicast(tr.endpos, MULTICAST_PVS, false);
+			}
+
+			return false;
+		}
+
+		if (!mark(tr.ent))
+			return false;
+
+		return true;
+	}
+};
+
+void dabeam_update(edict_t* self, bool damage)
+{
+	vec3_t start = self->s.origin;
+	vec3_t end = start + (self->movedir * 2048);
+
+	dabeam_pierce_t args{
+		self,
+		damage
+	};
+
+	pierce_trace(start, end, self, args, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
+
+	self->s.old_origin = args.tr.endpos + (args.tr.plane.normal * 1.f);
+	gi.linkentity(self);
 }
 
-void BossInvis(edict_t* self, gtime_t time)
+THINK(beam_think) (edict_t* self) -> void
 {
-	self->monsterinfo.invisible_time = time;
+	if (self->spawnflags.has(SPAWNFLAG_DABEAM_SECONDARY))
+		self->owner->beam2 = nullptr;
+	else
+		self->owner->beam = nullptr;
+	G_FreeEdict(self);
 }
 
-/*KONIG - Powerup Copying for BBEG (Jorg, Makron, and both Black Widows)*/
+// RAFAEL
+void monster_fire_dabeam(edict_t* self, int damage, bool secondary, void(*update_func)(edict_t* self))
+{
+	edict_t*& beam_ptr = secondary ? self->beam2 : self->beam;
+
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	if (!beam_ptr)
+	{
+		beam_ptr = G_Spawn();
+
+		beam_ptr->movetype = MOVETYPE_NONE;
+		beam_ptr->solid = SOLID_NOT;
+		beam_ptr->s.renderfx |= RF_BEAM;
+		beam_ptr->s.modelindex = MODELINDEX_WORLD;
+		beam_ptr->owner = self;
+		beam_ptr->dmg = damage;
+		beam_ptr->s.frame = 2;
+		beam_ptr->spawnflags = secondary ? SPAWNFLAG_DABEAM_SECONDARY : SPAWNFLAG_NONE;
+
+		if (self->monsterinfo.aiflags & AI_MEDIC)
+			beam_ptr->s.skinnum = 0xf3f3f1f1;
+		else
+			beam_ptr->s.skinnum = 0xf2f2f0f0;
+
+		beam_ptr->think = beam_think;
+		beam_ptr->s.sound = gi.soundindex("misc/lasfly.wav");
+		beam_ptr->postthink = update_func;
+	}
+
+	beam_ptr->nextthink = level.time + 200_ms;
+	beam_ptr->spawnflags &= ~SPAWNFLAG_DABEAM_SPAWNED;
+	update_func(beam_ptr);
+	dabeam_update(beam_ptr, true);
+	beam_ptr->spawnflags |= SPAWNFLAG_DABEAM_SPAWNED;
+}
+
+// ROGUE
+void monster_fire_blaster2(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect)
+{
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	fire_blaster2(self, start, dir, damage, speed, effect, false);
+	monster_muzzleflash(self, start, flashtype);
+}
+
+void monster_fire_tracker(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, edict_t* enemy, monster_muzzleflash_id_t flashtype)
+{
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	fire_tracker(self, start, dir, damage, speed, enemy);
+	monster_muzzleflash(self, start, flashtype);
+}
+
+void monster_fire_heatbeam(edict_t* self, const vec3_t& start, const vec3_t& dir, const vec3_t& offset, int damage, int kick, monster_muzzleflash_id_t flashtype)
+{
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
+	{
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
+	}
+#endif
+	fire_heatbeam(self, start, dir, offset, damage, kick, true);
+	monster_muzzleflash(self, start, flashtype);
+}
+// ROGUE
+
+// ROGUE
+
+void stationarymonster_start_go(edict_t* self);
+
+THINK(stationarymonster_triggered_spawn) (edict_t* self) -> void
+{
+	self->solid = SOLID_BBOX;
+	self->movetype = MOVETYPE_NONE;
+	self->svflags &= ~SVF_NOCLIENT;
+	self->air_finished = level.time + 12_sec;
+	gi.linkentity(self);
+
+	KillBox(self, false);
+
+	// FIXME - why doesn't this happen with real monsters?
+	self->spawnflags &= ~SPAWNFLAG_MONSTER_TRIGGER_SPAWN;
+
+	stationarymonster_start_go(self);
+
+	if (self->enemy && !(self->spawnflags & SPAWNFLAG_MONSTER_AMBUSH) && !(self->enemy->flags & FL_NOTARGET))
+	{
+		if (!(self->enemy->flags & FL_DISGUISED)) // PGM
+			FoundTarget(self);
+		else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
+			self->enemy = nullptr;
+	}
+	else
+	{
+		self->enemy = nullptr;
+	}
+}
+
+USE(stationarymonster_triggered_spawn_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	// we have a one frame delay here so we don't telefrag the guy who activated us
+	self->think = stationarymonster_triggered_spawn;
+	self->nextthink = level.time + FRAME_TIME_S;
+	if (activator && activator->client)
+		self->enemy = activator;
+	self->use = monster_use;
+}
+
+void stationarymonster_triggered_start(edict_t* self)
+{
+	self->solid = SOLID_NOT;
+	self->movetype = MOVETYPE_NONE;
+	self->svflags |= SVF_NOCLIENT;
+	self->nextthink = 0_ms;
+	self->use = stationarymonster_triggered_spawn_use;
+}
+
+THINK(stationarymonster_start_go) (edict_t* self) -> void
+{
+	if (!self->yaw_speed)
+		self->yaw_speed = 20;
+
+	monster_start_go(self);
+
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_TRIGGER_SPAWN))
+		stationarymonster_triggered_start(self);
+}
+
+void stationarymonster_start(edict_t* self, const spawn_temp_t& st)
+{
+	self->flags |= FL_STATIONARY;
+	self->think = stationarymonster_start_go;
+	monster_start(self, st);
+
+	// fix viewheight
+	self->viewheight = 0;
+}
+
+void monster_done_dodge(edict_t* self)
+{
+	self->monsterinfo.aiflags &= ~AI_DODGING;
+	if (self->monsterinfo.attack_state == AS_SLIDING)
+		self->monsterinfo.attack_state = AS_STRAIGHT;
+}
+
+int32_t M_SlotsLeft(edict_t* self)
+{
+	return self->monsterinfo.monster_slots - self->monsterinfo.monster_used;
+}
+// ROGUE
+
+/* KONIG - universal boss response powerups */
+
 void BossPowerArmor(edict_t* self)
 {
 	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 	if (self->monsterinfo.power_armor_power <= 0)
-	{
-		self->monsterinfo.power_armor_power += 500;
+		self->monsterinfo.power_armor_power += 200 * (skill->integer - 1);
 		if (coop->integer)
-			self->monsterinfo.power_armor_power += 50 * skill->integer;
-	}
-}
-
-void BossCombatArmor(edict_t* self)
-{
-	self->monsterinfo.armor_type = IT_ARMOR_BODY;
-	if (self->monsterinfo.armor_power <= 0)
-	{
-		self->monsterinfo.armor_power += 250;
-		if (coop->integer)
-			self->monsterinfo.armor_power += 25 * skill->integer;
-	}
+			self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
 }
 
 void BossRespondPowerup(edict_t* self, edict_t* other)
 {
-	if (other->s.effects & EF_QUAD)
+	if (other->s.effects & (EF_QUAD | EF_DOUBLE | EF_DUALFIRE | EF_PENT))
 	{
-		if (skill->integer >= 1)
-			BossGoinQuad(self, other->client->quad_time);
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-	}
-	else if (other->s.effects & EF_DOUBLE)
-	{
-		if (skill->integer >= 1)
-			BossDouble(self, other->client->double_time);
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-	}
-	else
-	{
-		boss_damage_multiplier = 1;
-	}
-
-	if (other->s.effects & EF_PENT)
-	{
-		if (skill->integer >= 1)
-			BossPowerArmor(self);
-		if (skill->integer == 3)
-			BossCombatArmor(self);
-	}
-	if (other->s.effects & EF_DUALFIRE)
-	{
-		if (skill->integer >= 1)
-			BossAccel(self, other->client->quadfire_time);
-		if (skill->integer == 3)
-			BossPowerArmor(self);
+		BossPowerArmor(self);
 	}
 }
 
@@ -1769,177 +1997,45 @@ void BossPowerups(edict_t* self)
 				continue;
 			if (!ent->client)
 				continue;
-			if (ent->s.effects & EF_PENT)
-			{
-				BossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_QUAD)
-			{
-				BossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_DOUBLE)
-			{
-				BossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_DUALFIRE)
-			{
-				BossRespondPowerup(self, ent);
-				return;
-			}
+			BossRespondPowerup(self, ent);
 		}
 	}
 }
 
-/*KONIG - Powerup Copying for lesser bosses (Supertank, Hornet, Guardian, Carrier)*/
-void MBossPowerArmor(edict_t* self)
+/* KONIG - old attacks made universal*/
+
+//Phalanx Gladiator
+void monster_fire_plasma(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius, int radius_damage, monster_muzzleflash_id_t flashtype)
 {
-	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-	if (self->monsterinfo.power_armor_power <= 0)
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
 	{
-		self->monsterinfo.power_armor_power += 250;
-		if (coop->integer)
-			self->monsterinfo.power_armor_power += 25 * skill->integer;
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
 	}
+#endif
+	fire_plasma(self, start, dir, damage, speed, damage_radius, radius_damage);
+	monster_muzzleflash(self, start, flashtype);
 }
 
-void MBossCombatArmor(edict_t* self)
+//Gekk spit
+void monster_fire_acid(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype)
 {
-	self->monsterinfo.armor_type = IT_ARMOR_BODY;
-	if (self->monsterinfo.armor_power <= 0)
-	{
-		self->monsterinfo.armor_power += 100;
-		if (coop->integer)
-			self->monsterinfo.armor_power += 20 * skill->integer;
-	}
+	fire_acid(self, start, dir, damage, speed);
+	monster_muzzleflash(self, start, flashtype);
 }
 
-void MBossRespondPowerup(edict_t* self, edict_t* other)
+/* KONIG - new attacks*/
+
+void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect)
 {
-	if (other->s.effects & EF_QUAD)
+#if 0
+	if (EMPNukeCheck(self, self->s.origin))
 	{
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-		else if (skill->integer > 1)
-			MBossPowerArmor(self);
+		gi.sound(self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
+		return;
 	}
-	if (other->s.effects & EF_DOUBLE)
-	{
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-		else if (skill->integer > 1)
-			MBossPowerArmor(self);
-	}
-
-	if (other->s.effects & EF_PENT)
-	{
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-		else if (skill->integer > 1)
-			MBossPowerArmor(self);
-	}
-	if (other->s.effects & EF_DUALFIRE)
-	{
-		if (skill->integer == 3)
-			BossPowerArmor(self);
-		else if (skill->integer > 1)
-			MBossPowerArmor(self);
-	}
-}
-
-void MBossPowerups(edict_t* self)
-{
-	edict_t* ent;
-
-	if (!coop->integer)
-	{
-		MBossRespondPowerup(self, self->enemy);
-	}
-	else
-	{
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_PENT)
-			{
-				MBossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_QUAD)
-			{
-				MBossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_DOUBLE)
-			{
-				MBossRespondPowerup(self, ent);
-				return;
-			}
-		}
-
-		for (uint32_t player = 1; player <= game.maxclients; player++)
-		{
-			ent = &g_edicts[player];
-			if (!ent->inuse)
-				continue;
-			if (!ent->client)
-				continue;
-			if (ent->s.effects & EF_DUALFIRE)
-			{
-				MBossRespondPowerup(self, ent);
-				return;
-			}
-		}
-	}
+#endif
+	fire_lightning(self, start, dir, damage, speed, effect);
+	monster_muzzleflash(self, start, flashtype);
 }

@@ -508,7 +508,7 @@ BoxEdictsResult_t KillBox_BoxFilter(edict_t *hit, void *)
 	return BoxEdictsResult_t::Keep;
 }
 
-bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping)
+bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping, bool allow_safety)
 {
 	// don't telefrag as spectator...
 	if (ent->movetype == MOVETYPE_NOCLIP)
@@ -554,6 +554,9 @@ bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping)
 			ent->clipmask &= ~CONTENTS_PLAYER;
 			continue;
 		}
+
+		if (allow_safety && G_FixStuckObject(hit, hit->s.origin) != stuck_result_t::NO_GOOD_POSITION)
+			continue;
 
 		T_Damage(hit, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, mod);
 	}

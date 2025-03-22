@@ -121,7 +121,7 @@ static void SpawnAndGiveItem(edict_t *ent, item_id_t id)
 
 	edict_t *it_ent = G_Spawn();
 	it_ent->classname = it->classname;
-	SpawnItem(it_ent, it);
+	SpawnItem(it_ent, it, spawn_temp_t::empty);
 
 	if (it_ent->inuse)
 	{
@@ -283,7 +283,7 @@ void Cmd_Give_f(edict_t *ent)
 	{
 		it_ent = G_Spawn();
 		it_ent->classname = it->classname;
-		SpawnItem(it_ent, it);
+		SpawnItem(it_ent, it, spawn_temp_t::empty);
 		// PMM - since some items don't actually spawn when you say to ..
 		if (!it_ent->inuse)
 			return;
@@ -354,7 +354,6 @@ void Cmd_God_f(edict_t *ent)
 
 	gi.LocClient_Print(ent, PRINT_HIGH, msg);
 }
-void ED_ParseField(const char *key, const char *value, edict_t *ent);
 
 /*
 ==================
@@ -408,15 +407,15 @@ void Cmd_Spawn_f(edict_t *ent)
 	other->s.origin = ent->s.origin + (AngleVectors(ent->s.angles).forward * 24.f);
 	other->s.angles[1] = ent->s.angles[1];
 
-	st = {};
+	spawn_temp_t st {};
 
 	if (gi.argc() > 3)
 	{
 		for (int i = 2; i < gi.argc(); i += 2)
-			ED_ParseField(gi.argv(i), gi.argv(i + 1), other);
+			ED_ParseField(gi.argv(i), gi.argv(i + 1), other, st);
 	}
 
-	ED_CallSpawn(other);
+	ED_CallSpawn(other, st);
 
 	if (other->inuse)
 	{

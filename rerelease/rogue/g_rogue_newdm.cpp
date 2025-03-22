@@ -13,7 +13,6 @@ dm_game_rt DMGame;
 //=================
 constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_POWERUP | IF_ARMOR | IF_KEY);
 
-void ED_CallSpawn(edict_t *ent);
 bool Pickup_Health(edict_t *ent, edict_t *other);
 bool Pickup_Armor(edict_t *ent, edict_t *other);
 bool Pickup_PowerArmor(edict_t *ent, edict_t *other);

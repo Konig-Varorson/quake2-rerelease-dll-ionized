@@ -47,6 +47,7 @@ constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_X_AXIS = 64_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_Y_AXIS = 128_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_INACTIVE = 0x10000_spawnflag; // Paril: moved to non-reserved
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN = 0x20000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_NO_COLLISION = 0x40000_spawnflag;
 
 // support routine for setting moveinfo sounds
 inline int32_t G_GetMoveinfoSoundIndex(edict_t *self, const char *default_value, const char *wanted_value)
@@ -66,6 +67,8 @@ inline int32_t G_GetMoveinfoSoundIndex(edict_t *self, const char *default_value,
 
 void G_SetMoveinfoSounds(edict_t *self, const char *default_start, const char *default_mid, const char *default_end)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->moveinfo.sound_start = G_GetMoveinfoSoundIndex(self, default_start, st.noise_start);
 	self->moveinfo.sound_middle = G_GetMoveinfoSoundIndex(self, default_mid, st.noise_middle);
 	self->moveinfo.sound_end = G_GetMoveinfoSoundIndex(self, default_end, st.noise_end);
@@ -647,6 +650,8 @@ TOUCH(Touch_Plat_Center) (edict_t *ent, edict_t *other, const trace_t &tr, bool 
 // PGM - plat2's change the trigger field
 edict_t *plat_spawn_inside_trigger(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	edict_t *trigger;
 	vec3_t	 tmin, tmax;
 
@@ -710,6 +715,8 @@ Set "sounds" to one of the following:
 */
 void SP_func_plat(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	ent->s.angles = {};
 	ent->solid = SOLID_BSP;
 	ent->movetype = MOVETYPE_PUSH;
@@ -736,16 +743,18 @@ void SP_func_plat(edict_t *ent)
 	if (!ent->dmg)
 		ent->dmg = 2;
 
-	if (!st.lip)
-		st.lip = 8;
+	float lip = st.lip;
+
+	if (!st.was_key_specified("lip"))
+		lip = 8;
 
 	// pos1 is the top position, pos2 is the bottom
 	ent->pos1 = ent->s.origin;
-	ent->pos2 = ent->s.origin;
+	ent->pos2 = ent->s.origin; 
 	if (st.height)
 		ent->pos2[2] -= st.height;
 	else
-		ent->pos2[2] -= (ent->maxs[2] - ent->mins[2]) - st.lip;
+		ent->pos2[2] -= (ent->maxs[2] - ent->mins[2]) - lip;
 
 	ent->use = Use_Plat;
 
@@ -898,6 +907,8 @@ USE(rotating_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_rotating(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	ent->solid = SOLID_BSP;
 	if (ent->spawnflags.has(SPAWNFLAG_ROTATING_STOP))
 		ent->movetype = MOVETYPE_STOP;
@@ -1135,6 +1146,7 @@ DIE(button_killed) (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 
 void SP_func_button(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 	float  dist;
 
@@ -1157,14 +1169,17 @@ void SP_func_button(edict_t *ent)
 
 	if (!ent->wait)
 		ent->wait = 3;
-	if (!st.lip)
-		st.lip = 4;
+
+	float lip = st.lip;
+
+	if (!lip)
+		lip = 4;
 
 	ent->pos1 = ent->s.origin;
 	abs_movedir[0] = fabsf(ent->movedir[0]);
 	abs_movedir[1] = fabsf(ent->movedir[1]);
 	abs_movedir[2] = fabsf(ent->movedir[2]);
-	dist = abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - st.lip;
+	dist = abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - lip;
 	ent->pos2 = ent->pos1 + (ent->movedir * dist);
 
 	ent->use = button_use;
@@ -1532,8 +1547,15 @@ TOUCH(Touch_DoorTrigger) (edict_t *self, edict_t *other, const trace_t &tr, bool
 	if (!(other->svflags & SVF_MONSTER) && (!other->client))
 		return;
 
-	if (self->owner->spawnflags.has(SPAWNFLAG_DOOR_NOMONSTER) && (other->svflags & SVF_MONSTER))
-		return;
+	if (other->svflags & SVF_MONSTER)
+	{
+		if (self->owner->spawnflags.has(SPAWNFLAG_DOOR_NOMONSTER))
+			return;
+		// [Paril-KEX] this is for PSX; the scale is so small that monsters walking
+		// around to path_corners often initiate doors unintentionally.
+		else if (other->spawnflags.has(SPAWNFLAG_MONSTER_NO_IDLE_DOORS) && !other->enemy)
+			return;
+	}
 
 	if (level.time < self->touch_debounce_time)
 		return;
@@ -1695,6 +1717,7 @@ THINK(Think_DoorActivateAreaPortal) (edict_t *ent) -> void
 
 void SP_func_door(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 
 	if (ent->sounds != 1)
@@ -1731,7 +1754,7 @@ void SP_func_door(edict_t *ent)
 		ent->speed = 100;
 	if (deathmatch->integer)
 		ent->speed *= 2;
-
+	
 	if (!ent->accel)
 		ent->accel = ent->speed;
 	if (!ent->decel)
@@ -1739,8 +1762,9 @@ void SP_func_door(edict_t *ent)
 
 	if (!ent->wait)
 		ent->wait = 3;
-	if (!st.lip)
-		st.lip = 8;
+	float lip = st.lip;
+	if (!lip)
+		lip = 8;
 	if (!ent->dmg)
 		ent->dmg = 2;
 
@@ -1750,7 +1774,7 @@ void SP_func_door(edict_t *ent)
 	abs_movedir[1] = fabsf(ent->movedir[1]);
 	abs_movedir[2] = fabsf(ent->movedir[2]);
 	ent->moveinfo.distance =
-		abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - st.lip;
+		abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - lip;
 	ent->pos2 = ent->pos1 + (ent->movedir * ent->moveinfo.distance);
 
 	// if it starts open, switch the positions
@@ -1881,16 +1905,19 @@ void SP_func_door_rotating(edict_t *ent)
 	if (ent->spawnflags.has(SPAWNFLAG_DOOR_REVERSE))
 		ent->movedir = -ent->movedir;
 
-	if (!st.distance)
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+	int distance = st.distance;
+
+	if (!distance)
 	{
 		gi.Com_PrintFmt("{}: no distance set\n", *ent);
-		st.distance = 90;
+		distance = 90;
 	}
 
 	ent->pos1 = ent->s.angles;
-	ent->pos2 = ent->s.angles + (ent->movedir * st.distance);
-	ent->pos3 = ent->s.angles + (ent->movedir * -st.distance);
-	ent->moveinfo.distance = (float) st.distance;
+	ent->pos2 = ent->s.angles + (ent->movedir * distance);
+	ent->pos3 = ent->s.angles + (ent->movedir * -distance);
+	ent->moveinfo.distance = (float) distance;
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
@@ -1947,6 +1974,9 @@ void SP_func_door_rotating(edict_t *ent)
 		ent->pos1 = ent->s.angles;
 		ent->movedir = -ent->movedir;
 	}
+
+	if (ent->spawnflags.has(SPAWNFLAG_DOOR_ROTATING_NO_COLLISION))
+		ent->clipmask = CONTENTS_AREAPORTAL; // just because zero is automatic
 
 	if (ent->health)
 	{
@@ -2036,6 +2066,7 @@ SMART causes the water to adjust its speed depending on distance to player.
 
 void SP_func_water(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 
 	G_SetMovedir(self->s.angles, self->movedir);
@@ -2337,6 +2368,23 @@ void train_resume(edict_t *self)
 			dest -= vec3_t{1.f, 1.f, 1.f};
 	}
 
+	// PGM (Paril)
+	if (ent->speed)
+	{
+		self->speed = ent->speed;
+		self->moveinfo.speed = ent->speed;
+		if (ent->accel)
+			self->moveinfo.accel = ent->accel;
+		else
+			self->moveinfo.accel = ent->speed;
+		if (ent->decel)
+			self->moveinfo.decel = ent->decel;
+		else
+			self->moveinfo.decel = ent->speed;
+		self->moveinfo.current_speed = 0;
+	}
+	// PGM
+
 	self->s.sound = self->moveinfo.sound_middle;
 
 	self->moveinfo.state = STATE_TOP;
@@ -2410,6 +2458,7 @@ USE(train_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_train(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	self->movetype = MOVETYPE_PUSH;
 
 	self->s.angles = {};
@@ -2566,6 +2615,7 @@ USE(func_timer_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_timer(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	if (!self->wait)
 		self->wait = 1.0;
 
@@ -2768,7 +2818,10 @@ void SP_func_door_secret(edict_t *ent)
 	if (!ent->wait)
 		ent->wait = 5;
 
-	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = 50;
+	if (!ent->speed)
+		ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = 50;
+	else
+		ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed * 0.1f;
 
 	// calculate positions
 	AngleVectors(ent->s.angles, forward, right, up);
@@ -2960,6 +3013,7 @@ THINK(func_eye_setup) (edict_t *self) -> void
 
 void SP_func_eye(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	gi.setmodel(ent, ent->model);
@@ -2971,6 +3025,10 @@ void SP_func_eye(edict_t *ent)
 
 	if (!ent->speed)
 		ent->speed = 45;
+
+	// set vision cone
+	if (st.was_key_specified("vision_cone"))
+		ent->yaw_speed = ent->vision_cone;
 
 	if (!ent->yaw_speed)
 		ent->yaw_speed = 0.5f;
@@ -3000,4 +3058,607 @@ void SP_func_eye(edict_t *ent)
 	}
 
 	gi.linkentity(ent);
+}
+
+/*QUAKED rotating_light (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF ALARM
+"health"	if set, the light may be killed.
+*/
+
+// RAFAEL
+// note to self
+// the lights will take damage from explosions
+// this could leave a player in total darkness very bad
+
+constexpr spawnflags_t SPAWNFLAG_ROTATING_LIGHT_START_OFF = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ROTATING_LIGHT_ALARM = 2_spawnflag;
+
+THINK(rotating_light_alarm) (edict_t* self) -> void
+{
+	if (self->spawnflags.has(SPAWNFLAG_ROTATING_LIGHT_START_OFF))
+	{
+		self->think = nullptr;
+		self->nextthink = 0_ms;
+	}
+	else
+	{
+		gi.sound(self, CHAN_NO_PHS_ADD | CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+		self->nextthink = level.time + 1_sec;
+	}
+}
+
+DIE(rotating_light_killed) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, const vec3_t& point, const mod_t& mod) -> void
+{
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_WELDING_SPARKS);
+	gi.WriteByte(30);
+	gi.WritePosition(self->s.origin);
+	gi.WriteDir(vec3_origin);
+	gi.WriteByte(irandom(0xe0, 0xe8));
+	gi.multicast(self->s.origin, MULTICAST_PVS, false);
+
+	self->s.effects &= ~EF_SPINNINGLIGHTS;
+	self->use = nullptr;
+
+	self->think = G_FreeEdict;
+	self->nextthink = level.time + FRAME_TIME_S;
+}
+
+USE(rotating_light_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
+{
+	if (self->spawnflags.has(SPAWNFLAG_ROTATING_LIGHT_START_OFF))
+	{
+		self->spawnflags &= ~SPAWNFLAG_ROTATING_LIGHT_START_OFF;
+		self->s.effects |= EF_SPINNINGLIGHTS;
+
+		if (self->spawnflags.has(SPAWNFLAG_ROTATING_LIGHT_ALARM))
+		{
+			self->think = rotating_light_alarm;
+			self->nextthink = level.time + FRAME_TIME_S;
+		}
+	}
+	else
+	{
+		self->spawnflags |= SPAWNFLAG_ROTATING_LIGHT_START_OFF;
+		self->s.effects &= ~EF_SPINNINGLIGHTS;
+	}
+}
+
+void SP_rotating_light(edict_t* self)
+{
+	self->movetype = MOVETYPE_STOP;
+	self->solid = SOLID_BBOX;
+
+	self->s.modelindex = gi.modelindex("models/objects/light/tris.md2");
+
+	self->s.frame = 0;
+
+	self->use = rotating_light_use;
+
+	if (self->spawnflags.has(SPAWNFLAG_ROTATING_LIGHT_START_OFF))
+		self->s.effects &= ~EF_SPINNINGLIGHTS;
+	else
+	{
+		self->s.effects |= EF_SPINNINGLIGHTS;
+	}
+
+	if (!self->speed)
+		self->speed = 32;
+	// this is a real cheap way
+	// to set the radius of the light
+	// self->s.frame = self->speed;
+
+	if (!self->health)
+	{
+		self->health = 10;
+		self->max_health = self->health;
+		self->die = rotating_light_killed;
+		self->takedamage = true;
+	}
+	else
+	{
+		self->max_health = self->health;
+		self->die = rotating_light_killed;
+		self->takedamage = true;
+	}
+
+	if (self->spawnflags.has(SPAWNFLAG_ROTATING_LIGHT_ALARM))
+	{
+		self->moveinfo.sound_start = gi.soundindex("misc/alarm.wav");
+	}
+
+	gi.linkentity(self);
+}
+
+/*QUAKED func_object_repair (1 .5 0) (-8 -8 -8) (8 8 8)
+object to be repaired.
+The default delay is 1 second
+"delay" the delay in seconds for spark to occur
+*/
+
+THINK(object_repair_fx) (edict_t* ent) -> void
+{
+	ent->nextthink = level.time + gtime_t::from_sec(ent->delay);
+
+	if (ent->health <= 100)
+		ent->health++;
+	else
+	{
+		gi.WriteByte(svc_temp_entity);
+		gi.WriteByte(TE_WELDING_SPARKS);
+		gi.WriteByte(10);
+		gi.WritePosition(ent->s.origin);
+		gi.WriteDir(vec3_origin);
+		gi.WriteByte(irandom(0xe0, 0xe8));
+		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+	}
+}
+
+THINK(object_repair_dead) (edict_t* ent) -> void
+{
+	G_UseTargets(ent, ent);
+	ent->nextthink = level.time + 10_hz;
+	ent->think = object_repair_fx;
+}
+
+THINK(object_repair_sparks) (edict_t* ent) -> void
+{
+	if (ent->health <= 0)
+	{
+		ent->nextthink = level.time + 10_hz;
+		ent->think = object_repair_dead;
+		return;
+	}
+
+	ent->nextthink = level.time + gtime_t::from_sec(ent->delay);
+
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_WELDING_SPARKS);
+	gi.WriteByte(10);
+	gi.WritePosition(ent->s.origin);
+	gi.WriteDir(vec3_origin);
+	gi.WriteByte(irandom(0xe0, 0xe8));
+	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+}
+
+void SP_object_repair(edict_t* ent)
+{
+	ent->movetype = MOVETYPE_NONE;
+	ent->solid = SOLID_BBOX;
+	ent->classname = "object_repair";
+	ent->mins = { -8, -8, 8 };
+	ent->maxs = { 8, 8, 8 };
+	ent->think = object_repair_sparks;
+	ent->nextthink = level.time + 1_sec;
+	ent->health = 100;
+	if (!ent->delay)
+		ent->delay = 1.0;
+}
+
+
+//====
+// PGM
+constexpr spawnflags_t SPAWNFLAGS_PLAT2_TOGGLE = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAGS_PLAT2_TOP = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAGS_PLAT2_START_ACTIVE = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAGS_PLAT2_BOX_LIFT = 32_spawnflag;
+// PGM
+//====
+
+void plat2_go_down(edict_t* ent);
+void plat2_go_up(edict_t* ent);
+
+void plat2_spawn_danger_area(edict_t* ent)
+{
+	vec3_t mins, maxs;
+
+	mins = ent->mins;
+	maxs = ent->maxs;
+	maxs[2] = ent->mins[2] + 64;
+
+	SpawnBadArea(mins, maxs, 0_ms, ent);
+}
+
+void plat2_kill_danger_area(edict_t* ent)
+{
+	edict_t* t;
+
+	t = nullptr;
+	while ((t = G_FindByString<&edict_t::classname>(t, "bad_area")))
+	{
+		if (t->owner == ent)
+			G_FreeEdict(t);
+	}
+}
+
+MOVEINFO_ENDFUNC(plat2_hit_top) (edict_t* ent) -> void
+{
+	if (!(ent->flags & FL_TEAMSLAVE))
+	{
+		if (ent->moveinfo.sound_end)
+			gi.sound(ent, CHAN_NO_PHS_ADD | CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+	}
+	ent->s.sound = 0;
+	ent->moveinfo.state = STATE_TOP;
+
+	if (ent->plat2flags & PLAT2_CALLED)
+	{
+		ent->plat2flags = PLAT2_WAITING;
+		if (!ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
+		{
+			ent->think = plat2_go_down;
+			ent->nextthink = level.time + gtime_t::from_sec(ent->wait * 2.5f);
+		}
+		if (deathmatch->integer)
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait * 0.5f);
+		else
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait);
+	}
+	else if (!(ent->spawnflags & SPAWNFLAGS_PLAT2_TOP) && !ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
+	{
+		ent->plat2flags = PLAT2_NONE;
+		ent->think = plat2_go_down;
+		ent->nextthink = level.time + gtime_t::from_sec(ent->wait);
+		ent->last_move_time = level.time;
+	}
+	else
+	{
+		ent->plat2flags = PLAT2_NONE;
+		ent->last_move_time = level.time;
+	}
+
+	G_UseTargets(ent, ent);
+}
+
+MOVEINFO_ENDFUNC(plat2_hit_bottom) (edict_t* ent) -> void
+{
+	if (!(ent->flags & FL_TEAMSLAVE))
+	{
+		if (ent->moveinfo.sound_end)
+			gi.sound(ent, CHAN_NO_PHS_ADD | CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+	}
+	ent->s.sound = 0;
+	ent->moveinfo.state = STATE_BOTTOM;
+
+	if (ent->plat2flags & PLAT2_CALLED)
+	{
+		ent->plat2flags = PLAT2_WAITING;
+		if (!(ent->spawnflags & SPAWNFLAGS_PLAT2_TOGGLE))
+		{
+			ent->think = plat2_go_up;
+			ent->nextthink = level.time + gtime_t::from_sec(ent->wait * 2.5f);
+		}
+		if (deathmatch->integer)
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait * 0.5f);
+		else
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait);
+	}
+	else if (ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOP) && !ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
+	{
+		ent->plat2flags = PLAT2_NONE;
+		ent->think = plat2_go_up;
+		ent->nextthink = level.time + gtime_t::from_sec(ent->wait);
+		ent->last_move_time = level.time;
+	}
+	else
+	{
+		ent->plat2flags = PLAT2_NONE;
+		ent->last_move_time = level.time;
+	}
+
+	plat2_kill_danger_area(ent);
+	G_UseTargets(ent, ent);
+}
+
+THINK(plat2_go_down) (edict_t* ent) -> void
+{
+	if (!(ent->flags & FL_TEAMSLAVE))
+	{
+		if (ent->moveinfo.sound_start)
+			gi.sound(ent, CHAN_NO_PHS_ADD | CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+	}
+
+	ent->s.sound = ent->moveinfo.sound_middle;
+
+	ent->moveinfo.state = STATE_DOWN;
+	ent->plat2flags |= PLAT2_MOVING;
+
+	Move_Calc(ent, ent->moveinfo.end_origin, plat2_hit_bottom);
+}
+
+THINK(plat2_go_up) (edict_t* ent) -> void
+{
+	if (!(ent->flags & FL_TEAMSLAVE))
+	{
+		if (ent->moveinfo.sound_start)
+			gi.sound(ent, CHAN_NO_PHS_ADD | CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+	}
+
+	ent->s.sound = ent->moveinfo.sound_middle;
+
+	ent->moveinfo.state = STATE_UP;
+	ent->plat2flags |= PLAT2_MOVING;
+
+	plat2_spawn_danger_area(ent);
+
+	Move_Calc(ent, ent->moveinfo.start_origin, plat2_hit_top);
+}
+
+void plat2_operate(edict_t* ent, edict_t* other)
+{
+	int		 otherState;
+	gtime_t	 pauseTime;
+	float	 platCenter;
+	edict_t* trigger;
+
+	trigger = ent;
+	ent = ent->enemy; // now point at the plat, not the trigger
+
+	if (ent->plat2flags & PLAT2_MOVING)
+		return;
+
+	if ((ent->last_move_time + gtime_t::from_sec(ent->wait)) > level.time)
+		return;
+
+	platCenter = (trigger->absmin[2] + trigger->absmax[2]) / 2;
+
+	if (ent->moveinfo.state == STATE_TOP)
+	{
+		otherState = STATE_TOP;
+		if (ent->spawnflags.has(SPAWNFLAGS_PLAT2_BOX_LIFT))
+		{
+			if (platCenter > other->s.origin[2])
+				otherState = STATE_BOTTOM;
+		}
+		else
+		{
+			if (trigger->absmax[2] > other->s.origin[2])
+				otherState = STATE_BOTTOM;
+		}
+	}
+	else
+	{
+		otherState = STATE_BOTTOM;
+		if (other->s.origin[2] > platCenter)
+			otherState = STATE_TOP;
+	}
+
+	ent->plat2flags = PLAT2_MOVING;
+
+	if (deathmatch->integer)
+		pauseTime = 300_ms;
+	else
+		pauseTime = 500_ms;
+
+	if (ent->moveinfo.state != otherState)
+	{
+		ent->plat2flags |= PLAT2_CALLED;
+		pauseTime = 100_ms;
+	}
+
+	ent->last_move_time = level.time;
+
+	if (ent->moveinfo.state == STATE_BOTTOM)
+	{
+		ent->think = plat2_go_up;
+		ent->nextthink = level.time + pauseTime;
+	}
+	else
+	{
+		ent->think = plat2_go_down;
+		ent->nextthink = level.time + pauseTime;
+	}
+}
+
+TOUCH(Touch_Plat_Center2) (edict_t* ent, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
+{
+	// this requires monsters to actively trigger plats, not just step on them.
+
+	// FIXME - commented out for E3
+	// if (!other->client)
+	//	return;
+
+	if (other->health <= 0)
+		return;
+
+	// PMM - don't let non-monsters activate plat2s
+	if ((!(other->svflags & SVF_MONSTER)) && (!other->client))
+		return;
+
+	plat2_operate(ent, other);
+}
+
+MOVEINFO_BLOCKED(plat2_blocked) (edict_t* self, edict_t* other) -> void
+{
+	if (!(other->svflags & SVF_MONSTER) && (!other->client))
+	{
+		// give it a chance to go away on it's own terms (like gibs)
+		T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, 100000, 1, DAMAGE_NONE, MOD_CRUSH);
+		// if it's still there, nuke it
+		if (other && other->inuse && other->solid)
+			BecomeExplosion1(other);
+		return;
+	}
+
+	// gib dead things
+	if (other->health < 1)
+	{
+		T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, 100, 1, DAMAGE_NONE, MOD_CRUSH);
+	}
+
+	T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, DAMAGE_NONE, MOD_CRUSH);
+
+	// [Paril-KEX] killed, so don't change direction
+	if (!other->inuse || !other->solid)
+		return;
+
+	if (self->moveinfo.state == STATE_UP)
+		plat2_go_down(self);
+	else if (self->moveinfo.state == STATE_DOWN)
+		plat2_go_up(self);
+}
+
+USE(Use_Plat2) (edict_t* ent, edict_t* other, edict_t* activator) -> void
+{
+	edict_t* trigger;
+
+	if (ent->moveinfo.state > STATE_BOTTOM)
+		return;
+	// [Paril-KEX] disabled this; causes confusing situations
+	//if ((ent->last_move_time + 2_sec) > level.time)
+	//	return;
+
+	uint32_t i;
+	for (i = 1, trigger = g_edicts + 1; i < globals.num_edicts; i++, trigger++)
+	{
+		if (!trigger->inuse)
+			continue;
+		if (trigger->touch == Touch_Plat_Center2)
+		{
+			if (trigger->enemy == ent)
+			{
+				//				Touch_Plat_Center2 (trigger, activator, nullptr, nullptr);
+				plat2_operate(trigger, activator);
+				return;
+			}
+		}
+	}
+}
+
+USE(plat2_activate) (edict_t* ent, edict_t* other, edict_t* activator) -> void
+{
+	edict_t* trigger;
+
+	//	if(ent->targetname)
+	//		ent->targetname[0] = 0;
+
+	ent->use = Use_Plat2;
+
+	trigger = plat_spawn_inside_trigger(ent); // the "start moving" trigger
+
+	trigger->maxs[0] += 10;
+	trigger->maxs[1] += 10;
+	trigger->mins[0] -= 10;
+	trigger->mins[1] -= 10;
+
+	gi.linkentity(trigger);
+
+	trigger->touch = Touch_Plat_Center2; // Override trigger touch function
+
+	plat2_go_down(ent);
+}
+
+/*QUAKED func_plat2 (0 .5 .8) ? PLAT_LOW_TRIGGER PLAT2_TOGGLE PLAT2_TOP PLAT2_START_ACTIVE UNUSED BOX_LIFT
+speed	default 150
+
+PLAT_LOW_TRIGGER - creates a short trigger field at the bottom
+PLAT2_TOGGLE - plat will not return to default position.
+PLAT2_TOP - plat's default position will the the top.
+PLAT2_START_ACTIVE - plat will trigger it's targets each time it hits top
+UNUSED
+BOX_LIFT - this indicates that the lift is a box, rather than just a platform
+
+Plats are always drawn in the extended position, so they will light correctly.
+
+If the plat is the target of another trigger or button, it will start out disabled in the extended position until it is trigger, when it will lower and become a normal plat.
+
+"speed"	overrides default 200.
+"accel" overrides default 500
+"lip"	no default
+
+If the "height" key is set, that will determine the amount the plat moves, instead of being implicitly determoveinfoned by the model's height.
+
+*/
+void SP_func_plat2(edict_t* ent)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	edict_t* trigger;
+
+	ent->s.angles = {};
+	ent->solid = SOLID_BSP;
+	ent->movetype = MOVETYPE_PUSH;
+
+	gi.setmodel(ent, ent->model);
+
+	ent->moveinfo.blocked = plat2_blocked;
+
+	if (!ent->speed)
+		ent->speed = 20;
+	else
+		ent->speed *= 0.1f;
+
+	if (!ent->accel)
+		ent->accel = 5;
+	else
+		ent->accel *= 0.1f;
+
+	if (!ent->decel)
+		ent->decel = 5;
+	else
+		ent->decel *= 0.1f;
+
+	if (deathmatch->integer)
+	{
+		ent->speed *= 2;
+		ent->accel *= 2;
+		ent->decel *= 2;
+	}
+
+	// PMM Added to kill things it's being blocked by
+	if (!ent->dmg)
+		ent->dmg = 2;
+
+	// pos1 is the top position, pos2 is the bottom
+	ent->pos1 = ent->s.origin;
+	ent->pos2 = ent->s.origin;
+
+	if (st.height)
+		ent->pos2[2] -= (st.height - st.lip);
+	else
+		ent->pos2[2] -= (ent->maxs[2] - ent->mins[2]) - st.lip;
+
+	ent->moveinfo.state = STATE_TOP;
+
+	if (ent->targetname && !(ent->spawnflags & SPAWNFLAGS_PLAT2_START_ACTIVE))
+	{
+		ent->use = plat2_activate;
+	}
+	else
+	{
+		ent->use = Use_Plat2;
+
+		trigger = plat_spawn_inside_trigger(ent); // the "start moving" trigger
+
+		// PGM - debugging??
+		trigger->maxs[0] += 10;
+		trigger->maxs[1] += 10;
+		trigger->mins[0] -= 10;
+		trigger->mins[1] -= 10;
+
+		gi.linkentity(trigger);
+
+		trigger->touch = Touch_Plat_Center2; // Override trigger touch function
+
+		if (!(ent->spawnflags & SPAWNFLAGS_PLAT2_TOP))
+		{
+			ent->s.origin = ent->pos2;
+			ent->moveinfo.state = STATE_BOTTOM;
+		}
+	}
+
+	gi.linkentity(ent);
+
+	ent->moveinfo.speed = ent->speed;
+	ent->moveinfo.accel = ent->accel;
+	ent->moveinfo.decel = ent->decel;
+	ent->moveinfo.wait = ent->wait;
+	ent->moveinfo.start_origin = ent->pos1;
+	ent->moveinfo.start_angles = ent->s.angles;
+	ent->moveinfo.end_origin = ent->pos2;
+	ent->moveinfo.end_angles = ent->s.angles;
+
+	if (!ent->wait)
+		ent->wait = 2.0f;
+
+	G_SetMoveinfoSounds(ent, "plats/pt1_strt.wav", "plats/pt1_mid.wav", "plats/pt1_end.wav");
 }

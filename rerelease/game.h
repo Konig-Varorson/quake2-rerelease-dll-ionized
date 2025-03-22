@@ -19,8 +19,12 @@
     using gvec3_t = float[3];
     using gvec3_ptr_t = gvec3_t;
     using gvec3_ref_t = gvec3_t;
-    using gvec3_cref_t = const gvec3_t;
-    using gvec3_cptr_t = const gvec3_t;
+    // FIXME: MSVC bug
+    //using gvec3_cref_t = const gvec3_t;
+    typedef const gvec3_t gvec3_cref_t;
+    // FIXME: MSVC bug
+    //using gvec3_cptr_t = const gvec3_t;
+    typedef const gvec3_t gvec3_cptr_t;
     using gvec4_t = float[4];
 #endif
     
@@ -388,6 +392,7 @@ enum pmflags_t : uint16_t
     PMF_NO_ANGULAR_PREDICTION = bit_v<8>, // temporary disables angular prediction
     PMF_IGNORE_PLAYER_COLLISION = bit_v<9>, // don't collide with other players
     PMF_TIME_TRICK = bit_v<10>, // pm_time is trick jump time
+    PMF_NO_GROUND_SEEK = bit_v<11>, // temporarily disable ground seeking
 };
 
 MAKE_ENUM_BITFLAGS(pmflags_t);
@@ -612,6 +617,7 @@ enum renderfx_t : uint32_t
 MAKE_ENUM_BITFLAGS(renderfx_t);
 
 constexpr renderfx_t RF_BEAM_LIGHTNING = RF_BEAM | RF_GLOW; // [Paril-KEX] make a lightning bolt instead of a laser
+//constexpr renderfx_t RF_BEAM_REACTOR = RF_BEAM | RF_USE_DISGUISE; // [Paril-KEX] make reactor FX, like PSX version
 
 MAKE_ENUM_BITFLAGS(refdef_flags_t);
 
