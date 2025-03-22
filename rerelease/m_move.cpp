@@ -184,7 +184,7 @@ static vec3_t G_IdealHoverPosition(edict_t *ent)
 		phi = acos(frandom());
 	// non-buzzards pick a level around the center
 	else
-		phi = acos(crandom() * 0.06f);
+		phi = acos(frandom() * 0.7f);
 
     vec3_t d {
 		sin(phi) * cos(theta),
@@ -273,6 +273,8 @@ static bool SV_alternate_flystep(edict_t *ent, vec3_t move, bool relink, edict_t
 	else
 		wanted_pos = (towards_origin + (towards_velocity * 0.25f)) + ent->monsterinfo.fly_ideal_position;
 
+	//gi.Draw_Point(wanted_pos, 8.0f, rgba_red, gi.frame_time_s, true);
+
 	// find a place we can fit in from here
 	trace_t tr = gi.trace(towards_origin, { -8.f, -8.f, -8.f }, { 8.f, 8.f, 8.f }, wanted_pos, ent, MASK_SOLID | CONTENTS_MONSTERCLIP);
 
@@ -337,9 +339,10 @@ static bool SV_alternate_flystep(edict_t *ent, vec3_t move, bool relink, edict_t
 	// the closer we are to zero, the more we can change dir.
 	// if we're pushed past our max speed we shouldn't
 	// turn at all.
+	bool following_paths = ent->monsterinfo.aiflags & (AI_PATHING | AI_COMBAT_POINT | AI_LOST_SIGHT);
 	float turn_factor;
 			
-	if (((ent->monsterinfo.fly_thrusters && !ent->monsterinfo.fly_pinned) || ent->monsterinfo.aiflags & (AI_PATHING | AI_COMBAT_POINT | AI_LOST_SIGHT)) && dir.dot(wanted_dir) > 0.0f)
+	if (((ent->monsterinfo.fly_thrusters && !ent->monsterinfo.fly_pinned) || following_paths) && dir.dot(wanted_dir) > 0.0f)
 		turn_factor = 0.45f;
 	else
 		turn_factor = min(1.f, 0.84f + (0.08f * (current_speed / ent->monsterinfo.fly_speed)));
@@ -385,11 +388,18 @@ static bool SV_alternate_flystep(edict_t *ent, vec3_t move, bool relink, edict_t
 	// the closer we are to the wanted position, we want to slow
 	// down so we don't fly past it.
 	float speed_factor;
-		
-	if (!ent->enemy || (ent->monsterinfo.fly_thrusters && !ent->monsterinfo.fly_pinned) || (ent->monsterinfo.aiflags & (AI_PATHING | AI_COMBAT_POINT | AI_LOST_SIGHT)))
-		speed_factor = 1.f;
-	else if (aim_fwd.dot(wanted_dir) < -0.25 && dir)
-		speed_factor = 0.f;
+	
+	//gi.Draw_Ray(ent->s.origin, aim_fwd, 16.0f, 8.0f, rgba_green, gi.frame_time_s, true);
+	//gi.Draw_Ray(ent->s.origin, final_dir, 16.0f, 8.0f, rgba_blue, gi.frame_time_s, true);
+	if (!ent->enemy || (ent->monsterinfo.fly_thrusters && !ent->monsterinfo.fly_pinned) || following_paths)
+	{
+		// Paril: only do this correction if we are following paths. we want to move backwards
+		// away from players.
+		if (following_paths && dir && wanted_dir.dot(dir) < -0.25)
+			speed_factor = 0.f;
+		else
+			speed_factor = 1.f;
+	}
 	else
 		speed_factor = min(1.f, dist_to_wanted / ent->monsterinfo.fly_speed);
 
@@ -1171,8 +1181,13 @@ static bool M_NavPathToGoal(edict_t *self, float dist, const vec3_t &goal)
 	vec3_t &path_to = (self->monsterinfo.nav_path.returnCode == PathReturnCode::TraversalPending) ?
 		self->monsterinfo.nav_path.secondMovePoint : self->monsterinfo.nav_path.firstMovePoint;
 
-	if ((self->monsterinfo.nav_path.returnCode != PathReturnCode::TraversalPending && (path_to - self->s.origin).length() <= (self->size.length() * 0.5f)) ||
-		self->monsterinfo.nav_path_cache_time <= level.time)
+	vec3_t ground_origin = self->s.origin + vec3_t { 0.f, 0.f, self->mins[2] } - vec3_t { 0.f, 0.f, PLAYER_MINS[2] };
+	vec3_t mon_mins = ground_origin + PLAYER_MINS;
+	vec3_t mon_maxs = ground_origin + PLAYER_MAXS;
+
+	if (self->monsterinfo.nav_path_cache_time <= level.time ||
+		(self->monsterinfo.nav_path.returnCode != PathReturnCode::TraversalPending &&
+		boxes_intersect(mon_mins, mon_maxs, path_to, path_to)))
 	{
 		PathRequest request;
 		if (self->enemy)
@@ -1184,6 +1199,15 @@ static bool M_NavPathToGoal(edict_t *self, float dist, const vec3_t &goal)
 			request.debugging.drawTime = gi.frame_time_s;
 		request.start = self->s.origin;
 		request.pathFlags = PathFlags::Walk;
+		
+		request.nodeSearch.minHeight = -(self->mins.z * 2);
+		request.nodeSearch.maxHeight = (self->maxs.z * 2);
+
+		// FIXME remove hardcoding
+		if (!strcmp(self->classname, "monster_guardian"))
+		{
+			request.nodeSearch.radius = 2048.f;
+		}
 
 		if (self->monsterinfo.can_jump || (self->flags & FL_FLY))
 		{

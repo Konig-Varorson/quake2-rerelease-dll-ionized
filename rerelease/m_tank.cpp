@@ -25,11 +25,11 @@ static cached_soundindex sound_sight;
 static cached_soundindex sound_windup;
 static cached_soundindex sound_strike;
 
-constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_GUARDIAN = 8_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_TANK_HEAT_SEEKING = 16_spawnflag;
 
-/*KONIG - add powerup copy*/
-void MBossPowerups(edict_t* self);
+/* KONIG - universal boss powerup copy */
+void BossPowerups(edict_t* self);
 
 //
 // misc
@@ -394,20 +394,18 @@ void TankBlaster(edict_t *self)
 		PredictAim(self, self->enemy, start, 0, false, 0.f, &dir, nullptr);
 	// pmm
 
-	/*KONIG - Tanks now use blue blaster, slightly slower; Commanders hit slightly harder; Guardians use green blasters, hits even harder and faster*/
-	if (strcmp(self->classname, "monster_tank_commander") == 0)
+		/*KONIG - Tanks now use blue blaster, slightly slower; Commanders hit slightly harder; Guardians use green blasters, hits even harder and faster*/
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
 	{
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_blaster2(self, start, dir, 40, 1000, flash_number, EF_BLASTER);
-		else
-			monster_fire_blaster(self, start, dir, 35, 800, flash_number, EF_BLASTER);
+		monster_fire_blaster2(self, start, dir, 35, 1000, flash_number, EF_BLASTER);
+	}
+	else if (strcmp(self->classname, "monster_tank_commander") == 0)
+	{
+		monster_fire_blaster(self, start, dir, 30, 800, flash_number, EF_BLASTER);
 	}
 	else
 	{
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_blaster(self, start, dir, 35, 800, flash_number, EF_BLASTER);
-		else
-			monster_fire_blueblaster(self, start, dir, 30, 600, flash_number, EF_BLUEHYPERBLASTER);
+		monster_fire_blueblaster(self, start, dir, 30, 600, flash_number, EF_BLUEHYPERBLASTER);
 	}
 }
 
@@ -442,12 +440,11 @@ void TankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 
 	// [Paril-KEX] scale
-	/* KONIG - Changed else if statement to give all Commanders heat seeking rockets*/
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
 	if (self->speed)
 		rocketSpeed = self->speed;
-	else if (strcmp(self->classname, "monster_tank_commander") == 0 || self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
+	else if (self->spawnflags.has(SPAWNFLAG_TANK_HEAT_SEEKING))
 		rocketSpeed = 500;
 	else
 		rocketSpeed = 650;
@@ -499,7 +496,7 @@ void TankRocket(edict_t *self)
 		// blindfire has different fail criteria for the trace
 		if (M_AdjustBlindfireTarget(self, start, vec, right, dir))
 		{
-			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
+			if (self->spawnflags.has(SPAWNFLAG_TANK_HEAT_SEEKING))
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, flash_number, self->accel);
 			else
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, flash_number);
@@ -511,7 +508,7 @@ void TankRocket(edict_t *self)
 
 		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
 		{
-			if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING))
+			if (self->spawnflags.has(SPAWNFLAG_TANK_HEAT_SEEKING))
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, flash_number, self->accel);
 			else
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, flash_number);
@@ -556,21 +553,13 @@ void TankMachineGun(edict_t *self)
 
 	AngleVectors(dir, forward, nullptr, nullptr);
 
-	/*KONIG - Commander hits slightly harder; Guardian uses railgun */
-	if (strcmp(self->classname, "monster_tank_commander") == 0)
-	{
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_railgun(self, start, forward, 35, 100, flash_number);
-		else
-			monster_fire_bullet(self, start, forward, 25, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
-	}
+	/*KONIG - Commander hits slightly harder; Commander Guardian uses railgun */
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+		monster_fire_railgun(self, start, forward, 40, 100, flash_number);
+	else if (strcmp(self->classname, "monster_tank_commander") == 0)
+		monster_fire_bullet(self, start, forward, 25, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	else
-	{
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-			monster_fire_grenade(self, start, forward, 35, 500, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
-		else
-			monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
-	}
+		monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
 static void tank_blind_check(edict_t *self)
@@ -930,22 +919,68 @@ MONSTERINFO_ATTACK(tank_attack) (edict_t *self) -> void
 // death
 //
 
+static void tank_gib(edict_t* self)
+{
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_EXPLOSION1_BIG);
+	gi.WritePosition(self->s.origin);
+	gi.multicast(self->s.origin, MULTICAST_PHS, false);
+
+	self->s.sound = 0;
+	self->s.skinnum /= 2;
+
+	ThrowGibs(self, 500, {
+				{ "models/objects/gibs/sm_meat/tris.md2" },
+				{ 3, "models/objects/gibs/sm_metal/tris.md2", GIB_METALLIC },
+				{ "models/objects/gibs/gear/tris.md2", GIB_METALLIC },
+				{ 2, "models/monsters/tank/gibs/foot.md2", GIB_SKINNED | GIB_METALLIC },
+				{ 2, "models/monsters/tank/gibs/thigh.md2", GIB_SKINNED | GIB_METALLIC },
+				{ "models/monsters/tank/gibs/chest.md2", GIB_SKINNED },
+				{ "models/monsters/tank/gibs/head.md2", GIB_HEAD | GIB_SKINNED }
+		});
+}
+
 void tank_dead(edict_t *self)
 {
-	self->mins = { -16, -16, -16 };
-	self->maxs = { 16, 16, -0 };
-	monster_dead(self);
+
+	// no blowy on deady
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	{
+		if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
+		{
+			self->deadflag = false;
+			self->takedamage = true;
+			return;
+		}
+		
+		tank_gib(self);
+	}
+	else
+	{
+		self->mins = { -16, -16, -16 };
+		self->maxs = { 16, 16, -0 };
+		monster_dead(self);
+	}
 }
 
 static void tank_shrink(edict_t *self)
 {
-	self->maxs[2] = 0;
-	self->svflags |= SVF_DEADMONSTER;
-	gi.linkentity(self);
+	if (!self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	{
+		self->maxs[2] = 0;
+		self->svflags |= SVF_DEADMONSTER;
+		gi.linkentity(self);
+	}
+}
+
+static void TankExplode(edict_t* self)
+{
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+		BossExplode(self);
 }
 
 mframe_t tank_frames_death1[] = {
-	{ ai_move, -7 },
+	{ ai_move, -7, TankExplode },
 	{ ai_move, -2 },
 	{ ai_move, -2 },
 	{ ai_move, 1 },
@@ -982,55 +1017,78 @@ MMOVE_T(tank_move_death) = { FRAME_death101, FRAME_death132, tank_frames_death1,
 
 DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
-	// check for gib
-	if (M_CheckGib(self, mod))
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN) && self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
 	{
-		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		// check for gib
+		if (M_CheckGib(self, mod))
+		{
+			tank_gib(self);
+			self->deadflag = true;
+			return;
+		}
 
-		self->s.skinnum /= 2;
-
-		ThrowGibs(self, damage, {
-			{ "models/objects/gibs/sm_meat/tris.md2" },
-			{ 3, "models/objects/gibs/sm_metal/tris.md2", GIB_METALLIC },
-			{ "models/objects/gibs/gear/tris.md2", GIB_METALLIC },
-			{ 2, "models/monsters/tank/gibs/foot.md2", GIB_SKINNED | GIB_METALLIC },
-			{ 2, "models/monsters/tank/gibs/thigh.md2", GIB_SKINNED | GIB_METALLIC },
-			{ "models/monsters/tank/gibs/chest.md2", GIB_SKINNED },
-			{ "models/monsters/tank/gibs/head.md2", GIB_HEAD | GIB_SKINNED }
-		});
-
-		if (!self->style)
-			ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
-
+		if (self->deadflag)
+			return;
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	{
+		gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 		self->deadflag = true;
-		return;
+		self->takedamage = false;
 	}
-
-	if (self->deadflag)
-		return;
-
-	// [Paril-KEX] dropped arm
-	if (!self->style)
+	else
 	{
-		self->style = 1;
 
-		auto [ fwd, rgt, up] = AngleVectors(self->s.angles);
+		// check for gib
+		if (M_CheckGib(self, mod))
+		{
+			gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
-		edict_t *arm_gib = ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
-		arm_gib->s.origin = self->s.origin + (rgt * -16.f) + (up * 23.f);
-		arm_gib->s.old_origin = arm_gib->s.origin;
-		arm_gib->avelocity = { crandom() * 15.f, crandom() * 15.f, 180.f };
-		arm_gib->velocity = (up * 100.f) + (rgt * -120.f);
-		arm_gib->s.angles = self->s.angles;
-		arm_gib->s.angles[2] = -90.f;
-		arm_gib->s.skinnum /= 2;
-		gi.linkentity(arm_gib);
+			self->s.skinnum /= 2;
+
+			ThrowGibs(self, damage, {
+				{ "models/objects/gibs/sm_meat/tris.md2" },
+				{ 3, "models/objects/gibs/sm_metal/tris.md2", GIB_METALLIC },
+				{ "models/objects/gibs/gear/tris.md2", GIB_METALLIC },
+				{ 2, "models/monsters/tank/gibs/foot.md2", GIB_SKINNED | GIB_METALLIC },
+				{ 2, "models/monsters/tank/gibs/thigh.md2", GIB_SKINNED | GIB_METALLIC },
+				{ "models/monsters/tank/gibs/chest.md2", GIB_SKINNED },
+				{ "models/monsters/tank/gibs/head.md2", GIB_HEAD | GIB_SKINNED }
+				});
+
+			if (!self->style)
+				ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
+
+			self->deadflag = true;
+			return;
+		}
+
+		if (self->deadflag)
+			return;
+
+		// [Paril-KEX] dropped arm
+		if (!self->style)
+		{
+			self->style = 1;
+
+			auto [fwd, rgt, up] = AngleVectors(self->s.angles);
+
+			edict_t* arm_gib = ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
+			arm_gib->s.origin = self->s.origin + (rgt * -16.f) + (up * 23.f);
+			arm_gib->s.old_origin = arm_gib->s.origin;
+			arm_gib->avelocity = { crandom() * 15.f, crandom() * 15.f, 180.f };
+			arm_gib->velocity = (up * 100.f) + (rgt * -120.f);
+			arm_gib->s.angles = self->s.angles;
+			arm_gib->s.angles[2] = -90.f;
+			arm_gib->s.skinnum /= 2;
+			gi.linkentity(arm_gib);
+		}
+
+		// regular death
+		gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+		self->deadflag = true;
+		self->takedamage = true;
 	}
-
-	// regular death
-	gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
-	self->deadflag = true;
-	self->takedamage = true;
 
 	M_SetAnimation(self, &tank_move_death);
 }
@@ -1051,11 +1109,12 @@ MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool
 // monster_tank
 //
 
+
 /* KONIG - use generic checkattack for Tank Guardian*/
 MONSTERINFO_CHECKATTACK(Tank_CheckAttack) (edict_t* self) -> bool
 {
-	if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
-		MBossPowerups(self);
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+		BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
 
@@ -1064,19 +1123,21 @@ model="models/monsters/tank/tris.md2"
 */
 /*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) Ambush Trigger_Spawn Sight Guardian HeatSeeking
  */
-void SP_monster_tank(edict_t* self)
+void SP_monster_tank(edict_t *self)
 {
-	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
+	if ( !M_AllowSpawn( self ) ) {
+		G_FreeEdict( self );
 		return;
 	}
-
+	
 	self->s.modelindex = gi.modelindex("models/monsters/tank/tris.md2");
 	self->mins = { -32, -32, -16 };
 	self->maxs = { 32, 32, 64 };
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-
+	
 	gi.modelindex("models/monsters/tank/gibs/barm.md2");
 	gi.modelindex("models/monsters/tank/gibs/head.md2");
 	gi.modelindex("models/monsters/tank/gibs/chest.md2");
@@ -1099,76 +1160,66 @@ void SP_monster_tank(edict_t* self)
 	gi.soundindex("tank/tnkatk2e.wav");
 	gi.soundindex("tank/tnkatck3.wav");
 
-	/*KONIG - reworked health code to have only TC affected by chonky boy code*/
-	if (strcmp(self->classname, "monster_tank_commander") == 0)
+	/* KONIG - reworked code to make Tank Guardians their own visual entity; Tank Guardians get GZ health scaling; reduced health, added armor; Tank Commanders always heatseeking rockets*/
+	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
 	{
-		self->spawnflags |= SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING;
-		sound_pain2.assign("tank/pain.wav");
-
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
+		//exclusive teal skin for n64 maps
+		if (level.is_n64)
 		{
 			self->s.skinnum = 6;
-			if (!self->s.scale)
-				self->s.scale = 1.5f;
-			self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
-			self->gib_health = -275;
-			if (!st.was_key_specified("armor_type"))
-				self->monsterinfo.armor_type = IT_ARMOR_BODY;
-			if (!st.was_key_specified("armor_power"))
-				self->monsterinfo.armor_power = max(200, 200 + 200 * (skill->integer - 1));
-			if (coop->integer)
-			{
-				self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-			}
 		}
 		else
-		{
-			self->s.skinnum = 2;
-			self->health = 1000 * st.health_multiplier;
-			self->gib_health = -225;
-			self->count = 1;
-			if (!st.was_key_specified("armor_type"))
-				self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-			if (!st.was_key_specified("armor_power"))
-				self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
-			if (coop->integer)
-			{
-				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-			}
-		}
-	}
-	else //normal tank
-	{
-		sound_pain.assign("tank/tnkpain2.wav");
-		if (self->spawnflags.has(SPAWNFLAG_TANK_COMMANDER_GUARDIAN))
 		{
 			self->s.skinnum = 4;
-			if (!self->s.scale)
-				self->s.scale = 1.25f;
-			self->health = 1500 * st.health_multiplier;
-			self->gib_health = -250;
+		}
+
+		if (!self->s.scale)
+			self->s.scale = 1.5f;
+
+		self->health = max(1500, 1500 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		self->gib_health = -300;
+
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(250, 250 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->health += (250 * (CountPlayers() - 1));
+			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
+		}
+	}
+	else if (strcmp(self->classname, "monster_tank_commander") == 0)
+	{
+		self->spawnflags |= SPAWNFLAG_TANK_HEAT_SEEKING;
+		sound_pain2.assign("tank/pain.wav");
+
+		// [Paril-KEX] N64 tank commander is a chonky boy
+		self->s.skinnum = 2;
+
+		self->health = 950 * st.health_multiplier;
+		self->gib_health = -225;
+
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = 200;
+		self->count = 1;
+	}
+	else
+	{
+		sound_pain.assign("tank/tnkpain2.wav");
+			self->health = 750 * st.health_multiplier;
+			self->gib_health = -200;
+
 			if (!st.was_key_specified("armor_type"))
 				self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 			if (!st.was_key_specified("armor_power"))
-				self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
-			if (coop->integer)
-			{
-				self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-			}
-		}
-		else
-		{
-			self->health = 750 * st.health_multiplier;
-			self->gib_health = -200;
-			if (!st.was_key_specified("armor_type"))
-				self->monsterinfo.armor_type = IT_ARMOR_JACKET;
-			if (!st.was_key_specified("armor_power"))
-				self->monsterinfo.armor_power = 100;
-		}
+				self->monsterinfo.armor_power = 200;
 	}
 
 	self->monsterinfo.scale = MODEL_SCALE;
+
 
 	// heat seekingness
 	if (!self->accel)
@@ -1198,7 +1249,6 @@ void SP_monster_tank(edict_t* self)
 	// PMM
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 	self->monsterinfo.blindfire = true;
-	// pmm
 }
 
 void Use_Boss3(edict_t *ent, edict_t *other, edict_t *activator);
@@ -1217,13 +1267,8 @@ THINK(Think_TankStand) (edict_t *ent) -> void
 Just stands and cycles in one place until targeted, then teleports away.
 N64 edition!
 */
-/*KONIG - New skin for N64*/
 void SP_monster_tank_stand(edict_t *self)
 {
-	constexpr spawnflags_t SPAWNFLAG_TANK_SKIN = 1_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN_SKIN = 2_spawnflag;
-	constexpr spawnflags_t SPAWNFLAG_COMMANDER_SKIN = 4_spawnflag;
-
 	if( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -1234,14 +1279,8 @@ void SP_monster_tank_stand(edict_t *self)
 	self->model = "models/monsters/tank/tris.md2";
 	self->s.modelindex = gi.modelindex(self->model);
 	self->s.frame = FRAME_stand01;
-	if (self->spawnflags.has(SPAWNFLAG_TANK_SKIN))
-		self->s.skinnum = 0;
-	else if (self->spawnflags.has(SPAWNFLAG_COMMANDER_SKIN))
-		self->s.skinnum = 2;
-	else if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN_SKIN))
-		self->s.skinnum = 4;
-	else
-		self->s.skinnum = 6;
+	/*KONIG - New skin for N64*/
+	self->s.skinnum = 6;
 
 	gi.soundindex("misc/bigtele.wav");
 	
@@ -1258,4 +1297,15 @@ void SP_monster_tank_stand(edict_t *self)
 	self->think = Think_TankStand;
 	self->nextthink = level.time + 10_hz;
 	gi.linkentity(self);
+}
+/*KONIG - function to make classname tank guardians */
+/*QUAKED monster_tank_guardian (1 .5 0) (-32 -32 0) (32 32 90) Ambush Trigger_Spawn Sight Guardian HeatSeeking
+ */
+void SP_monster_tank_guardian(edict_t* self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	self->spawnflags |= SPAWNFLAG_TANK_GUARDIAN;
+
+	SP_monster_tank(self);
 }

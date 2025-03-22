@@ -35,8 +35,8 @@ static cached_soundindex sound_taunt2;
 static cached_soundindex sound_taunt3;
 static cached_soundindex sound_hit;
 
-/*KONIG - add powerup copy*/
-void BossPowerups(edict_t* self);
+/* KONIG - universal boss powerup copy */
+unsigned int jorg_damage_multiplier;
 
 void makron_taunt(edict_t *self)
 {
@@ -446,7 +446,7 @@ void makronBFG(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
-	monster_fire_bfg(self, start, dir, 50, 300, 100, 300, MZ2_MAKRON_BFG);
+	monster_fire_bfg(self, start, dir, 50 * jorg_damage_multiplier, 300, 100, 300, MZ2_MAKRON_BFG);
 }
 
 mframe_t makron_frames_attack3[] = {
@@ -530,7 +530,7 @@ void MakronRailgun(edict_t *self)
 	dir = self->pos1 - start;
 	dir.normalize();
 
-	monster_fire_railgun(self, start, dir, 50, 100, MZ2_MAKRON_RAILGUN_1);
+	monster_fire_railgun(self, start, dir, 50 * jorg_damage_multiplier, 100, MZ2_MAKRON_RAILGUN_1);
 }
 
 void MakronHyperblaster(edict_t *self)
@@ -565,7 +565,7 @@ void MakronHyperblaster(edict_t *self)
 
 	AngleVectors(dir, forward, nullptr, nullptr);
 
-	monster_fire_blaster(self, start, forward, 15, 1000, flash_number, EF_BLASTER);
+	monster_fire_blaster(self, start, forward, 15 * jorg_damage_multiplier, 1000, flash_number, EF_BLASTER);
 }
 
 PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
@@ -622,10 +622,11 @@ PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(makron_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 MONSTERINFO_SIGHT(makron_sight) (edict_t *self, edict_t *other) -> void
@@ -695,11 +696,140 @@ DIE(makron_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	self->maxs = { 60, 60, 48 };
 }
 
+void JorgQuad(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	jorg_damage_multiplier = 4;
+}
+
+void JorgQuadnDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	self->monsterinfo.double_time = time;
+	jorg_damage_multiplier = 8;
+}
+
+void JorgDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.double_time = time;
+	jorg_damage_multiplier = 2;
+}
+
+void JorgPent(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invincible_time = time;
+}
+
+void JorgPowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	// I don't like this, but it works
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	if (coop->integer)
+		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
+}
+
+void JorgRespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD & EF_DOUBLE)
+	{
+		JorgPowerArmor(self);
+		if (skill->integer >= 1)
+		{
+			JorgQuadnDouble(self, other->client->quad_time);
+		}
+	}
+	else if (other->s.effects & EF_QUAD)
+	{
+		JorgPowerArmor(self);
+		if (skill->integer >= 1)
+			JorgQuad(self, other->client->quad_time);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		JorgPowerArmor(self);
+		if (skill->integer >= 1)
+			JorgDouble(self, other->client->double_time);
+	}
+	else if (other->s.effects & EF_DUALFIRE)
+		{
+			JorgPowerArmor(self);
+			if (skill->integer >= 3)
+				JorgDouble(self, other->client->double_time);
+		}
+	else
+		jorg_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		if (skill->integer == 1)
+			JorgPowerArmor(self);
+		else if (skill->integer >= 2)
+			JorgPent(self, other->client->invincible_time);
+	}
+}
+
+void JorgPowerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		JorgRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		// in coop, check for pents, then quads, then doubles
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				JorgRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				JorgRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				JorgRespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
+}
+
 // [Paril-KEX] use generic function
-/*Konig - add powerup copy*/
 MONSTERINFO_CHECKATTACK(Makron_CheckAttack) (edict_t *self) -> bool
 {
-	BossPowerups(self);
+	/* KONIG - add powerup copy */
+	JorgPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -731,6 +861,8 @@ void MakronPrecache()
  */
 void SP_monster_makron(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -744,16 +876,16 @@ void SP_monster_makron(edict_t *self)
 	self->mins = { -30, -30, 0 };
 	self->maxs = { 30, 30, 90 };
 
-	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
-	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	/* KONIG - GZ health scaling; added armor w/ scaling; rebalanced for nojorg spawnflag*/
+	self->health = max(3000, 3000 + 1250 * (skill->integer - 1)) * st.health_multiplier;
 	if (!st.was_key_specified("power_armor_type"))
 		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 	if (!st.was_key_specified("power_armor_power"))
-		self->monsterinfo.power_armor_power = max(600, 600 + 100 * (skill->integer - 1));
+		self->monsterinfo.power_armor_power = max(500, 500 + 150 * (skill->integer - 1));
 	if (coop->integer)
 	{
-		self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-		self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+		self->health += (500 * skill->integer) + (500 * (CountPlayers() - 1));
+		self->monsterinfo.power_armor_power += (250 * skill->integer) + (250 * (CountPlayers() - 1));
 	}
 	self->gib_health = -2000;
 	self->mass = 500;

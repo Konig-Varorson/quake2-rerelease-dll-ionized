@@ -613,25 +613,39 @@ void HelpComputer(edict_t *ent)
 	}
 	else 
 	{
-		int y = 54;
-		if (strlen(game.helpmessage1))
+		const char *first_message = game.helpmessage1;
+		const char *first_title = level.primary_objective_title;
+
+		const char *second_message = game.helpmessage2;
+		const char *second_title = level.secondary_objective_title;
+
+		if (level.is_psx)
 		{
-			helpString += G_Fmt("xv 0 yv {} loc_cstring2 0 \"$g_pc_primary_objective\" "  // title
+			std::swap(first_message, second_message);
+			std::swap(first_title, second_title);
+		}
+
+		int y = 54;
+		if (strlen(first_message))
+		{
+			helpString += G_Fmt("xv 0 yv {} loc_cstring2 0 \"{}\" "  // title
 				"xv 0 yv {} loc_cstring 0 \"{}\" ",
 				y,
+				first_title,
 				y + 11,
-				game.helpmessage1);
+				first_message);
 
 			y += 58;
 		}
 
-		if (strlen(game.helpmessage2))
+		if (strlen(second_message))
 		{
-			helpString += G_Fmt("xv 0 yv {} loc_cstring2 0 \"$g_pc_secondary_objective\" "  // title
+			helpString += G_Fmt("xv 0 yv {} loc_cstring2 0 \"{}\" "  // title
 				"xv 0 yv {} loc_cstring 0 \"{}\" ",
 				y,
+				second_title,
 				y + 11,
-				game.helpmessage2);
+				second_message);
 		}
 
 	}

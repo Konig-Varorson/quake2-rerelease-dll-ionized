@@ -571,8 +571,6 @@ MONSTERINFO_ATTACK(floater_attack) (edict_t *self) -> void
 
 MONSTERINFO_MELEE(floater_melee) (edict_t *self) -> void
 {
-	if (self->style == 1)
-		float_mimic_explode(self);
 	if (frandom() < 0.5f)
 		M_SetAnimation(self, &floater_move_attack3);
 	else
@@ -610,13 +608,9 @@ PAIN(floater_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(floater_setskin) (edict_t *self) -> void
 {
-	/* KONIG - new skinnums for Mimic */
+	/* KONIG - allows multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
-		if (self->style == 1)
-		{
-			self->s.effects |= EF_BARREL_EXPLODING;
-		}
 	else
 		self->s.skinnum &= ~1;
 }
@@ -652,19 +646,6 @@ DIE(floater_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 	});
 }
 
-void float_mimic_explode(edict_t* self)
-{
-	vec3_t dir;
-
-	if (self->enemy)
-		{
-			dir = self->enemy->s.origin - self->s.origin;
-			T_Damage(self->enemy, self, self, dir, self->s.origin, vec3_origin, (int)100, (int)100, DAMAGE_RADIUS, MOD_UNKNOWN);
-		}
-
-	floater_die(self, nullptr, nullptr, 0, dir, MOD_EXPLOSIVE);
-}
-
 static void float_set_fly_parameters(edict_t *self)
 {
 	self->monsterinfo.fly_thrusters = false;
@@ -681,6 +662,8 @@ constexpr spawnflags_t SPAWNFLAG_FLOATER_DISGUISE = 8_spawnflag;
  */
 void SP_monster_floater(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -742,18 +725,19 @@ void SP_monster_floater(edict_t *self)
 
 	flymonster_start(self);
 }
-
+/* KONIG - technician beta aka Mimic */
 /*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight Disguise
  */
-/* KONIG - technician beta aka Mimic */
 void SP_monster_mimic(edict_t* self)
 {
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
 	self->spawnflags |= SPAWNFLAG_FLOATER_DISGUISE;
 	SP_monster_floater(self);
 	self->s.skinnum = 2;
 	self->style = 1;
 	self->health = 200 * st.health_multiplier;
 
-	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
-	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
+	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+	self->monsterinfo.armor_power = 100;
 }

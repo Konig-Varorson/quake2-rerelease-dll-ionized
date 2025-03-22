@@ -23,8 +23,19 @@ static cached_soundindex sound_pain3;
 static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 
-/*KONIG - add powerup copy*/
-void MBossPowerups(edict_t* self);
+/* KONIG - universal boss powerup copy */
+void BossPowerups(edict_t* self);
+
+// he fly
+static void boss2_set_fly_parameters(edict_t *self, bool firing)
+{
+	self->monsterinfo.fly_thrusters = false;
+	self->monsterinfo.fly_acceleration = firing ? 1.5f : 3.f;
+	self->monsterinfo.fly_speed = firing ? 10.f : 80.f;
+	// BOSS2 stays far-ish away if he's in the open
+	self->monsterinfo.fly_min_distance = 400.f;
+	self->monsterinfo.fly_max_distance = 600.f;
+}
 
 MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void
 {
@@ -160,7 +171,11 @@ void Boss2Rocket64(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 
-	monster_fire_rocket(self, start, dir, 35, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_1);
+	/* KONIG _ Titan Hornet from Citadel*/
+	if (strcmp(self->classname, "monster_boss2_titan") == 0)
+		monster_fire_heat(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_1, 0.075f);
+	else
+		monster_fire_rocket(self, start, dir, 35, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_1);
 }
 
 void boss2_firebullet_right(edict_t *self)
@@ -298,9 +313,11 @@ void Boss2HyperBlaster(edict_t *self)
 	forward = target - start;
 	forward.normalize();
 
-	/*KONIG - updated N64 version, flechettes instead of normal blasters*/
-	monster_fire_flechette(self, start, forward, 10, 1000, MZ2_BOSS2_MACHINEGUN_L1);
-	//monster_fire_blaster(self, start, forward, 2, 1000, id, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
+	/* KONIG - flechettes instead of blaster, increase damage from 2 to 10*/
+	if (strcmp(self->classname, "monster_boss2_titan") == 0)
+		monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD, id);
+	else
+		monster_fire_flechette(self, start, forward, 10, 1000, id);
 }
 
 mframe_t boss2_frames_attack_hb[] = {
@@ -467,6 +484,8 @@ MONSTERINFO_STAND(boss2_stand) (edict_t *self) -> void
 
 MONSTERINFO_RUN(boss2_run) (edict_t *self) -> void
 {
+	boss2_set_fly_parameters(self, false);
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &boss2_move_stand);
 	else
@@ -490,6 +509,8 @@ MONSTERINFO_ATTACK(boss2_attack) (edict_t *self) -> void
 		M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_hb : &boss2_move_attack_pre_mg);
 	else
 		M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_rocket2 : &boss2_move_attack_rocket);
+
+	boss2_set_fly_parameters(self, true);
 }
 
 void boss2_attack_mg(edict_t *self)
@@ -531,14 +552,12 @@ PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		M_SetAnimation(self, &boss2_move_pain_heavy);
 }
 
-/*KONIG - Additional skin for N64*/
 MONSTERINFO_SETSKIN(boss2_setskin) (edict_t *self) -> void
 {
+	/*KONIG - Additional skin for N64*/
 	if (self->health < (self->max_health / 2))
-		//self->s.skinnum = 1;
 		self->s.skinnum |= 1;
 	else
-		//self->s.skinnum = 0;
 		self->s.skinnum &= ~1;
 }
 
@@ -618,16 +637,19 @@ DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 // [Paril-KEX] use generic function
 MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool
 {
-	MBossPowerups(self);
+	/* KONIG - boss powerup response*/
+	BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
 
 /*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight Hyperblaster
  */
-void SP_monster_boss2(edict_t* self)
+void SP_monster_boss2(edict_t *self)
 {
-	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
+	if ( !M_AllowSpawn( self ) ) {
+		G_FreeEdict( self );
 		return;
 	}
 
@@ -639,16 +661,11 @@ void SP_monster_boss2(edict_t* self)
 
 	gi.soundindex("tank/rocket.wav");
 
-	/*KONIG - fletchettes for N64*/
 	if (self->spawnflags.has(SPAWNFLAG_BOSS2_N64))
-	{
+		/*KONIG - fletchettes for N64*/
 		gi.soundindex("guncmdr/gcdratck2.wav");
-		//gi.soundindex("flyer/flyatck3.wav");
-	}
 	else
-	{
 		gi.soundindex("infantry/infatck1.wav");
-	}
 
 	self->monsterinfo.weapon_sound = gi.soundindex("bosshovr/bhvengn1.wav");
 
@@ -670,41 +687,40 @@ void SP_monster_boss2(edict_t* self)
 	self->mins = { -56, -56, 0 };
 	self->maxs = { 56, 56, 80 };
 
-	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling; second skin for Hornet Guardian */
+	/*KONIG - GZ scaling health; added armor; N64 skin */
 	if (self->spawnflags.has(SPAWNFLAG_BOSS2_N64))
 	{
 		self->s.skinnum = 2;
-		self->health = max(1500, 1000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 		if (!level.is_n64)
 		{
 			if (!st.was_key_specified("power_armor_type"))
 				self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 			if (!st.was_key_specified("power_armor_power"))
-				self->monsterinfo.power_armor_power = max(400, 400 + 100 * (skill->integer - 1));
+				self->monsterinfo.power_armor_power = max(350, 350 + 100 * (skill->integer - 1));
 		}
 		if (coop->integer)
 		{
-			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			self->health += (250 * (CountPlayers() - 1));
+			self->monsterinfo.power_armor_power += (100 * (CountPlayers() - 1));
 		}
 	}
 	else
 	{
-		self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 		if (!st.was_key_specified("armor_type"))
 			self->monsterinfo.armor_type = IT_ARMOR_BODY;
 		if (!st.was_key_specified("armor_power"))
-			self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
+			self->monsterinfo.armor_power = max(350, 350 + 100 * (skill->integer - 1));
 		if (coop->integer)
 		{
-			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			self->health += (250 * (CountPlayers() - 1));
+			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
 		}
 	}
+	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	self->gib_health = -200;
 	self->mass = 1000;
 
-		self->yaw_speed = 50;
+	self->yaw_speed = 50;
 
 	self->flags |= FL_IMMUNE_LASER;
 
@@ -726,5 +742,57 @@ void SP_monster_boss2(edict_t* self)
 	// [Paril-KEX]
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
+	boss2_set_fly_parameters(self, false);
+
 	flymonster_start(self);
+}
+
+//Citadel boss
+/*QUAKED monster_boss2_titan (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
+ */
+void SP_monster_boss2_titan(edict_t* self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	SP_monster_boss2(self);
+	self->spawnflags |= SPAWNFLAG_BOSS2_N64;
+	self->s.skinnum = 4;
+
+	if (!self->s.scale)
+		self->s.scale = 1.5f;
+
+	self->mins = { -72, -72, 0 };
+	self->maxs = { 72, 72, 136 };
+
+	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	self->gib_health = -200;
+	self->mass = 1000;
+
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_BODY;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = max(350, 350 + 100 * (skill->integer - 1));
+	if (!st.was_key_specified("power_armor_type"))
+		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = max(350, 350 + 100 * (skill->integer - 1));
+	if (coop->integer)
+	{
+		self->health += (250 * (CountPlayers() - 1));
+		self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
+		self->monsterinfo.power_armor_power += (100 * (CountPlayers() - 1));
+	}
+}
+
+/*KONIG - function to make classname hornet guardians */
+/*QUAKED monster_boss2_guardian (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
+ */
+void SP_monster_boss2_guardian(edict_t* self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	self->spawnflags |= SPAWNFLAG_BOSS2_N64;
+
+	SP_monster_boss2(self);
 }

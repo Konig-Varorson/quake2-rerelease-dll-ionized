@@ -225,9 +225,10 @@ PAIN(shambler_pain) (edict_t* self, edict_t* other, float kick, int damage, cons
 	self->pain_debounce_time = level.time + 2_sec;
 	M_SetAnimation(self, &shambler_move_pain);
 }
-/*KONIG - set painskin*/
+
 MONSTERINFO_SETSKIN(shambler_setskin) (edict_t* self) -> void
 {
+	/*KONIG - set painskin*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -266,7 +267,7 @@ void ShamblerSaveLoc(edict_t* self)
 	shambler_lightning_update(self);
 }
 
-/* KONIG - fixing apparent bug of spawnflag using 1_spawnflag rather than 8_spawnflag as Modir has spawnflag 8 checked despite it doing nothing. */
+/* KONIG - fixing bug of spawnflag using 1_spawnflag rather than 8_spawnflag as Modir has spawnflag 8 checked despite it doing nothing. */
 constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 8_spawnflag;
 
 vec3_t FindShamblerOffset(edict_t *self)
@@ -520,8 +521,8 @@ DIE(shambler_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 	}
 
 	// check for gib
-	/* KONIG - add gib head from Q1; increased amount of sm_meat gibs; added bone gibs
-	TODO - find/make better chest gib; limb gibs?*/
+	/* KONIG - add gib head from Q1; inrease generic gibs
+	TODO - make unique chest and limb gibs */
 	if (M_CheckGib(self, mod))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -530,6 +531,7 @@ DIE(shambler_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 1, "models/objects/gibs/bone2/tris.md2" },
 			{ 3, "models/objects/gibs/sm_meat/tris.md2" },
+			{ "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/chest/tris.md2" },
 			{ "models/monsters/shambler/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 		});
@@ -550,6 +552,8 @@ DIE(shambler_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 
 void SP_monster_shambler(edict_t* self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -572,13 +576,8 @@ void SP_monster_shambler(edict_t* self)
 	sound_smack.assign("shambler/smack.wav");
 	sound_boom.assign("shambler/sboom.wav");
 
-	/* KONIG - scaling health per skill & coop, to compensate lack of armor (doesn't feel right to add) */
-	self->health = max(600, 600 + 100 * (skill->integer - 1)) * st.health_multiplier;
-	if (coop->integer)
-	{
-		self->health += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-	}
-	self->gib_health = -60;
+	self->health = 600 * st.health_multiplier;
+	self->gib_health = -120;
 
 	self->mass = 500;
 

@@ -892,7 +892,7 @@ PAIN(parasite_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 
 MONSTERINFO_SETSKIN(parasite_setskin) (edict_t *self) -> void
 {
-	/* KONIG - new skinnums for Dropper */
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -905,6 +905,8 @@ constexpr spawnflags_t SPAWNFLAG_PARASITE_NOJUMPING = 8_spawnflag;
  */
 void SP_monster_parasite(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

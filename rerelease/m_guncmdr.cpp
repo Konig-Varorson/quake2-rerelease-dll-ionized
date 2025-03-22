@@ -1399,6 +1399,8 @@ model="models/monsters/guncmdr/tris.md2"
 */
 void SP_monster_guncmdr(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -1458,15 +1460,11 @@ void SP_monster_guncmdr(edict_t *self)
 	M_SetAnimation(self, &guncmdr_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	/* KONIG - power armor -> screen; reduced armor but scaled on skill & coop*/
+	/* KONIG - power armor -> screen */
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = 200;
 	if (!st.was_key_specified("power_armor_type"))
 		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
-	if (!st.was_key_specified("power_armor_power"))
-		self->monsterinfo.power_armor_power = max(100, 100 + 100 * (skill->integer - 1));
-	if (coop->integer)
-	{
-		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-	}
 
 	// PMM
 	//self->monsterinfo.blindfire = true;

@@ -15,6 +15,8 @@ TANK
 static cached_soundindex sound_pain;
 static cached_soundindex sound_death;
 static cached_soundindex sound_sight;
+static cached_soundindex sound_spawn;
+static cached_soundindex sound_pissed;
 
 MONSTERINFO_SIGHT(arachnid_sight) (edict_t *self, edict_t *other) -> void
 {
@@ -59,16 +61,16 @@ void arachnid_footstep(edict_t *self)
 }
 
 mframe_t arachnid_frames_walk[] = {
+	{ ai_walk, 2, arachnid_footstep },
+	{ ai_walk, 5 },
+	{ ai_walk, 12 },
+	{ ai_walk, 16 },
+	{ ai_walk, 5 },
 	{ ai_walk, 8, arachnid_footstep },
 	{ ai_walk, 8 },
-	{ ai_walk, 8 },
-	{ ai_walk, 8 },
-	{ ai_walk, 8 },
-	{ ai_walk, 8, arachnid_footstep },
-	{ ai_walk, 8 },
-	{ ai_walk, 8 },
-	{ ai_walk, 8 },
-	{ ai_walk, 8 }
+	{ ai_walk, 12 },
+	{ ai_walk, 9 },
+	{ ai_walk, 5 }
 };
 MMOVE_T(arachnid_move_walk) = { FRAME_walk1, FRAME_walk10, arachnid_frames_walk, nullptr };
 
@@ -82,16 +84,16 @@ MONSTERINFO_WALK(arachnid_walk) (edict_t *self) -> void
 //
 
 mframe_t arachnid_frames_run[] = {
+	{ ai_run, 2, arachnid_footstep },
+	{ ai_run, 5 },
+	{ ai_run, 12 },
+	{ ai_run, 16 },
+	{ ai_run, 5 },
 	{ ai_run, 8, arachnid_footstep },
 	{ ai_run, 8 },
-	{ ai_run, 8 },
-	{ ai_run, 8 },
-	{ ai_run, 8 },
-	{ ai_run, 8, arachnid_footstep },
-	{ ai_run, 8 },
-	{ ai_run, 8 },
-	{ ai_run, 8 },
-	{ ai_run, 8 }
+	{ ai_run, 12 },
+	{ ai_run, 9 },
+	{ ai_run, 5 }
 };
 MMOVE_T(arachnid_move_run) = { FRAME_walk1, FRAME_walk10, arachnid_frames_run, nullptr };
 
@@ -140,6 +142,8 @@ PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
+
 	float r = frandom();
 
 	if (r < 0.5f)
@@ -147,32 +151,115 @@ PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 	else
 		M_SetAnimation(self, &arachnid_move_pain2);
 }
-/*KONIG - set pain skin*/
-MONSTERINFO_SETSKIN(arachnid_setskin) (edict_t* self) -> void
-{
-	if (self->health < (self->max_health / 2))
-		self->s.skinnum |= 1;
-	else
-		self->s.skinnum &= ~1;
-}
 
 static cached_soundindex sound_charge;
 
-void arachnid_charge_rail(edict_t *self)
+static void arachnid_charge_rail(edict_t *self, monster_muzzleflash_id_t mz)
 {
 	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	gi.sound(self, CHAN_WEAPON, sound_charge, 1.f, ATTN_NORM, 0.f);
-	self->pos1 = self->enemy->s.origin;
-	self->pos1[2] += self->enemy->viewheight;
+
+	vec3_t forward, right, start;
+	AngleVectors(self->s.angles, forward, right, nullptr);
+	start = M_ProjectFlashSource(self, monster_flash_offset[mz], forward, right);
+
+	PredictAim(self, self->enemy, start, 0, false, 0.0f, nullptr, &self->pos1);
+}
+
+static void arachnid_charge_rail_left(edict_t *self)
+{
+	arachnid_charge_rail(self, MZ2_ARACHNID_RAIL1);
+}
+
+static void arachnid_charge_rail_right(edict_t *self)
+{
+	arachnid_charge_rail(self, MZ2_ARACHNID_RAIL2);
+}
+
+static void arachnid_charge_rail_up_left(edict_t *self)
+{
+	arachnid_charge_rail(self, MZ2_ARACHNID_RAIL_UP1);
+}
+
+static void arachnid_charge_rail_up_right(edict_t *self)
+{
+	arachnid_charge_rail(self, MZ2_ARACHNID_RAIL_UP2);
+}
+
+void arachnid_rail_real(edict_t *self, monster_muzzleflash_id_t id)
+{
+	vec3_t start;
+	vec3_t dir;
+	vec3_t forward, right, up;
+
+	AngleVectors(self->s.angles, forward, right, up);
+	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
+	int dmg = 50;
+
+	if (self->s.frame >= FRAME_melee_in1 && self->s.frame <= FRAME_melee_in16)
+	{
+		// scan our current direction for players
+		std::array<edict_t *, 8> players_scanned {};
+		size_t num_players = 0;
+
+		for (auto player : active_players())
+		{
+			if (!visible(self, player, false))
+				continue;
+
+			if (infront_cone(self, player, 0.5f))
+			{
+				players_scanned[num_players++] = player;
+
+				if (num_players == players_scanned.size())
+					break;
+			}
+		}
+
+		if (num_players != 0)
+		{
+			edict_t *chosen = players_scanned[irandom(num_players)];
+
+			PredictAim(self, chosen, start, 0, false, 0.0f, nullptr, &self->pos1);
+
+			dir = (chosen->s.origin - self->s.origin).normalized();
+
+			self->ideal_yaw = vectoyaw(dir);
+			self->s.angles[YAW] = self->ideal_yaw;
+
+			dir = (self->pos1 - start).normalized();
+
+			for (int i = 0; i < 3; i++)
+				dir[i] += crandom_open() * 0.018f;
+			dir = dir.normalized();
+		}
+		else
+		{
+			dir = forward;
+		}
+	}
+	else
+	{
+		// calc direction to where we targeted
+		dir = (self->pos1 - start).normalized();
+		dmg = 50;
+	}
+
+	bool hit = monster_fire_railgun(self, start, dir, dmg, dmg * 2.0f, id);
+
+	if (dmg == 50)
+	{
+		if (hit)
+			self->count = 0;
+		else
+			self->count++;
+	}
 }
 
 void arachnid_rail(edict_t *self)
 {
-	vec3_t start;
-	vec3_t dir;
-	vec3_t forward, right;
 	monster_muzzleflash_id_t id;
 
 	switch (self->s.frame)
@@ -192,136 +279,16 @@ void arachnid_rail(edict_t *self)
 			break;
 	}
 
-	AngleVectors(self->s.angles, forward, right, nullptr);
-	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
-
-	// calc direction to where we targeted
-	dir = self->pos1 - start;
-	dir.normalize();
-
-	/* KONIG - Increased damage to 50 to match PSX */
-	monster_fire_railgun(self, start, dir, 50, 100, id);
-}
-/*KONIG - Beta attacks; NOTE: 3 rockets, 4-6 blaster shots;
-Q4 Stream Protectors also have flamethrower and flak nail volley, consider adding?*/
-static void protector_blind_check(edict_t* self)
-{
-	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
-	{
-		vec3_t aim = self->monsterinfo.blind_fire_target - self->s.origin;
-		self->ideal_yaw = vectoyaw(aim);
-	}
-}
-
-void protector_rockets(edict_t *self)
-{
-	vec3_t						start;
-	vec3_t						dir;
-	vec3_t						forward, right;
-	vec3_t						vec;
-	monster_muzzleflash_id_t	id;
-	int							rocketSpeed;
-	trace_t						trace;
-	vec3_t						target;
-	bool						blindfire = self->monsterinfo.aiflags & AI_MANUAL_STEERING;
-
-	switch (self->s.frame)
-	{
-	case FRAME_rails4:
-	default:
-		id = MZ2_ARACHNID_RAIL1;
-		break;
-	case FRAME_rails8:
-		id = MZ2_ARACHNID_RAIL2;
-		break;
-	case FRAME_rails_up7:
-		id = MZ2_ARACHNID_RAIL_UP1;
-		break;
-	case FRAME_rails_up11:
-		id = MZ2_ARACHNID_RAIL_UP2;
-		break;
-	}
-
-	AngleVectors(self->s.angles, forward, right, nullptr);
-	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
-
-	if (blindfire)
-		target = self->monsterinfo.blind_fire_target;
-	else
-		target = self->enemy->s.origin;
-
-	if (blindfire)
-	{
-		vec = target;
-		dir = vec - start;
-	}
-	else if (frandom() < 0.66f || (start[2] < self->enemy->absmin[2]))
-	{
-		vec = self->enemy->s.origin;
-		vec[2] += self->enemy->viewheight;
-		dir = vec - start;
-	}
-	else
-	{
-		vec = self->enemy->s.origin;
-		vec[2] = self->enemy->absmin[2] + 1;
-		dir = vec - start;
-	}
-
-	if ((!blindfire) && ((frandom() < (0.2f + ((3 - skill->integer) * 0.15f)))))
-		PredictAim(self, self->enemy, start, 500, false, 0, &dir, &vec);
-
-	dir.normalize();
-	//copied from m_chick
-	trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
-	if (blindfire)
-	{
-		// blindfire has different fail criteria for the trace
-		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
-		{
-			monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
-		}
-		else
-		{
-			vec = target;
-			vec += (right * -10);
-			dir = vec - start;
-			dir.normalize();
-			trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
-			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
-			{
-				monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
-			}
-			else
-			{
-				vec = target;
-				vec += (right * 10);
-				dir = vec - start;
-				dir.normalize();
-				trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
-				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
-				{
-					monster_fire_heat(self, start, dir, 60, 500, id, 0.075f);
-				}
-			}
-		}
-	}
-	else
-	{
-		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
-		{
-			monster_fire_heat(self, start, dir, 50, 500, id, 0.15f);
-		}
-	}
+	arachnid_rail_real(self, id);
 }
 
 mframe_t arachnid_frames_attack1[] = {
-	{ ai_charge, 0, arachnid_charge_rail },
 	{ ai_charge },
+	{ ai_charge, 0, arachnid_charge_rail_left },
 	{ ai_charge },
 	{ ai_charge, 0, arachnid_rail },
-	{ ai_charge, 0, arachnid_charge_rail },
 	{ ai_charge },
+	{ ai_charge, 0, arachnid_charge_rail_right },
 	{ ai_charge },
 	{ ai_charge, 0, arachnid_rail },
 	{ ai_charge },
@@ -334,12 +301,12 @@ mframe_t arachnid_frames_attack_up1[] = {
 	{ ai_charge },
 	{ ai_charge },
 	{ ai_charge },
-	{ ai_charge, 0, arachnid_charge_rail },
 	{ ai_charge },
+	{ ai_charge, 0, arachnid_charge_rail_up_left },
 	{ ai_charge },
 	{ ai_charge, 0, arachnid_rail },
-	{ ai_charge, 0, arachnid_charge_rail },
 	{ ai_charge },
+	{ ai_charge, 0, arachnid_charge_rail_up_right },
 	{ ai_charge },
 	{ ai_charge, 0, arachnid_rail },
 	{ ai_charge },
@@ -349,41 +316,7 @@ mframe_t arachnid_frames_attack_up1[] = {
 	{ ai_charge },
 };
 MMOVE_T(arachnid_attack_up1) = { FRAME_rails_up1, FRAME_rails_up16, arachnid_frames_attack_up1, arachnid_run };
-/*KONIG - Beta attack animations*/
-mframe_t protector_frames_attack1[] = {
-	{ ai_charge, 0, protector_blind_check },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge, 0, protector_rockets },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge, 0, protector_rockets },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge }
-};
-MMOVE_T(protector_attack1) = { FRAME_rails1, FRAME_rails11, protector_frames_attack1, arachnid_run };
 
-mframe_t protector_frames_attack_up1[] = {
-	{ ai_charge, 0, protector_blind_check },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge, 0, protector_rockets },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge, 0, protector_rockets },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-};
-MMOVE_T(protector_attack_up1) = { FRAME_rails_up1, FRAME_rails_up16, protector_frames_attack_up1, arachnid_run };
 static cached_soundindex sound_melee, sound_melee_hit;
 
 void arachnid_melee_charge(edict_t *self)
@@ -393,17 +326,26 @@ void arachnid_melee_charge(edict_t *self)
 
 void arachnid_melee_hit(edict_t *self)
 {
-	/* KONIG - update damage to 20 to match PSX;Beta does 30 meleedamage*/
-	if (self->style == 1)
+	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 15, 50))
 	{
-		if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 30, 50))
-			self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
+		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
+		self->count++;
 	}
-	else
-	{
-		if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 20, 50))
-			self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
-	}
+	else if (self->s.frame == FRAME_melee_atk11 &&
+		     self->monsterinfo.melee_debounce_time < level.time)
+		self->monsterinfo.nextframe = FRAME_melee_atk2;
+}
+
+mframe_t arachnid_frames_melee_out[] = {
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge }
+};
+MMOVE_T(arachnid_melee_out) = { FRAME_melee_out1, FRAME_melee_out3, arachnid_frames_melee_out, arachnid_run };
+
+void arachnid_to_out_melee(edict_t *self)
+{
+	M_SetAnimation(self, &arachnid_melee_out);
 }
 
 mframe_t arachnid_frames_melee[] = {
@@ -420,32 +362,170 @@ mframe_t arachnid_frames_melee[] = {
 	{ ai_charge, 0, arachnid_melee_hit },
 	{ ai_charge }
 };
-MMOVE_T(arachnid_melee) = { FRAME_melee_atk1, FRAME_melee_atk12, arachnid_frames_melee, arachnid_run };
+MMOVE_T(arachnid_melee) = { FRAME_melee_atk1, FRAME_melee_atk12, arachnid_frames_melee, arachnid_to_out_melee };
+
+void arachnid_to_melee(edict_t *self)
+{
+	M_SetAnimation(self, &arachnid_melee);
+}
+
+mframe_t arachnid_frames_melee_in[] = {
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge }
+};
+MMOVE_T(arachnid_melee_in) = { FRAME_melee_in1, FRAME_melee_in3, arachnid_frames_melee_in, arachnid_to_melee };
+
+static void arachnid_stop_rails(edict_t *self)
+{
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
+	arachnid_run(self);
+}
+
+static void arachnid_rail_left(edict_t *self)
+{
+	arachnid_rail_real(self, MZ2_ARACHNID_RAIL1);
+}
+
+static void arachnid_rail_right(edict_t *self)
+{
+	arachnid_rail_real(self, MZ2_ARACHNID_RAIL2);
+}
+
+static void arachnid_rail_rapid(edict_t *self)
+{
+	bool left_shot = self->s.frame == FRAME_melee_in9; //((self->s.frame - FRAME_melee_in5) / 2) % 2;
+
+	arachnid_rail_real(self, left_shot ? MZ2_ARACHNID_RAIL1 : MZ2_ARACHNID_RAIL2);
+}
+
+mframe_t arachnid_frames_attack3[] = {
+	{ ai_charge },
+	{ ai_move, 0, arachnid_rail_rapid },
+	{ ai_move },
+	{ ai_move/*, 0, arachnid_rail_rapid*/ },
+	{ ai_move },
+	{ ai_move, 0, arachnid_rail_rapid },
+	{ ai_move },
+	{ ai_move/*, 0, arachnid_rail_rapid*/ },
+	{ ai_move },
+	{ ai_move, 0, arachnid_rail_rapid },
+	{ ai_move },
+	{ ai_move/*, 0, arachnid_rail_rapid*/ },
+	{ ai_charge }
+};
+MMOVE_T(arachnid_attack3) = { FRAME_melee_in4, FRAME_melee_in16, arachnid_frames_attack3, arachnid_to_out_melee };
+
+static void arachnid_rapid_fire(edict_t *self)
+{
+	self->count = 0;
+	M_SetAnimation(self, &arachnid_attack3);
+}
+
+static void arachnid_spawn(edict_t *self)
+{
+	if (skill->integer != 3)
+		return;
+
+	static constexpr vec3_t reinforcement_position[] = { { -24.f, 124.f, 0 }, { -24.f, -124.f, 0 } };
+	vec3_t f, r, offset, startpoint, spawnpoint;
+	int	   count;
+
+	AngleVectors(self->s.angles, f, r, nullptr);
+
+	int num_summoned;
+	self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, 2);
+
+	for (count = 0; count < num_summoned; count++)
+	{
+		offset = reinforcement_position[count];
+
+		if (self->s.scale)
+			offset *= self->s.scale;
+
+		startpoint = M_ProjectFlashSource(self, offset, f, r);
+		// a little off the ground
+		startpoint[2] += 10 * (self->s.scale ? self->s.scale : 1.0f);
+
+		auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[count]];
+
+		if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32))
+		{
+			if (CheckGroundSpawnPoint(spawnpoint, reinforcement.mins, reinforcement.maxs, 256, -1))
+			{
+				edict_t *ent = CreateGroundMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.classname, 256);
+
+				if (!ent)
+					return;
+
+				ent->nextthink = level.time;
+				ent->think(ent);
+
+				ent->monsterinfo.aiflags |= AI_SPAWNED_COMMANDER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+				ent->monsterinfo.commander = self;
+				ent->monsterinfo.slots_from_commander = reinforcement.strength;
+				self->monsterinfo.monster_used += reinforcement.strength;
+
+				gi.sound(ent, CHAN_BODY, sound_spawn, 1, ATTN_NONE, 0);
+
+				if ((self->enemy->inuse) && (self->enemy->health > 0))
+				{
+					ent->enemy = self->enemy;
+					FoundTarget(ent);
+				}
+
+				float radius = (reinforcement.maxs - reinforcement.mins).length() * 0.5f;
+				SpawnGrow_Spawn(spawnpoint + (reinforcement.mins + reinforcement.maxs), radius, radius * 2.f);
+			}
+		}
+	}
+}
+
+mframe_t arachnid_frames_taunt[] = {
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, arachnid_spawn },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge }
+};
+MMOVE_T(arachnid_taunt) = { FRAME_melee_pain1, FRAME_melee_pain16, arachnid_frames_taunt, arachnid_rapid_fire };
 
 MONSTERINFO_ATTACK(arachnid_attack) (edict_t *self) -> void
 {
 	if (!self->enemy || !self->enemy->inuse)
 		return;
-	/*KONIG - Adding beta attacks*/
+
 	if (self->monsterinfo.melee_debounce_time < level.time && range_to(self, self->enemy) < MELEE_DISTANCE)
-		M_SetAnimation(self, &arachnid_melee);
-	else
+		M_SetAnimation(self, &arachnid_melee_in);
+	// annoyed rapid fire attack
+	else if (self->enemy->client &&
+		self->last_move_time <= level.time &&
+		self->count >= 4 &&
+		frandom() < (max(self->count / 2.0f, 4.0f) + 1.0f) * 0.2f &&
+		(M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL1]) || M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL2])))
 	{
-		if (self->style == 1)
-		{
-			if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
-				M_SetAnimation(self, &protector_attack_up1);
-			else
-				M_SetAnimation(self, &protector_attack1);
-		}
-		else
-		{
-			if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
-				M_SetAnimation(self, &arachnid_attack_up1);
-			else
-				M_SetAnimation(self, &arachnid_attack1);
-		}
+		M_SetAnimation(self, &arachnid_taunt);
+		gi.sound(self, CHAN_VOICE, sound_pissed, 1.f, 0.25f, 0.f);
+		self->count = 0;
+		self->pain_debounce_time = level.time + 4.5_sec;
+		self->last_move_time = level.time + 10_sec;
 	}
+	else if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f &&
+		(M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL_UP1]) || M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL_UP2])))
+		M_SetAnimation(self, &arachnid_attack_up1);
+	else if (M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL1]) || M_CheckClearShot(self, monster_flash_offset[MZ2_ARACHNID_RAIL2]))
+		M_SetAnimation(self, &arachnid_attack1);
 }
 
 //
@@ -489,7 +569,7 @@ MMOVE_T(arachnid_move_death) = { FRAME_death1, FRAME_death20, arachnid_frames_de
 DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	// check for gib
-	/* KONIG - replaced generic head for gunner head, added gunner chest, added generic gear gib*/
+	/* KONIG - add gear gib; TODO - unique head, chest, and leg gibs!*/
 	if (M_CheckGib(self, mod))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -497,8 +577,7 @@ DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ 1, "models/objects/gibs/gear/tris.md2" },
-			{ "models/monsters/gunner/gibs/chest.md2", GIB_SKINNED },
-			{ "models/monsters/gunner/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
+			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 		});
 		self->deadflag = true;
 		return;
@@ -512,17 +591,33 @@ DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 	self->deadflag = true;
 	self->takedamage = true;
 
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
+
 	M_SetAnimation(self, &arachnid_move_death);
+}
+
+MONSTERINFO_SETSKIN(arachnid_setskin) (edict_t *self) -> void
+{
+	/* KONIG - set for multiple skins*/
+	if (self->health < (self->max_health / 2))
+		self->s.skinnum |= 1;
+	else
+		self->s.skinnum &= ~1;
 }
 
 //
 // monster_arachnid
 //
+// 
+constexpr const char *default_reinforcements = "monster_stalker 1";
+constexpr int32_t default_monster_slots_base = 2;
 
-/*QUAKED monster_arachnid (1 .5 0) (-48 -48 -20) (48 48 48) Ambush Trigger_Spawn Sight
+/*QUAKED monster_arachnid (1 .5 0) (-40 -40 -20) (40 40 48) Ambush Trigger_Spawn Sight
  */
 void SP_monster_arachnid(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -535,23 +630,35 @@ void SP_monster_arachnid(edict_t *self)
 	sound_pain.assign("arachnid/pain.wav");
 	sound_death.assign("arachnid/death.wav");
 	sound_sight.assign("arachnid/sight.wav");
+	sound_pissed.assign("arachnid/angry.wav");
+
+	if (skill->value >= 3)
+	{
+		sound_spawn.assign("medic_commander/monsterspawn1.wav");
+
+		const char *reinforcements = default_reinforcements;
+
+		if (!st.was_key_specified("monster_slots"))
+			self->monsterinfo.monster_slots = default_monster_slots_base;
+		if (st.was_key_specified("reinforcements"))
+			reinforcements = st.reinforcements;
+
+		if (self->monsterinfo.monster_slots && reinforcements && *reinforcements)
+			M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
+	}
 
 	self->s.modelindex = gi.modelindex("models/monsters/arachnid/tris.md2");
-	self->mins = { -48, -48, -20 };
-	self->maxs = { 48, 48, 48 };
+	self->mins = { -40, -40, -20 };
+	self->maxs = { 40, 40, 48 };
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	/* KONIG - adding combat armor */
-	self->health = 1000 * st.health_multiplier;
+	/* KONIG - adding combat armor; nerfed health to compensate */
+	self->health = 950 * st.health_multiplier;
 	if (!st.was_key_specified("armor_type"))
 		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 	if (!st.was_key_specified("armor_power"))
-		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
-	if (coop->integer)
-	{
-		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-	}
+		self->monsterinfo.armor_power = 200;
 	self->gib_health = -200;
 
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -567,6 +674,8 @@ void SP_monster_arachnid(edict_t *self)
 	self->monsterinfo.sight = arachnid_sight;
 	self->monsterinfo.setskin = arachnid_setskin;
 
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
+
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &arachnid_move_stand);
@@ -575,8 +684,10 @@ void SP_monster_arachnid(edict_t *self)
 }
 
 /*KONIG - Stream Protector from Q4 as Arachnid Beta*/
-void SP_monster_protector(edict_t *self)
+void SP_monster_protector(edict_t* self)
 {
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
 	SP_monster_arachnid(self);
 
 	self->style = 1;
@@ -585,14 +696,5 @@ void SP_monster_protector(edict_t *self)
 	if (!self->s.scale)
 		self->s.scale = 1.5f;
 
-	self->health = 1250 * st.health_multiplier;
-	if (!st.was_key_specified("armor_type"))
-		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-	if (!st.was_key_specified("armor_power"))
-		self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
-	if (coop->integer)
-	{
-		self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-	}
 	self->mass = 600;
 }

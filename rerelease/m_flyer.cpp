@@ -622,7 +622,7 @@ PAIN(flyer_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 
 MONSTERINFO_SETSKIN(flyer_setskin) (edict_t *self) -> void
 {
-	/* KONIG - new skin for Kamikaze Flyers */
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -700,6 +700,8 @@ TOUCH(flyer_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_
  */
 void SP_monster_flyer(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -772,14 +774,15 @@ void SP_monster_flyer(edict_t *self)
 }
 
 // PMM - suicide fliers
-void SP_monster_kamikaze(edict_t* self)
+void SP_monster_kamikaze(edict_t *self)
 {
-	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+	if ( !M_AllowSpawn( self ) ) {
+		G_FreeEdict( self );
 		return;
 	}
 
 	self->s.effects |= EF_ROCKET;
+	self->s.skinnum = 2;
 
 	SP_monster_flyer(self);
 }

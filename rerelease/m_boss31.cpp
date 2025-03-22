@@ -29,14 +29,16 @@ static cached_soundindex sound_step_left;
 static cached_soundindex sound_step_right;
 static cached_soundindex sound_death_hit;
 
-/* KONIG - spawnflag to disable Makron spawn*/
-constexpr spawnflags_t SPAWNFLAG_NO_MAKRON = 8_spawnflag;
+/* KONIG - add powerup copy; makron corpse for disable makron spawn */
+unsigned int makron_damage_multiplier;
+void MakronPowerups(edict_t* self);
 
-void MakronToss(edict_t *self);
-/*KONIG - add powerup copy; makron corpse for disable makron spawn*/
-void jorg_spawn_torso(edict_t* self);
+constexpr spawnflags_t SPAWNFLAG_NO_MAKRON = 8_spawnflag;
+void makron_spawn_torso(edict_t* self);
 void makron_torso(edict_t* self);
 void BossPowerups(edict_t* self);
+
+void MakronToss(edict_t *self);
 
 void jorg_attack1_end_sound(edict_t *self)
 {
@@ -467,10 +469,11 @@ PAIN(jorg_pain) (edict_t *self, edict_t *other, float kick, int damage, const mo
 
 MONSTERINFO_SETSKIN(jorg_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 void jorgBFG(edict_t *self)
@@ -488,7 +491,7 @@ void jorgBFG(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_WEAPON, sound_bfg_fire, 1, ATTN_NORM, 0);
-	monster_fire_bfg(self, start, dir, 50, 300, 100, 200, MZ2_JORG_BFG_1);
+	monster_fire_bfg(self, start, dir, 50 * makron_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1);
 }
 
 void jorg_firebullet_right(edict_t *self)
@@ -497,7 +500,7 @@ void jorg_firebullet_right(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_JORG_MACHINEGUN_R1], forward, right);
 	PredictAim(self, self->enemy, start, 0, false, -0.2f, &forward, nullptr);
-	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1);
+	monster_fire_bullet(self, start, forward, 6 * makron_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1);
 }
 
 void jorg_firebullet_left(edict_t *self)
@@ -506,7 +509,7 @@ void jorg_firebullet_left(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_JORG_MACHINEGUN_L1], forward, right);
 	PredictAim(self, self->enemy, start, 0, false, 0.2f, &forward, nullptr);
-	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1);
+	monster_fire_bullet(self, start, forward, 6 * makron_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1);
 }
 
 void jorg_firebullet(edict_t *self)
@@ -555,21 +558,11 @@ void jorg_dead(edict_t *self)
 
 	/* KONIG - Spawnflag to disable MakronToss */
 	if (self->spawnflags.has(SPAWNFLAG_NO_MAKRON))
-	{
-		jorg_spawn_torso(self);
-	}
+		makron_spawn_torso(self);
 	else
 		MakronToss(self);
 }
-void jorg_spawn_torso(edict_t* self)
-{
-	edict_t* tempent = ThrowGib(self, "models/monsters/boss3/rider/tris.md2", 0, GIB_NONE, self->s.scale);
-	tempent->s.origin = self->s.origin;
-	tempent->s.angles = self->s.angles;
-	self->maxs[2] -= tempent->maxs[2];
-	tempent->s.origin[2] += self->maxs[2] - 15;
-	makron_torso(tempent);
-}
+
 DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
@@ -577,14 +570,146 @@ DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	self->deadflag = true;
 	self->takedamage = false;
 	self->count = 0;
+	self->monsterinfo.quad_time = 0_ms;
+	self->monsterinfo.double_time = 0_ms;
+	self->monsterinfo.invincible_time = 0_ms;
 	M_SetAnimation(self, &jorg_move_death);
 }
 
+void MakronQuad(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	makron_damage_multiplier = 4;
+}
+
+void MakronQuadnDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	self->monsterinfo.double_time = time;
+	makron_damage_multiplier = 8;
+}
+
+void MakronDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.double_time = time;
+	makron_damage_multiplier = 2;
+}
+
+void MakronPent(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invincible_time = time;
+}
+
+void MakronPowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	// I don't like this, but it works
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	if (coop->integer)
+		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
+}
+
+void MakronRespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD & EF_DOUBLE)
+	{
+		MakronPowerArmor(self);
+		if (skill->integer >= 1)
+		{
+			MakronQuadnDouble(self, other->client->quad_time);
+		}
+	}
+	else if (other->s.effects & EF_QUAD)
+	{
+		MakronPowerArmor(self);
+		if (skill->integer >= 1)
+			MakronQuad(self, other->client->quad_time);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		MakronPowerArmor(self);
+		if (skill->integer >= 1)
+			MakronDouble(self, other->client->double_time);
+	}
+	else if (other->s.effects & EF_DUALFIRE)
+	{
+		MakronPowerArmor(self);
+		if (skill->integer >= 3)
+			MakronDouble(self, other->client->double_time);
+	}
+	else
+		makron_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		if (skill->integer == 1)
+			MakronPowerArmor(self);
+		else if (skill->integer >= 2)
+			MakronPent(self, other->client->invincible_time);
+	}
+}
+
+void MakronPowerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		MakronRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		// in coop, check for pents, then quads, then doubles
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				MakronRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				MakronRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				MakronRespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
+}
+
 // [Paril-KEX] use generic function
-/*Konig - add powerup copy*/
 MONSTERINFO_CHECKATTACK(Jorg_CheckAttack) (edict_t *self) -> bool
 {
-	BossPowerups(self);
+	/* KONIG - add powerup copy */
+	MakronPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -594,6 +719,8 @@ void MakronPrecache();
  */
 void SP_monster_jorg(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -636,39 +763,38 @@ void SP_monster_jorg(edict_t *self)
 	self->mins = { -80, -80, 0 };
 	self->maxs = { 80, 80, 140 };
 
-	/* KONIG - modified health to scale on skill; added coop scaling; added armor w/ coop scaling */
+	/* KONIG - GZ health scaling; added armor w/ scaling; rebalanced for nojorg spawnflag*/
 	if (self->spawnflags.has(SPAWNFLAG_NO_MAKRON))
 	{
-		self->health = max(8000, 8000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		self->health = max(10000, 10000 + 1250 * (skill->integer - 1)) * st.health_multiplier;
 		if (!st.was_key_specified("armor_type"))
 			self->monsterinfo.armor_type = IT_ARMOR_BODY;
 		if (!st.was_key_specified("armor_power"))
-			self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
+			self->monsterinfo.armor_power = max(500, 500 + 150 * (skill->integer - 1));
 		if (!st.was_key_specified("power_armor_type"))
 			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = max(600, 600 + 100 * (skill->integer - 1));
+			self->monsterinfo.power_armor_power = max(500, 500 + 150 * (skill->integer - 1));
 		if (coop->integer)
 		{
-			self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			self->health += (500 * skill->integer) + (500 * (CountPlayers() - 1));
+			self->monsterinfo.armor_power += (250 * skill->integer) + (250 * (CountPlayers() - 1));
+			self->monsterinfo.power_armor_power += (250 * skill->integer) + (250 * (CountPlayers() - 1));
 		}
 	}
 	else
 	{
-		self->health = max(7000, 7000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		self->health = max(8000, 8000 + 1250 * (skill->integer - 1)) * st.health_multiplier;
 		if (!st.was_key_specified("armor_type"))
 			self->monsterinfo.armor_type = IT_ARMOR_BODY;
 		if (!st.was_key_specified("armor_power"))
-			self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
+			self->monsterinfo.armor_power = max(500, 500 + 150 * (skill->integer - 1));
 		if (coop->integer)
 		{
-			self->health += (500 * skill->integer) + (500 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
+			self->health += (500 * skill->integer) + (500 * (CountPlayers() - 1));
+			self->monsterinfo.armor_power += (250 * skill->integer) + (250 * (CountPlayers() - 1));
 		}
 	}
-
 	self->gib_health = -2000;
 	self->mass = 1000;
 
@@ -688,6 +814,8 @@ void SP_monster_jorg(edict_t *self)
 
 	M_SetAnimation(self, &jorg_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
+
+	makron_damage_multiplier = 1;
 
 	walkmonster_start(self);
 	// PMM

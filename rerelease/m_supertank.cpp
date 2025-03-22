@@ -12,12 +12,9 @@ SUPERTANK
 #include "m_supertank.h"
 #include "m_flash.h"
 
-constexpr spawnflags_t SPAWNFLAG_SUPERTANK_POWERSHIELD = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SUPERTANK_HEATSEEKING = 8_spawnflag;
 // n64
 constexpr spawnflags_t SPAWNFLAG_SUPERTANK_LONG_DEATH = 16_spawnflag;
-
-/* KONIG - separating heat-seeking into two spawnflags*/
-constexpr spawnflags_t SPAWNFLAG_SUPERTANK_HEATSEEKING = 32_spawnflag;
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
@@ -28,8 +25,8 @@ static cached_soundindex sound_search2;
 
 static cached_soundindex tread_sound;
 
-/*KONIG - add powerup copy*/
-void MBossPowerups(edict_t* self);
+/* KONIG - universal boss powerup copy */
+void BossPowerups(edict_t* self);
 
 void TreadSound(edict_t *self)
 {
@@ -448,6 +445,17 @@ PAIN(supertank_pain) (edict_t *self, edict_t *other, float kick, int damage, con
 		M_SetAnimation(self, &supertank_move_pain3);
 }
 
+MONSTERINFO_CHECKATTACK(supertank_CheckAttack) (edict_t* self) -> bool
+{
+	if (!self->enemy)
+		return false;
+
+	/* KONIG - boss powerups*/
+	BossPowerups(self);
+
+	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.6f, 0.7f, 0.85f, 0.f);
+}
+
 MONSTERINFO_SETSKIN(supertank_setskin) (edict_t *self) -> void
 {
 	if (self->health < (self->max_health / 2))
@@ -477,7 +485,7 @@ void supertankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	/* KONIG - change spawnflag to be heatseeking instead of powershield*/
+	/* KONIG - spawnflag renamed; TODO - Gamma fire Hellfury or Guardian rockets */
 	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_HEATSEEKING))
 	{
 		vec = self->enemy->s.origin;
@@ -512,12 +520,7 @@ void supertankMachineGun(edict_t *self)
 	AngleVectors(dir, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 	PredictAim(self, self->enemy, start, 0, true, -0.1f, &forward, nullptr);
-	/* KONIG - use flechettes for beta */
-	if (self->style == 1)
-		monster_fire_flechette(self, start, forward, 10, 1000, MZ2_BOSS2_MACHINEGUN_L1);
-	else
-		monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD * 3, flash_number);
-
+	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD * 3, flash_number);
 }
 
 MONSTERINFO_ATTACK(supertank_attack) (edict_t *self) -> void
@@ -636,12 +639,7 @@ MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool
 }
 // PGM
 //===========
-/*Konig - add powerup copy*/
-MONSTERINFO_CHECKATTACK(Supertank_CheckAttack) (edict_t* self) -> bool
-{
-	MBossPowerups(self);
-	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
-}
+
 //
 // monster_supertank
 //
@@ -652,6 +650,8 @@ MONSTERINFO_CHECKATTACK(Supertank_CheckAttack) (edict_t* self) -> bool
  */
 void SP_monster_supertank(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -686,8 +686,46 @@ void SP_monster_supertank(edict_t *self)
 	self->mins = { -64, -64, 0 };
 	self->maxs = { 64, 64, 112 };
 
-	/* KONIG - added combat armor and extra health per difficulty; bonus health and armor in co-op*/
-	self->health = max(1500, 1000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	/* KONIG - GZ health scaling; adding body armor*/
+	self->health = max(1500, 1500 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+	if (coop->integer)
+		self->health += (250 * (CountPlayers() - 1));
+
+	if (strcmp(self->classname, "monster_boss5") == 0)
+	{
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = max(350, 350 + 100 * (skill->integer - 1));
+		if (coop->integer)
+			self->monsterinfo.power_armor_power += (100 * (CountPlayers() - 1));
+	}
+	else if (strcmp(self->classname, "monster_boss5_gamma") == 0)
+	{
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(350, 350 + 100 * (skill->integer - 1));
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = max(350, 350 + 100 * (skill->integer - 1));
+		if (coop->integer)
+		{
+			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
+			self->monsterinfo.power_armor_power += (100 * (CountPlayers() - 1));
+		}
+	}
+	else
+	{
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(350, 350 + 100 * (skill->integer - 1));
+		if (coop->integer)
+			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
+	}
+
 	self->gib_health = -500;
 	self->mass = 800;
 
@@ -702,39 +740,13 @@ void SP_monster_supertank(edict_t *self)
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = nullptr;
 	self->monsterinfo.blocked = supertank_blocked; // PGM
+	self->monsterinfo.checkattack = supertank_CheckAttack;
 	self->monsterinfo.setskin = supertank_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &supertank_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
-
-	// RAFAEL
-	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_POWERSHIELD))
-	{
-		if (!st.was_key_specified("power_armor_type"))
-			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
-		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = max(400, 400 + 100 * (skill->integer - 1));
-		if (coop->integer)
-		{
-			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.power_armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-		}
-	}
-	else
-	{
-		if (!st.was_key_specified("armor_type"))
-			self->monsterinfo.armor_type = IT_ARMOR_BODY;
-		if (!st.was_key_specified("armor_power"))
-			self->monsterinfo.armor_power = max(100, 100 + 100 * (skill->integer - 1));
-		if (coop->integer)
-		{
-			self->health += (250 * skill->integer) + (250 * (skill->integer * (CountPlayers() - 1)));
-			self->monsterinfo.armor_power += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-		}
-	}
-	// RAFAEL
 
 	walkmonster_start(self);
 
@@ -759,9 +771,34 @@ void SP_monster_supertank(edict_t *self)
  */
 void SP_monster_boss5(edict_t *self)
 {
-	self->spawnflags |= SPAWNFLAG_SUPERTANK_POWERSHIELD;
+	/* KONIG - changed unused spawnflag to just heatseeking, moved power armor to boss5 */
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
 	self->spawnflags |= SPAWNFLAG_SUPERTANK_HEATSEEKING;
 	SP_monster_supertank(self);
 	gi.soundindex("weapons/railgr1a.wav");
 	self->s.skinnum = 2;
+
+}
+
+//Citadel boss
+/*QUAKED monster_boss5_gamma (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
+ */
+void SP_monster_boss5_gamma(edict_t* self)
+{
+	/* KONIG - changed unused spawnflag to just heatseeking, moved power armor to boss5 */
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	self->spawnflags |= SPAWNFLAG_SUPERTANK_HEATSEEKING;
+	SP_monster_supertank(self);
+	gi.soundindex("weapons/railgr1a.wav");
+	self->s.skinnum = 4;
+
+	if (!self->s.scale)
+		self->s.scale = 1.25f;
+
+	self->mins = { -80, -80, 0 };
+	self->maxs = { 80, 80, 128 };
+
+	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 }

@@ -284,10 +284,11 @@ PAIN(gunner_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(gunner_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 void gunner_dead(edict_t *self)
@@ -853,6 +854,8 @@ model="models/monsters/gunner/tris.md2"
 */
 void SP_monster_gunner(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

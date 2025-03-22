@@ -296,16 +296,8 @@ TOUCH(mutant_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 			normal = self->velocity;
 			normal.normalize();
 			point = self->s.origin + (normal * self->maxs[0]);
-			if (strcmp(self->classname, "monster_tank_commander") == 0)
-			{
-				damage = (int)frandom(40, 50);
-				T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
-			}
-			else
-			{
-				damage = (int)frandom(50, 70);
-				T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
-			}
+			damage = (int) frandom(40, 50);
+			T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
 			self->style = 0;
 		}
 	}
@@ -505,12 +497,11 @@ PAIN(mutant_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(mutant_setskin) (edict_t *self) -> void
 {
-	/* KONIG - new skinnums for alphamutant */
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		if (self->health < (self->max_health / 2))
-			self->s.skinnum |= 1;
-		else
-			self->s.skinnum &= ~1;
+		self->s.skinnum |= 1;
+	else
+		self->s.skinnum &= ~1;
 }
 
 //
@@ -684,6 +675,8 @@ model="models/monsters/mutant/tris.md2"
 */
 void SP_monster_mutant(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -707,42 +700,34 @@ void SP_monster_mutant(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-
+	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
+	
 	gi.modelindex("models/monsters/mutant/gibs/head.md2");
 	gi.modelindex("models/monsters/mutant/gibs/chest.md2");
 	gi.modelindex("models/monsters/mutant/gibs/hand.md2");
 	gi.modelindex("models/monsters/mutant/gibs/foot.md2");
 
-	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
+	self->mins = { -18, -18, -24 };
+	self->maxs = { 18, 18, 30 };
 
-	/* KONIG - alphamutant code*/
+	/* KONIG - alphamutant code */
 	if (strcmp(self->classname, "monster_alphamutant") == 0)
 	{
+		self->count = 1;
+		self->s.skinnum = 2;
 		if (!self->s.scale)
 			self->s.scale = 1.25f;
 
-		self->count = 1;
-		self->s.skinnum = 2;
-
-		self->health = max(400, 400 + 100 * (skill->integer - 1)) * st.health_multiplier;
-		if (coop->integer)
-		{
-			self->health += (100 * skill->integer) + (100 * (skill->integer * (CountPlayers() - 1)));
-		}
-		self->gib_health = -180;
+		self->health = 400 * st.health_multiplier;
+		self->gib_health = -160;
 		self->mass = 400;
 	}
 	else
 	{
-		self->s.scale = 1.0f;
-
 		self->health = 300 * st.health_multiplier;
 		self->gib_health = -120;
 		self->mass = 300;
 	}
-
-	self->mins = { -18, -18, -24 };
-	self->maxs = { 18, 18, 30 };
 
 	self->pain = mutant_pain;
 	self->die = mutant_die;

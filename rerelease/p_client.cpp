@@ -16,6 +16,8 @@ THINK(info_player_start_drop) (edict_t *self) -> void
 	gi.linkentity(self);
 }
 
+constexpr spawnflags_t SPAWNFLAG_SPAWN_RIDE = 1_spawnflag;
+
 /*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32)
 The normal starting point for a level.
 */
@@ -27,11 +29,14 @@ void SP_info_player_start(edict_t *self)
 
 	// [Paril-KEX] on n64, since these can spawn riding elevators,
 	// allow them to "ride" the elevators so respawning works
-	if (level.is_n64)
+	if (level.is_n64 || level.is_psx || self->spawnflags.has(SPAWNFLAG_SPAWN_RIDE))
 	{
 		self->think = info_player_start_drop;
 		self->nextthink = level.time + FRAME_TIME_S;
 	}
+
+	if (level.is_psx)
+		self->s.origin[2] -= PLAYER_MINS[2] - (PLAYER_MINS[2] * PSX_PHYSICS_SCALAR);
 }
 
 /*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32)
@@ -323,6 +328,34 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 			base = "$g_mod_kill_grapple";
 			break;
 			// ZOID
+			/* KONIG */
+			//ZAERO
+		#if 0
+		case MOD_SNIPERRIFLE:
+			message = "was ventilated by";
+			message2 = "'s bullet";
+			break;
+		case MOD_TRIPBOMB:
+			message = "tripped over";
+			message2 = "'s trip bomb";
+			break;
+		case MOD_FLARE:
+			message = "didn't see";
+			message2 = "'s flare";
+			break;
+		case MOD_GL_POLYBLEND:
+			message = "turned off gl_polyblend and was damaged by";
+			message2 = "'s flare";
+			break;
+		case MOD_A2K:
+			message = "got dissassembled by";
+			message2 = "";
+			break;
+		case MOD_SONICCANNON:
+			message = "got microwaved by";
+			message2 = "";
+			break;
+		#endif
 		default:
 			base = "$g_mod_kill_generic";
 			break;
@@ -849,14 +882,24 @@ void InitClientPersistant(edict_t *ent, gclient_t *client)
 			client->pers.max_ammo[AMMO_SHELLS] = 100;
 			client->pers.max_ammo[AMMO_CELLS] = 200;
 
-			/* KONIG - Increase capacity of default Tesla to 10 */
 			// RAFAEL
 			client->pers.max_ammo[AMMO_TRAP] = 5;
 			// RAFAEL
 			// ROGUE
 			client->pers.max_ammo[AMMO_FLECHETTES] = 200;
 			client->pers.max_ammo[AMMO_DISRUPTOR] = 12;
+			/* KONIG - Increase capacity of default Tesla to 10; new ammo */
 			client->pers.max_ammo[AMMO_TESLA] = 10;
+			//ZAERO
+			client->pers.max_ammo[AMMO_FLARES] = 50;
+			//client->pers.max_ammo[AMMO_LASERTRIPBOMB] = 10;
+			//client->pers.max_ammo[AMMO_EMPNUKE] = 5;
+			//client->pers.max_ammo[AMMO_A2K] = 1;
+			//client->pers.max_ammo[AMMO_PLASMASHIELD] = 5;
+			//OBLIVION
+			//PSX
+			client->pers.max_ammo[AMMO_BATTERIES] = 200;
+			client->pers.max_ammo[AMMO_FUEL] = 100;
 			// ROGUE
 
 			if (!deathmatch->integer || !g_instagib->integer)
@@ -874,6 +917,9 @@ void InitClientPersistant(edict_t *ent, gclient_t *client)
 
 			if (level.start_items && *level.start_items)
 				Player_GiveStartItems(ent, level.start_items);
+
+			// power armor from start items
+			G_CheckPowerArmor(ent);
 
 			if (!deathmatch->integer)
 				client->pers.inventory[IT_ITEM_COMPASS] = 1;
@@ -903,7 +949,7 @@ void InitClientPersistant(edict_t *ent, gclient_t *client)
 		client->pers.lives = g_coop_num_lives->integer + 1;
 
 	if (ent->client->pers.autoshield >= AUTO_SHIELD_AUTO)
-		ent->flags |= FL_WANTS_POWER_ARMOR;
+		client->pers.savedFlags |= FL_WANTS_POWER_ARMOR;
 
 	client->pers.connected = true;
 	client->pers.spawned = true;
@@ -3048,7 +3094,10 @@ void P_FallingDamage(edict_t *ent, const pmove_t &pm)
 
 	float delta = pm.impact_delta;
 
-	delta = delta * delta * 0.0001f;
+	if (level.is_psx)
+		delta = delta * delta * 0.000078f;
+	else
+		delta = delta * delta * 0.0001f;
 
 	if (pm.waterlevel == WATER_WAIST)
 		delta *= 0.25f;
@@ -3088,9 +3137,11 @@ void P_FallingDamage(edict_t *ent, const pmove_t &pm)
 			ent->s.event = EV_FALL;
 
 		ent->pain_debounce_time = level.time + FRAME_TIME_S; // no normal pain sound
-		damage = (int) ((delta - 30) / 2);
-		if (damage < 1)
-			damage = 1;
+		damage = std::max((int) ((delta - 30) / 2), 1);
+
+		if (level.is_psx)
+			damage = std::min(4, damage);
+
 		dir = { 0, 0, 1 };
 
 		if (!deathmatch->integer || !g_dm_no_fall_damage->integer)
@@ -3162,7 +3213,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
 	client->latched_buttons |= client->buttons & ~client->oldbuttons;
 	client->cmd = *ucmd;
 
-	if ((ucmd->buttons & BUTTON_CROUCH) && pm_config.n64_physics)
+	if ((ucmd->buttons & BUTTON_CROUCH) && PM_CrouchingDisabled(pm_config.physics_flags))
 	{
 		if (client->pers.n64_crouch_warn_times < 12 &&
 			client->pers.n64_crouch_warning < level.time &&
@@ -3243,7 +3294,17 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
 			client->ps.pmove.pm_flags &= ~PMF_IGNORE_PLAYER_COLLISION;
 
 		// PGM	trigger_gravity support
-		client->ps.pmove.gravity = (short) (level.gravity * ent->gravity);
+		if (ent->no_gravity_time > level.time)
+		{
+			client->ps.pmove.gravity = 0;
+			client->ps.pmove.pm_flags |= PMF_NO_GROUND_SEEK;
+		}
+		else
+		{
+			client->ps.pmove.gravity = (short) (level.gravity * ent->gravity);
+			client->ps.pmove.pm_flags &= ~PMF_NO_GROUND_SEEK;
+		}
+
 		pm.s = client->ps.pmove;
 
 		pm.s.origin = ent->s.origin;

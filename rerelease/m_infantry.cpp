@@ -30,6 +30,9 @@ static cached_soundindex sound_idle;
 // range at which we'll try to initiate a run-attack to close distance
 constexpr float RANGE_RUN_ATTACK = RANGE_NEAR * 0.75f;
 
+constexpr spawnflags_t SPAWNFLAG_INFANTRY_NOJUMPING = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_INFANTRY_HANDLER = 32_spawnflag;
+
 mframe_t infantry_frames_stand[] = {
 	{ ai_stand },
 	{ ai_stand },
@@ -248,10 +251,11 @@ PAIN(infantry_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 
 MONSTERINFO_SETSKIN(infantry_setskin) (edict_t *self) -> void
 {
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum = 0;
+		self->s.skinnum &= ~1;
 }
 
 constexpr vec3_t aimangles[] = {
@@ -310,7 +314,19 @@ void InfantryMachineGun(edict_t *self)
 		AngleVectors(vec, forward, nullptr, nullptr);
 	}
 
-	monster_fire_bullet(self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
+	/* KONIG - Unseen and SMD inspired variants */
+	if (self->spawnflags.has(SPAWNFLAG_INFANTRY_HANDLER))
+	{
+		monster_fire_flechette(self, start, forward, 4, 750, flash_number);
+	}
+	else if (strcmp(self->classname, "monster_heavy") == 0) /* KONIG - TO DO: swap with hellfury rockets*/
+	{
+		monster_fire_rocket(self, start, forward, 30, 800, flash_number);
+	}
+	else
+	{
+		monster_fire_bullet(self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
+	}
 }
 
 MONSTERINFO_SIGHT(infantry_sight) (edict_t *self, edict_t *other) -> void
@@ -863,12 +879,12 @@ void InfantryPrecache()
 	sound_idle.assign("infantry/infidle1.wav");
 }
 
-constexpr spawnflags_t SPAWNFLAG_INFANTRY_NOJUMPING = 8_spawnflag;
-
 /*QUAKED monster_infantry (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
  */
 void SP_monster_infantry(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -891,9 +907,35 @@ void SP_monster_infantry(edict_t *self)
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, 32 };
 
-	self->health = 100 * st.health_multiplier;
-	self->gib_health = -65;
-	self->mass = 200;
+	if (strcmp(self->classname, "monster_infantry_handler") == 0)
+	{
+		self->s.skinnum = 2;
+		self->health = 100 * st.health_multiplier;
+		self->gib_health = -65;
+		self->mass = 200;
+	}
+	else if (strcmp(self->classname, "monster_heavy") == 0)
+	{
+		self->s.skinnum = 4;
+		self->health = 120 * st.health_multiplier;
+		self->gib_health = -65;
+
+		if (!self->s.scale)
+			self->s.scale = 1.25f;
+		self->mass = 250;
+
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = 100;
+	}
+	else
+	{
+		self->s.skinnum = 0;
+		self->health = 100 * st.health_multiplier;
+		self->gib_health = -65;
+		self->mass = 200;
+	}
 
 	self->pain = infantry_pain;
 	self->die = infantry_die;
@@ -925,4 +967,37 @@ void SP_monster_infantry(edict_t *self)
 	self->monsterinfo.jump_height = 40;
 
 	walkmonster_start(self);
+}
+
+/* KONIG - Zaero handler function change and Unseen's Heavy */
+/*QUAKED monster_infantry_handler (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
+ */
+void SP_monster_infantry_handler(edict_t* self)
+{
+	SP_monster_infantry(self);
+
+	self->spawnflags |= SPAWNFLAG_INFANTRY_HANDLER; //Lazarus compat?
+}
+
+/*QUAKED monster_heavy (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
+ */
+void SP_monster_heavy(edict_t* self)
+{
+	SP_monster_infantry(self);
+
+	self->s.skinnum = 4;
+	sound_gunshot.assign("chick/chkatck2.wav");
+}
+
+//ZAERO - handler to infantry
+void handler_ConvertToInfantry(edict_t* self)
+{
+	SP_monster_infantry_handler(self);
+
+	self->s.skinnum = 2;
+
+	// [Paril-KEX] set health bar over to Makron when we throw him out
+	for (size_t i = 0; i < 2; i++)
+		if (level.health_bar_entities[i] && level.health_bar_entities[i]->enemy == self)
+			level.health_bar_entities[i]->enemy = self;
 }

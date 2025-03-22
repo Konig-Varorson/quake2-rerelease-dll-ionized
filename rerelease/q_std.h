@@ -24,11 +24,11 @@
 // format!
 #ifndef USE_CPP20_FORMAT
 #ifdef __cpp_lib_format
-#define USE_CPP20_FORMAT 1
+#define USE_CPP20_FORMAT
 #endif
 #endif
 
-#if USE_CPP20_FORMAT
+#ifdef USE_CPP20_FORMAT
 #include <format>
 namespace fmt = std;
 #define FMT_STRING(s) s
@@ -104,8 +104,8 @@ std::string join_strings(const T &cont, const char *separator)
 
 using byte = uint8_t;
 
-// note: only works on actual arrays
-#define q_countof(a) std::extent_v<decltype(a)>
+template<class T, std::size_t N>
+constexpr size_t q_countof(const T (&array)[N]) { return std::size<T, N>(array); }
 
 using std::max;
 using std::min;

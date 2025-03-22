@@ -158,7 +158,7 @@ void berserk_attack_spike(edict_t *self)
 {
 	constexpr vec3_t aim = { MELEE_DISTANCE, 0, -24 };
 	
-	if (!fire_hit(self, aim, irandom(5, 11), 80)) //	Faster attack -- upwards and backwards
+	if (!fire_hit(self, aim, irandom(5, 11), 400)) //	Faster attack -- upwards and backwards
 		self->monsterinfo.melee_debounce_time = level.time + 1.2_sec;
 }
 
@@ -183,7 +183,7 @@ void berserk_attack_club(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], -4 };
 	
-	if (!fire_hit(self, aim, irandom(15, 21), 400)) // Slower attack
+	if (!fire_hit(self, aim, irandom(15, 21), 250)) // Slower attack
 		self->monsterinfo.melee_debounce_time = level.time + 2.5_sec;
 }
 
@@ -271,12 +271,10 @@ static void berserk_attack_slam(edict_t *self)
 	self->velocity = {};
 	self->flags |= FL_KILL_VELOCITY;
 
-	/*KONIG - Beta version, buffed damage from 8 (nerfed from 32) to 16*/
-
 	if (self->style == 1)
-		T_SlamRadiusDamage(tr.endpos, self, self, 24, 300.f, self, 165, MOD_UNKNOWN);
+		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);		
 	else
-		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
+		T_SlamRadiusDamage(tr.endpos, self, self, 8, 300.f, self, 165, MOD_UNKNOWN);
 }
 
 TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
@@ -300,10 +298,14 @@ TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 
 static void berserk_high_gravity(edict_t *self)
 {
+	float gravity_scale = (800.f / level.gravity);
+
 	if (self->velocity[2] < 0)
-		self->gravity = 2.25f * (800.f / level.gravity);
+		self->gravity = 2.25f;
 	else
-		self->gravity = 5.25f * (800.f / level.gravity);
+		self->gravity = 5.25f;
+
+	self->gravity *= gravity_scale;
 }
 
 void berserk_jump_takeoff(edict_t *self)
@@ -322,12 +324,18 @@ void berserk_jump_takeoff(edict_t *self)
 	AngleVectors(self->s.angles, forward, nullptr, nullptr);
 	self->s.origin[2] += 1;
 	self->velocity = forward * fwd_speed;
-	self->velocity[2] = 450;
+	self->velocity[2] = 400;
 	self->groundentity = nullptr;
 	self->monsterinfo.aiflags |= AI_DUCKED;
 	self->monsterinfo.attack_finished = level.time + 3_sec;
 	self->touch = berserk_jump_touch;
 	berserk_high_gravity(self);
+
+	self->gravity = -self->gravity;
+	SV_AddGravity(self);
+	self->gravity = -self->gravity;
+
+	gi.linkentity(self);
 }
 
 void berserk_check_landing(edict_t *self)
@@ -530,7 +538,7 @@ PAIN(berserk_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(berserk_setskin) (edict_t *self) -> void
 {
-	/* KONIG - new skinnums for Q4 Berserk */
+	/* KONIG - set for multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -776,6 +784,8 @@ MONSTERINFO_DUCK(berserk_duck) (edict_t *self, gtime_t eta) -> bool
  */
 void SP_monster_berserk(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -841,11 +851,14 @@ void SP_monster_berserk(edict_t *self)
 	walkmonster_start(self);
 }
 
-/*QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
+
+/*QUAKED monster_berserk2 (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
-/* KONIG - new berserker beta; Quake 4's Berserker*/
+ /* KONIG - new berserker beta; Quake 4's Berserker*/
 void SP_monster_berserk2(edict_t* self)
 {
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
 	SP_monster_berserk(self);
 	self->s.skinnum = 2;
 	self->style = 1;

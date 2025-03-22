@@ -620,6 +620,8 @@ DIE(insane_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
  */
 void SP_misc_insane(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	//	static int skin = 0;	//@@
 
 	if ( !M_AllowSpawn( self ) ) {
@@ -683,7 +685,7 @@ void SP_misc_insane(edict_t *self)
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) // Crucified ?
 	{
 		self->flags |= FL_NO_KNOCKBACK | FL_STATIONARY;
-		stationarymonster_start(self);
+		stationarymonster_start(self, st);
 	}
 	else
 		walkmonster_start(self);
