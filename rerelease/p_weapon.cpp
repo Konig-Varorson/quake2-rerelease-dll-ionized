@@ -1923,3 +1923,5 @@ void Weapon_Beta_Disintegrator(edict_t *ent)
 
 	Weapon_Generic(ent, 16, 23, 46, 50, pause_frames, fire_frames, weapon_disint_fire);
 }
+
+// Commit Test 5
