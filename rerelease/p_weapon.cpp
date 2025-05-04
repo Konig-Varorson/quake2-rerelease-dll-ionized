@@ -1337,9 +1337,16 @@ void Blaster_Fire(edict_t *ent, const vec3_t &g_offset, int damage, bool hyper, 
 		P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	// let the regular blaster projectiles travel a bit faster because it is a completely useless gun
-	int speed = hyper ? 1000 : 1500;
+	int speed = hyper ? 1500 : 1500; // Shart: Default value is 1000 for HB and 1500 for Blaster - HB buffed to 1500 
 
-	fire_blaster(ent, start, dir, damage, speed, effect, hyper ? MOD_HYPERBLASTER : MOD_BLASTER);
+
+	// Shart: Splitting HB and Blaster fire functions so that HB fires plasma 
+	
+	if (hyper)
+		fire_blaster2(ent, start, dir, damage, speed, effect, hyper ? MOD_HYPERBLASTER : MOD_BLASTER);
+	else
+		fire_blaster(ent, start, dir, damage, speed, effect, hyper ? MOD_HYPERBLASTER : MOD_BLASTER);
+	
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -1923,5 +1930,3 @@ void Weapon_Beta_Disintegrator(edict_t *ent)
 
 	Weapon_Generic(ent, 16, 23, 46, 50, pause_frames, fire_frames, weapon_disint_fire);
 }
-
-// Commit Test 5
