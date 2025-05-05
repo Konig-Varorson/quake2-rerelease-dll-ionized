@@ -1846,7 +1846,7 @@ always owned, never in the world
 		/* vwep_model */ "#w_blaster.md2",
 		/* armor_info */ nullptr,
 		/* tag */ 0,
-		/* precaches */ "weapons/blastf1a.wav misc/lasfly.wav"
+		/* precaches */ "weapons/blastf1a.wav weapons/blastcharge.wav weapons/blastcharge_click.wav weapons/blastcharge_loop.wav weapons/blastcharge_fire01.wav misc/lasfly.wav"
 	},
 
 	/*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
