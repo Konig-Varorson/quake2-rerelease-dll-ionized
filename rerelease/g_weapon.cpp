@@ -350,6 +350,24 @@ fire_blaster
 Fires a single blaster bolt.  Used by the blaster and hyper blaster.
 =================
 */
+
+//Shart: Nicco's Blaster MK II code
+/*
+THINK(blaster_sparks) (edict_t *self) -> void
+{
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_WELDING_SPARKS);
+	gi.WriteByte(0);
+	gi.WritePosition(self->s.origin);
+	gi.WriteDir(vec3_origin);
+	gi.WriteByte(irandom(0xe4, 0xe8));
+	gi.multicast(self->s.origin, MULTICAST_PVS, false);
+
+	G_FreeEdict(self);
+}
+*/
+
+
 TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	if (other == self->owner)
