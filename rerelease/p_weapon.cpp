@@ -1365,11 +1365,91 @@ void Weapon_Blaster_Fire(edict_t *ent)
 	// give the blaster 15 across the board instead of just in dm
 	int damage = 15;
 	Blaster_Fire(ent, vec3_origin, damage, false, EF_BLASTER);
+
+	//Shart: Nicco's Blaster MK II code
+	/*
+	constexpr int damage_multiplier = 4;
+	
+	if (ent->client->blaster_ready_time != 0_sec && level.time < ent->client->blaster_ready_time)
+	{
+		while (ent->client->ps.gunframe < 10)
+		{
+			ent->client->ps.gunframe++;
+			return;
+		}
+
+		return;
+	}
+	
+	if (ent->client->buttons & BUTTON_ATTACK)
+	{
+		if (ent->client->ps.gunframe > 9)
+		ent->client->ps.gunframe = 7;
+
+		if ((ent->client->blaster_charge_time) == 0_sec)
+		{
+			ent->client->blaster_charge_time = level.time;
+			ent->client->weapon_sound = gi.soundindex("weapons/blastcharge.wav");
+		}
+
+		else if ((ent->client->blaster_charge_time) > 0_sec)
+		{
+			if (ent->client->blaster_charge_time > 200_ms)
+			{
+				ent->client->weapon_sound = gi.soundindex("weapons/blastcharge_loop.wav");
+			}
+
+			bool fully_charged = level.time - ent->client->blaster_charge_time >= 1_sec;
+	
+			// Play ready sound
+			if (fully_charged && level.time - ent->client->blaster_charge_time < 1050_ms)
+				gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/blastcharge_click.wav"), 1, ATTN_NORM, 0);
+		}
+
+		ent->client->ps.gunframe++;
+	}
+
+	if (!(ent->client->buttons & BUTTON_ATTACK) && ent->client->ps.gunframe <= 10)
+		ent->client->ps.gunframe = 9;
+
+	if (ent->client->ps.gunframe == 9)
+	{
+		if (ent->client->buttons & BUTTON_ATTACK)
+			ent->client->ps.gunframe = 7;
+
+		else if (ent->client->blaster_charge_time > 0_sec)
+		{
+			ent->client->blaster_ready_time = level.time + 300_ms;
+			ent->client->ps.gunframe = 5;
+			ent->client->weapon_sound = 0;
+
+			// Held down the blaster fire for 1 second or longer
+			if ((level.time - ent->client->blaster_charge_time) >= 1_sec)
+			{
+				damage *= damage_multiplier;
+				Blaster_Fire(ent, vec3_origin, damage, false, EF_BLUEHYPERBLASTER);
+				gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/blastcharged_fire01.wav"), 1, ATTN_NORM, 0);
+			}
+
+			// Held down the blaster fire for less than 1 second
+			else
+			{
+				Blaster_Fire(ent, vec3_origin, damage, false, EF_BLASTER); //EF_BLASTER is standard
+			}
+
+			Weapon_PowerupSound(ent);
+			ent->client->blaster_charge_time = gtime_t::from_sec(0);
+			return;
+		}
+	}
+	*/
 }
 
 void Weapon_Blaster(edict_t *ent)
 {
 	constexpr int pause_frames[] = { 19, 32, 0 };
+	
+	//Shart: Nicco's Blaster MK II code removes fire_frames
 	constexpr int fire_frames[] = { 5, 0 };
 
 	Weapon_Generic(ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
@@ -1426,7 +1506,7 @@ void Weapon_HyperBlaster_Fire(edict_t *ent)
 			if (deathmatch->integer)
 				damage = 15;
 			else
-				damage = 20;
+				damage = 20; // Shart: Default is 20
 			Blaster_Fire(ent, offset, damage, true, (ent->client->ps.gunframe % 4) ? EF_NONE : EF_HYPERBLASTER);
 			Weapon_PowerupSound(ent);
 
