@@ -52,6 +52,9 @@ contents_t G_GetClipMask(edict_t *ent)
 	if ((ent->svflags & (SVF_MONSTER | SVF_PLAYER)) && (ent->svflags & SVF_DEADMONSTER))
 		mask &= ~(CONTENTS_MONSTER | CONTENTS_PLAYER);
 
+	// remove special mask value
+	mask &= ~CONTENTS_AREAPORTAL;
+
 	return mask;
 }
 
@@ -179,6 +182,9 @@ SV_AddGravity
 */
 void SV_AddGravity(edict_t *ent)
 {
+	if (ent->no_gravity_time > level.time)
+		return;
+
 	ent->velocity += ent->gravityVector * (ent->gravity * level.gravity * gi.frame_time_s);
 }
 
@@ -281,6 +287,10 @@ bool SV_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 	pusher->s.origin += move;
 	pusher->s.angles += amove;
 	gi.linkentity(pusher);
+
+	// no clip mask, so it won't move anything
+	if (!G_GetClipMask(pusher))
+		return true;
 
 	// see if any solid entities are inside the final position
 	check = g_edicts + 1;
@@ -415,7 +425,7 @@ push all box objects
 void SV_Physics_Pusher(edict_t *ent)
 {
 	vec3_t	 move, amove;
-	edict_t *part, *mv;
+	edict_t *part;
 
 	// if not a team captain, so movement will be handled elsewhere
 	if (ent->flags & FL_TEAMSLAVE)
@@ -741,8 +751,11 @@ void SV_Physics_Step(edict_t *ent)
 	edict_t	*groundentity;
 	contents_t mask = G_GetClipMask(ent);
 
+	// [Paril-KEX]
+	if (ent->no_gravity_time > level.time)
+		ent->groundentity = nullptr;
 	// airborne monsters should always check for ground
-	if (!ent->groundentity)
+	else if (!ent->groundentity)
 		M_CheckGround(ent, mask);
 
 	groundentity = ent->groundentity;
@@ -758,7 +771,7 @@ void SV_Physics_Step(edict_t *ent)
 		SV_AddRotationalFriction(ent);
 
 	// FIXME: figure out how or why this is happening
-	if (isnan(ent->velocity[0]) || isnan(ent->velocity[1]) || isnan(ent->velocity[2]))
+	if (std::isnan(ent->velocity[0]) || std::isnan(ent->velocity[1]) || std::isnan(ent->velocity[2]))
 		ent->velocity = {};
 
 	// add gravity except:
@@ -799,7 +812,7 @@ void SV_Physics_Step(edict_t *ent)
 		ent->velocity[2] *= newspeed;
 	}
 
-	if (ent->velocity[2] || ent->velocity[1] || ent->velocity[0])
+	if (ent->velocity[2] || ent->velocity[1] || ent->velocity[0] || ent->no_gravity_time > level.time)
 	{
 		// apply friction
 		if ((wasonground || (ent->flags & (FL_SWIM | FL_FLY))) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))

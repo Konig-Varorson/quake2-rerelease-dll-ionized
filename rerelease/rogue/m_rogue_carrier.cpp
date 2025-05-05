@@ -29,8 +29,6 @@ bool inback(edict_t *self, edict_t *other);
 bool below(edict_t *self, edict_t *other);
 void drawbbox(edict_t *self);
 
-void ED_CallSpawn(edict_t *ent);
-
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
 static cached_soundindex sound_pain3;
@@ -42,9 +40,6 @@ static cached_soundindex sound_spawn;
 static cached_soundindex sound_cg_down, sound_cg_loop, sound_cg_up;
 
 float orig_yaw_speed;
-
-void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &list);
-std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t *self, int32_t &num_chosen, int32_t max_slots);
 
 extern const mmove_t flyer_move_attack2, flyer_move_attack3, flyer_move_kamikaze;
 
@@ -356,9 +351,9 @@ void CarrierSpawn(edict_t *self)
 		ent->nextthink = level.time;
 		ent->think(ent);
 
-		ent->monsterinfo.aiflags |= AI_SPAWNED_CARRIER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+		ent->monsterinfo.aiflags |= AI_SPAWNED_COMMANDER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 		ent->monsterinfo.commander = self;
-		ent->monsterinfo.monster_slots = reinforcement.strength;
+		ent->monsterinfo.slots_from_commander = reinforcement.strength;
 		self->monsterinfo.monster_used += reinforcement.strength;
 
 		if ((self->enemy->inuse) && (self->enemy->health > 0))
@@ -1055,6 +1050,8 @@ void CarrierPrecache()
  */
 void SP_monster_carrier(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

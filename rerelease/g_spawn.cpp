@@ -49,6 +49,7 @@ void SP_trigger_flashlight(edict_t *self); // [Paril-KEX]
 void SP_trigger_fog(edict_t *self); // [Paril-KEX]
 void SP_trigger_coop_relay(edict_t *self); // [Paril-KEX]
 void SP_trigger_health_relay(edict_t *self); // [Paril-KEX]
+void SP_trigger_safe_fall(edict_t *ent); // [Paril-KEX]
 
 void SP_target_temp_entity(edict_t *ent);
 void SP_target_speaker(edict_t *ent);
@@ -259,6 +260,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "trigger_fog", SP_trigger_fog }, // [Paril-KEX]
 	{ "trigger_coop_relay", SP_trigger_coop_relay }, // [Paril-KEX]
 	{ "trigger_health_relay", SP_trigger_health_relay }, // [Paril-KEX]
+	{ "trigger_safe_fall", SP_trigger_safe_fall }, // [Paril-KEX]
 
 	{ "target_temp_entity", SP_target_temp_entity },
 	{ "target_speaker", SP_target_speaker },
@@ -437,6 +439,20 @@ static const std::initializer_list<spawn_t> spawns = {
 };
 // clang-format on
 
+static const spawn_temp_t *current_st;
+/*static*/ const spawn_temp_t spawn_temp_t::empty = {};
+
+const spawn_temp_t &ED_GetSpawnTemp()
+{
+	if (!current_st)
+	{
+		gi.Com_Print("WARNING: empty spawntemp accessed; this is probably a code bug.\n");
+		return spawn_temp_t::empty;
+	}
+
+	return *current_st;
+}
+
 /*
 ===============
 ED_CallSpawn
@@ -444,7 +460,7 @@ ED_CallSpawn
 Finds the spawn function for the entity and calls it
 ===============
 */
-void ED_CallSpawn(edict_t *ent)
+void ED_CallSpawn(edict_t *ent, const spawn_temp_t &spawntemp)
 {
 	gitem_t *item;
 	int		 i;
@@ -455,6 +471,8 @@ void ED_CallSpawn(edict_t *ent)
 		G_FreeEdict(ent);
 		return;
 	}
+
+	current_st = &spawntemp;
 
 	// PGM - do this before calling the spawn function so it can be overridden.
 	ent->gravityVector[0] = 0.0;
@@ -494,7 +512,12 @@ void ED_CallSpawn(edict_t *ent)
 				}
 			}
 
-			SpawnItem(ent, item);
+			SpawnItem(ent, item, spawntemp);
+
+			if (level.is_psx)
+				ent->s.origin[2] += 15.f - (15.f * PSX_PHYSICS_SCALAR);
+
+			current_st = nullptr;
 			return;
 		}
 	}
@@ -509,12 +532,21 @@ void ED_CallSpawn(edict_t *ent)
 			// Paril: swap classname with stored constant if we didn't change it
 			if (strcmp(ent->classname, s.name) == 0)
 				ent->classname = s.name;
+
+			current_st = nullptr;
 			return;
 		}
 	}
 
 	gi.Com_PrintFmt("{} doesn't have a spawn function\n", *ent);
 	G_FreeEdict(ent);
+	current_st = nullptr;
+}
+
+// Quick redirect to use empty spawntemp
+void  ED_CallSpawn(edict_t *ent)
+{
+	ED_CallSpawn(ent, spawn_temp_t::empty);
 }
 
 /*
@@ -745,7 +777,7 @@ static const std::initializer_list<field_t> entity_fields = {
 
 	// [Paril-KEX] func_eye stuff
 	FIELD_AUTO_NAMED("eye_position", move_origin),
-	FIELD_AUTO_NAMED("vision_cone", yaw_speed),
+	FIELD_AUTO(vision_cone),
 
 	// [Paril-KEX] for trigger_coop_relay
 	FIELD_AUTO_NAMED("message2", map),
@@ -840,13 +872,21 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(start_items),
 	FIELD_AUTO(no_grapple),
 	FIELD_AUTO(health_multiplier),
+	FIELD_AUTO(physics_flags_sp),
+	FIELD_AUTO(physics_flags_dm),
 
 	FIELD_AUTO(reinforcements),
 	FIELD_AUTO(noise_start),
 	FIELD_AUTO(noise_middle),
 	FIELD_AUTO(noise_end),
 
-	FIELD_AUTO(loop_count)
+	FIELD_AUTO(loop_count),
+
+	FIELD_AUTO(primary_objective_string),
+	FIELD_AUTO(secondary_objective_string),
+
+	FIELD_AUTO(primary_objective_title),
+	FIELD_AUTO(secondary_objective_title)
 };
 // clang-format on
 
@@ -858,7 +898,7 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-void ED_ParseField(const char *key, const char *value, edict_t *ent)
+void ED_ParseField(const char *key, const char *value, edict_t *ent, spawn_temp_t &st)
 {
 	// check st first
 	for (auto &f : temp_fields)
@@ -905,14 +945,13 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-const char *ED_ParseEdict(const char *data, edict_t *ent)
+const char *ED_ParseEdict(const char *data, edict_t *ent, spawn_temp_t &st)
 {
 	bool  init;
 	char  keyname[256];
 	const char *com_token;
 
 	init = false;
-	st = {};
 	
 	// go through all the dictionary pairs
 	while (1)
@@ -947,7 +986,7 @@ const char *ED_ParseEdict(const char *data, edict_t *ent)
 			continue;
 		}
 
-		ED_ParseField(keyname, com_token, ent);
+		ED_ParseField(keyname, com_token, ent, st);
 	}
 
 	if (!init)
@@ -1134,6 +1173,8 @@ static void G_PrecacheStartItems()
 	}
 }
 
+#include <map>
+
 /*
 ==============
 SpawnEntities
@@ -1144,6 +1185,8 @@ parsing textual entity definitions out of an ent file.
 */
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint)
 {
+	level.is_spawning = true;
+
 	// clear cached indices
 	cached_soundindex::clear_all();
 	cached_modelindex::clear_all();
@@ -1175,6 +1218,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
+	level.is_psx = strncmp(level.mapname, "psx/", 4) == 0;
 
 	level.coop_scale_players = 0;
 	level.coop_health_scaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
@@ -1209,7 +1253,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			ent = g_edicts;
 		else
 			ent = G_Spawn();
-		entities = ED_ParseEdict(entities, ent);
+
+		spawn_temp_t st {};
+
+		entities = ED_ParseEdict(entities, ent, st);
 
 		// remove things (except the world) from different skill levels or deathmatch
 		if (ent != g_edicts)
@@ -1232,7 +1279,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		ent->gravityVector[1] = 0.0;
 		ent->gravityVector[2] = -1.0;
 		// PGM
-		ED_CallSpawn(ent);
+
+		ED_CallSpawn(ent, st);
 
 		ent->s.renderfx |= RF_IR_VISIBLE; // PGM
 	}
@@ -1272,6 +1320,61 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	// ROGUE
 
 	setup_shadow_lights();
+
+	if (gi.cvar("g_print_spawned_entities", "0", CVAR_NOFLAGS)->integer)
+	{
+		std::map<std::string, int> entities;
+		int total_monster_health = 0;
+
+		for (size_t i = 0; i < globals.num_edicts; i++)
+		{
+			edict_t *e = &globals.edicts[i];
+
+			if (!e->inuse)
+				continue;
+			else if (!e->item && !e->monsterinfo.stand)
+				continue;
+
+			const char *cn = e->classname ? e->classname : "noclass";
+
+			if (auto f = entities.find(cn); f != entities.end())
+			{
+				f->second++;
+			}
+			else
+			{
+				entities.insert({ cn, 1 });
+			}
+
+			if (e->monsterinfo.stand)
+			{
+				total_monster_health += e->health;
+			}
+
+			if (e->item && strcmp(e->classname, e->item->classname))
+			{
+				cn = e->item->classname ? e->item->classname : "noclass";
+
+				if (auto f = entities.find(cn); f != entities.end())
+				{
+					f->second++;
+				}
+				else
+				{
+					entities.insert({ cn, 1 });
+				}
+			}
+		}
+
+		gi.Com_PrintFmt("total monster health: {}\n", total_monster_health);
+		
+		for (auto &e : entities)
+		{
+			gi.Com_PrintFmt("{}: {}\n", e.first, e.second);
+		}
+	}
+
+	level.is_spawning = false;
 }
 
 //===================================================================
@@ -1425,6 +1528,8 @@ void SP_worldspawn(edict_t *ent)
 	ent->s.modelindex = MODELINDEX_WORLD;
 	ent->gravity = 1.0f;
 
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (st.hub_map)
 	{
 		level.hub_map = true;
@@ -1514,11 +1619,47 @@ void SP_worldspawn(edict_t *ent)
 
 	gi.configstring(CS_MAXCLIENTS, G_Fmt("{}", game.maxclients).data());
 
-	if (level.is_n64 && !deathmatch->integer)
+	int override_physics = gi.cvar("g_override_physics_flags", "-1", CVAR_NOFLAGS)->integer;
+
+	if (override_physics == -1)
 	{
-		gi.configstring(CONFIG_N64_PHYSICS, "1");
-		pm_config.n64_physics = true;
+		if (deathmatch->integer && st.was_key_specified("physics_flags_dm"))
+			override_physics = st.physics_flags_dm;
+		else if (!deathmatch->integer && st.was_key_specified("physics_flags_sp"))
+			override_physics = st.physics_flags_sp;
 	}
+
+	if (override_physics >= 0)
+		pm_config.physics_flags = (physics_flags_t) override_physics;
+	else
+	{
+		if (level.is_n64)
+			pm_config.physics_flags |= PHYSICS_N64_MOVEMENT;
+
+		if (level.is_psx)
+			pm_config.physics_flags |= PHYSICS_PSX_MOVEMENT | PHYSICS_PSX_SCALE;
+
+		if (deathmatch->integer)
+			pm_config.physics_flags |= PHYSICS_DEATHMATCH;
+	}
+
+	gi.configstring(CONFIG_PHYSICS_FLAGS, G_Fmt("{}", (int) pm_config.physics_flags).data());
+	
+	level.primary_objective_string = "$g_primary_mission_objective";
+	level.secondary_objective_string = "$g_secondary_mission_objective";
+
+	if (st.primary_objective_string && st.primary_objective_string[0])
+		level.primary_objective_string = st.primary_objective_string;
+	if (st.secondary_objective_string && st.secondary_objective_string[0])
+		level.secondary_objective_string = st.secondary_objective_string;
+	
+	level.primary_objective_title = "$g_pc_primary_objective";
+	level.secondary_objective_title = "$g_pc_secondary_objective";
+
+	if (st.primary_objective_title && st.primary_objective_title[0])
+		level.primary_objective_title = st.primary_objective_title;
+	if (st.secondary_objective_title && st.secondary_objective_title[0])
+		level.secondary_objective_title = st.secondary_objective_title;
 
 	// statusbar prog
 	G_InitStatusbar();
@@ -1633,6 +1774,12 @@ void SP_worldspawn(edict_t *ent)
 	gi.soundindex("player/wade1.wav");
 	gi.soundindex("player/wade2.wav");
 	gi.soundindex("player/wade3.wav");
+
+#ifdef PSX_ASSETS
+	gi.soundindex("player/breathout1.wav");
+	gi.soundindex("player/breathout2.wav");
+	gi.soundindex("player/breathout3.wav");
+#endif
 
 	gi.soundindex("items/pkup.wav");   // bonus item pickup
 	gi.soundindex("world/land.wav");   // landing thud

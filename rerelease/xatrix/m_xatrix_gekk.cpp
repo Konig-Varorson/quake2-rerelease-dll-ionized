@@ -752,7 +752,7 @@ void reloogie(edict_t *self)
 		return;
 	}
 
-	if (self->enemy->health >= 0)
+	if (self->enemy->health > 0)
 		if (frandom() > 0.7f && (range_to(self, self->enemy) <= RANGE_NEAR))
 			M_SetAnimation(self, &gekk_move_spit);
 }
@@ -1584,6 +1584,8 @@ MONSTERINFO_BLOCKED(gekk_blocked) (edict_t *self, float dist) -> bool
  */
 void SP_monster_gekk(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

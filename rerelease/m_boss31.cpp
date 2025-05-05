@@ -571,6 +571,8 @@ void MakronPrecache();
  */
 void SP_monster_jorg(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

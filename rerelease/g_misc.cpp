@@ -83,7 +83,7 @@ TOUCH(gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_t
 	}
 }
 
-edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t type, float scale)
+edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t type, float scale, int frame)
 {
 	edict_t *gib;
 	vec3_t	 vd;
@@ -153,7 +153,7 @@ edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t typ
 		gib->s.skinnum = self->s.skinnum;
 	else
 		gib->s.skinnum = 0;
-	gib->s.frame = 0;
+	gib->s.frame = frame;
 	gib->mins = gib->maxs = {};
 	gib->s.sound = 0;
 	gib->monsterinfo.engine_sound = 0;
@@ -624,6 +624,8 @@ void G_LoadShadowLights()
 
 static void setup_dynamic_light(edict_t* self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	// [Sam-KEX] Shadow stuff
 	if (st.sl.data.radius > 0)
 	{
@@ -661,6 +663,8 @@ void SP_dynamic_light(edict_t* self)
 
 void SP_light(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	// no targeted lights in deathmatch, because they cause global messages
 	if((!self->targetname || (deathmatch->integer && !(self->spawnflags.has(SPAWNFLAG_LIGHT_ALLOW_IN_DM)))) && st.sl.data.radius == 0) // [Sam-KEX]
 	{
@@ -709,6 +713,7 @@ constexpr spawnflags_t SPAWNFLAG_WALL_TOGGLE = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WALL_START_ON = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WALL_ANIMATED = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WALL_ANIMATED_FAST = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SAFE_APPEAR = 32_spawnflag;
 
 USE(func_wall_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
@@ -717,7 +722,7 @@ USE(func_wall_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 		self->solid = SOLID_BSP;
 		self->svflags &= ~SVF_NOCLIENT;
 		gi.linkentity(self);
-		KillBox(self, false);
+		KillBox(self, false, MOD_TELEFRAG, true, self->spawnflags.has(SPAWNFLAG_SAFE_APPEAR));
 	}
 	else
 	{
@@ -1188,6 +1193,8 @@ THINK(barrel_start) (edict_t *self) -> void
 // PGM
 //=========
 
+constexpr spawnflags_t SPAWNFLAG_EXPLOBOX_NO_MOVE = 1_spawnflag;
+
 void SP_misc_explobox(edict_t *self)
 {
 	if (deathmatch->integer)
@@ -1220,7 +1227,10 @@ void SP_misc_explobox(edict_t *self)
 	self->takedamage = true;
 	self->flags |= FL_TRAP;
 
-	self->touch = barrel_touch;
+	if (!self->spawnflags.has(SPAWNFLAG_EXPLOBOX_NO_MOVE))
+		self->touch = barrel_touch;
+	else
+		self->flags |= FL_NO_KNOCKBACK;
 
 	// PGM - change so barrels will think and hence, blow up
 	self->think = barrel_start;
@@ -2133,6 +2143,8 @@ USE(misc_flare_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 
 void SP_misc_flare(edict_t* ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	ent->s.modelindex = 1;
 	ent->s.renderfx = RF_FLARE;
 	ent->solid = SOLID_NOT;
@@ -2352,6 +2364,8 @@ void SP_info_world_text( edict_t * self ) {
 		return;
 	} // not much point without something to print...
 
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->think = info_world_text_think;
 	self->use = info_world_text_use;
 	self->size[ 2 ] = st.radius ? st.radius : 0.2f;
@@ -2492,6 +2506,8 @@ void SetupMannequinModel( edict_t * self, const int32_t modelType, const char * 
  "radius"		- How much to scale the model in-game
 */
 void SP_misc_player_mannequin( edict_t * self ) {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_BBOX;
 	if (!st.was_key_specified("effects"))
@@ -2528,10 +2544,28 @@ void SP_misc_player_mannequin( edict_t * self ) {
 	gi.linkentity( self );
 }
 
+constexpr spawnflags_t SPAWNFLAG_MODEL_TOGGLE = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_MODEL_START_ON = 2_spawnflag;
+
+USE(misc_model_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
+{
+	self->svflags ^= SVF_NOCLIENT;
+}
+
 /*QUAKED misc_model (1 0 0) (-8 -8 -8) (8 8 8)
 */
 void SP_misc_model(edict_t *ent)
 {
-	gi.setmodel(ent, ent->model);
+	if (ent->model && ent->model[0])
+		gi.setmodel(ent, ent->model);
+
+	if (ent->spawnflags.has(SPAWNFLAG_MODEL_TOGGLE))
+	{
+		ent->use = misc_model_use;
+
+		if (!ent->spawnflags.has(SPAWNFLAG_MODEL_START_ON))
+			ent->svflags |= SVF_NOCLIENT;
+	}
+
 	gi.linkentity(ent);
 }

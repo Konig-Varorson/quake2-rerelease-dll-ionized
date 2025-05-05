@@ -2,6 +2,10 @@
 // Licensed under the GNU General Public License 2.0.
 #include "cg_local.h"
 
+#if defined(CHAR_WIDTH)
+#undef CHAR_WIDTH
+#endif
+
 constexpr int32_t STAT_MINUS      = 10;  // num frame for '-' stats digit
 constexpr const char *sb_nums[2][11] =
 {
@@ -36,7 +40,7 @@ static struct
         struct {
             char    text[24];
         } table_cells[6];
-    } table_rows[11]; // just enough to store 8 levels + header + total (+ one slack)
+    } table_rows[MAX_LEVELS_PER_UNIT + 1 + 1 + 1]; // just enough to store all levels + header + total (+ one slack)
 
     size_t column_widths[6];
     int32_t num_rows = 0;
@@ -146,7 +150,7 @@ static void CG_AddNotify(hud_data_t &data, const char *msg, bool is_chat)
             break;
 
     // none left, so expire the topmost one
-    if (i == max)
+    if (i >= max)
     {
         data.notify[0].time = 0;
         CG_Notify_CheckExpire(data);

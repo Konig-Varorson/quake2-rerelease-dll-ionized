@@ -1,4 +1,4 @@
-// Copyright (c) ZeniMax Media Inc.
+﻿// Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 // g_weapon.c
 
@@ -88,7 +88,7 @@ void P_AddWeaponKick(edict_t *ent, const vec3_t &origin, const vec3_t &angles)
 	ent->client->kick.time = level.time + ent->client->kick.total;
 }
 
-void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir)
+void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir, bool adjust_for_pierce)
 {
 	if (ent->client->pers.hand == LEFT_HANDED)
 		distance[1] *= -1;
@@ -111,27 +111,29 @@ void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t
 
 	trace_t tr = gi.traceline(eye_position, end, ent, mask);
 
-	// if the point was a monster & close to us, use raw forward
+	// if the point was damageable, use raw forward
 	// so railgun pierces properly
-	if (tr.startsolid || ((tr.contents & (CONTENTS_MONSTER | CONTENTS_PLAYER)) && (tr.fraction * 8192.f) < 128.f))
-		result_dir = forward;
-	else
+	if ((tr.startsolid || adjust_for_pierce) && tr.ent->takedamage)
 	{
-		end = tr.endpos;
-		result_dir = (end - result_start).normalized();
+		result_dir = forward;
+		return;
+	}
+
+	end = tr.endpos;
+	result_dir = (end - result_start).normalized();
 
 #if 0
-		// correction for blocked shots
-		trace_t eye_tr = gi.traceline(result_start, result_start + (result_dir * tr.fraction * 8192.f), ent, mask);
+	// correction for blocked shots.
+	// disabled because it looks weird.
+	trace_t eye_tr = gi.traceline(result_start, result_start + (result_dir * tr.fraction * 8192.f), ent, mask);
 
-		if ((eye_tr.endpos - tr.endpos).length() > 32.f)
-		{
-			result_start = eye_position;
-			result_dir = (end - result_start).normalized();
-			return;
-		}
-#endif
+	if ((eye_tr.endpos - tr.endpos).length() > 32.f)
+	{
+		result_start = eye_position;
+		result_dir = (end - result_start).normalized();
+		return;
 	}
+#endif
 }
 
 /*
@@ -266,7 +268,15 @@ bool Pickup_Weapon(edict_t *ent, edict_t *other)
 			if (G_CheckInfiniteAmmo(ammo))
 				Add_Ammo(other, ammo, 1000);
 			else
-				Add_Ammo(other, ammo, ammo->quantity);
+			{
+				// in PSX, we get double ammo with pickups
+				int given_quantity = ammo->quantity;
+
+				if (level.is_psx && deathmatch->integer)
+					given_quantity *= 2;
+
+				Add_Ammo(other, ammo, given_quantity);
+			}
 		}
 
 		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED_PLAYER))
@@ -459,8 +469,9 @@ inline gtime_t Weapon_AnimationTime(edict_t *ent)
 	if (g_quick_weapon_switch->integer && (gi.tick_rate >= 20) &&
 		(ent->client->weaponstate == WEAPON_ACTIVATING || ent->client->weaponstate == WEAPON_DROPPING))
 		ent->client->ps.gunrate = 20;
+
 	else
-		ent->client->ps.gunrate = 10;
+		ent->client->ps.gunrate = 10; //10
 
 	if (ent->client->ps.gunframe != 0 && (!(ent->client->pers.weapon->flags & IF_NO_HASTE) || ent->client->weaponstate != WEAPON_FIRING))
 	{
@@ -1246,7 +1257,6 @@ void weapon_grenadelauncher_fire(edict_t *ent)
 	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[0]), ent->client->v_angle[1], ent->client->v_angle[2] }, { 8, 0, -8 }, start, dir);
 
 	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
-
 	fire_grenade(ent, start, dir, damage, 600, 2.5_sec, radius, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), false);
 
 	gi.WriteByte(svc_muzzleflash);
@@ -1337,16 +1347,15 @@ void Blaster_Fire(edict_t *ent, const vec3_t &g_offset, int damage, bool hyper, 
 		P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	// let the regular blaster projectiles travel a bit faster because it is a completely useless gun
-	int speed = hyper ? 1500 : 1500; // Shart: Default value is 1000 for HB and 1500 for Blaster - HB buffed to 1500 
+	int speed = hyper ? 1500 : 1500; //default is 1000 for Hyper and 1500 for blaster
 
+	//Shart:  seperate blaster and HBfiring
 
-	// Shart: Splitting HB and Blaster fire functions so that HB fires plasma 
-	
 	if (hyper)
 		fire_blaster2(ent, start, dir, damage, speed, effect, hyper ? MOD_HYPERBLASTER : MOD_BLASTER);
 	else
 		fire_blaster(ent, start, dir, damage, speed, effect, hyper ? MOD_HYPERBLASTER : MOD_BLASTER);
-	
+
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -1362,14 +1371,10 @@ void Blaster_Fire(edict_t *ent, const vec3_t &g_offset, int damage, bool hyper, 
 
 void Weapon_Blaster_Fire(edict_t *ent)
 {
-	// give the blaster 15 across the board instead of just in dm
+	// give the blaster 15 base damage across the board instead of just in dm
 	int damage = 15;
-	Blaster_Fire(ent, vec3_origin, damage, false, EF_BLASTER);
-
-	//Shart: Nicco's Blaster MK II code
-	/*
 	constexpr int damage_multiplier = 4;
-	
+
 	if (ent->client->blaster_ready_time != 0_sec && level.time < ent->client->blaster_ready_time)
 	{
 		while (ent->client->ps.gunframe < 10)
@@ -1442,17 +1447,13 @@ void Weapon_Blaster_Fire(edict_t *ent)
 			return;
 		}
 	}
-	*/
 }
 
 void Weapon_Blaster(edict_t *ent)
 {
 	constexpr int pause_frames[] = { 19, 32, 0 };
-	
-	//Shart: Nicco's Blaster MK II code removes fire_frames
-	constexpr int fire_frames[] = { 5, 0 };
 
-	Weapon_Generic(ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
+	Weapon_Repeating(ent, 4, 8, 52, 55, pause_frames, Weapon_Blaster_Fire);
 }
 
 void Weapon_HyperBlaster_Fire(edict_t *ent)
@@ -1506,8 +1507,8 @@ void Weapon_HyperBlaster_Fire(edict_t *ent)
 			if (deathmatch->integer)
 				damage = 15;
 			else
-				damage = 20; // Shart: Default is 20
-			Blaster_Fire(ent, offset, damage, true, (ent->client->ps.gunframe % 4) ? EF_NONE : EF_HYPERBLASTER);
+				damage = 20; // Default is 20
+			Blaster_Fire(ent, offset, damage, true, ((ent->client->ps.gunframe - 6) % 4) == 0 ? EF_HYPERBLASTER : EF_NONE);
 			Weapon_PowerupSound(ent);
 
 			G_RemoveAmmo(ent);
@@ -1596,7 +1597,7 @@ void Machinegun_Fire(edict_t *ent)
 	// get start / end positions
 	vec3_t start, dir;
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir, true);
 	G_LagCompensate(ent, start, dir);
 	fire_bullet(ent, start, dir, damage, kick, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MOD_MACHINEGUN);
 	G_UnLagCompensate();
@@ -1725,7 +1726,7 @@ void Chaingun_Fire(edict_t *ent)
 	P_AddWeaponKick(ent, kick_origin, kick_angles);
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir, true);
 
 	G_LagCompensate(ent, start, dir);
 	for (i = 0; i < shots; i++)
@@ -1734,7 +1735,7 @@ void Chaingun_Fire(edict_t *ent)
 		// Paril: kill sideways angle on hitscan
 		r = crandom() * 4;
 		u = crandom() * 4;
-		P_ProjectSource(ent, ent->client->v_angle, { 0, r, u + -8 }, start, dir);
+		P_ProjectSource(ent, ent->client->v_angle, { 0, r, u + -8 }, start, dir, true);
 
 		fire_bullet(ent, start, dir, damage, kick, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MOD_CHAINGUN);
 	}
@@ -1775,7 +1776,7 @@ void weapon_shotgun_fire(edict_t *ent)
 
 	vec3_t start, dir;
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir, true);
 
 	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -2.f, 0.f, 0.f });
 
@@ -1831,10 +1832,10 @@ void weapon_supershotgun_fire(edict_t *ent)
 	v[YAW] = ent->client->v_angle[YAW] - 5;
 	v[ROLL] = ent->client->v_angle[ROLL];
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir, true);
 	fire_shotgun(ent, start, dir, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 	v[YAW] = ent->client->v_angle[YAW] + 5;
-	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir, true);
 	fire_shotgun(ent, start, dir, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 	G_UnLagCompensate();
 
@@ -1856,7 +1857,8 @@ void Weapon_SuperShotgun(edict_t *ent)
 	constexpr int pause_frames[] = { 29, 42, 57, 0 };
 	constexpr int fire_frames[] = { 7, 0 };
 
-	Weapon_Generic(ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
+	Weapon_Generic(ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire); // default: 6, 17, 57, 61,
+
 }
 
 /*
@@ -1890,7 +1892,7 @@ void weapon_railgun_fire(edict_t *ent)
 	}
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 7, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 7, -8 }, start, dir, true);
 	G_LagCompensate(ent, start, dir);
 	fire_rail(ent, start, dir, damage, kick);
 	G_UnLagCompensate();

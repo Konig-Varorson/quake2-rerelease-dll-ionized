@@ -724,6 +724,8 @@ MONSTERINFO_DUCK(brain_duck) (edict_t *self, gtime_t eta) -> bool
  */
 void SP_monster_brain(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

@@ -85,11 +85,11 @@ THINK(stationarymonster_start_go) (edict_t *self) -> void
 		stationarymonster_triggered_start(self);
 }
 
-void stationarymonster_start(edict_t *self)
+void stationarymonster_start(edict_t *self, const spawn_temp_t &st)
 {
 	self->flags |= FL_STATIONARY;
 	self->think = stationarymonster_start_go;
-	monster_start(self);
+	monster_start(self, st);
 
 	// fix viewheight
 	self->viewheight = 0;

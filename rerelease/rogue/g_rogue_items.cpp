@@ -204,11 +204,16 @@ USE(Item_TriggeredSpawn) (edict_t *self, edict_t *other, edict_t *activator) -> 
 		self->velocity = forward * 100;
 		self->velocity[2] = 300;
 	}
+	
+	if (!self->spawnflags.has(SPAWNFLAG_ITEM_NO_DROP))
+	{
+		if (self->item->id != IT_KEY_POWER_CUBE && self->item->id != IT_KEY_EXPLOSIVE_CHARGES) // leave them be on key_power_cube..
+			self->spawnflags &= SPAWNFLAG_ITEM_NO_TOUCH;
+	}
+	else
+		self->spawnflags &= ~SPAWNFLAG_ITEM_TRIGGER_SPAWN;
 
-	if (self->item->id != IT_KEY_POWER_CUBE && self->item->id != IT_KEY_EXPLOSIVE_CHARGES) // leave them be on key_power_cube..
-		self->spawnflags &= SPAWNFLAG_ITEM_NO_TOUCH;
-
-	droptofloor(self);
+    droptofloor(self);
 }
 
 //=================

@@ -55,51 +55,14 @@ THINK(bot_goal_check) (edict_t *self) -> void
 	self->nextthink = level.time + 1_ms;
 }
 
-void ED_CallSpawn(edict_t *ent);
+edict_t *healFindMonster(edict_t *self, float radius);
 
 edict_t *fixbot_FindDeadMonster(edict_t *self)
 {
-	edict_t *ent = nullptr;
-	edict_t *best = nullptr;
-
-	while ((ent = findradius(ent, self->s.origin, 1024)) != nullptr)
-	{
-		if (ent == self)
-			continue;
-		if (!(ent->svflags & SVF_MONSTER))
-			continue;
-		if (ent->monsterinfo.aiflags & AI_GOOD_GUY)
-			continue;
-		// check to make sure we haven't bailed on this guy already
-		if ((ent->monsterinfo.badMedic1 == self) || (ent->monsterinfo.badMedic2 == self))
-			continue;
-		if (ent->monsterinfo.healer)
-			// FIXME - this is correcting a bug that is somewhere else
-			// if the healer is a monster, and it's in medic mode .. continue .. otherwise
-			//   we will override the healer, if it passes all the other tests
-			if ((ent->monsterinfo.healer->inuse) && (ent->monsterinfo.healer->health > 0) &&
-				(ent->monsterinfo.healer->svflags & SVF_MONSTER) && (ent->monsterinfo.healer->monsterinfo.aiflags & AI_MEDIC))
-				continue;
-		if (ent->health > 0)
-			continue;
-		if ((ent->nextthink) && (ent->think != monster_dead_think))
-			continue;
-		if (!visible(self, ent))
-			continue;
-		if (!best)
-		{
-			best = ent;
-			continue;
-		}
-		if (ent->max_health <= best->max_health)
-			continue;
-		best = ent;
-	}
-
-	return best;
+	return healFindMonster(self, 1024);
 }
 
-static void fixbot_set_fly_parameters(edict_t *self, bool heal, bool weld)
+static void fixbot_set_fly_parameters(edict_t *self, bool heal, bool weld, bool roam)
 {
 	self->monsterinfo.fly_position_time = 0_sec;
 	self->monsterinfo.fly_acceleration = 5.f;
@@ -112,10 +75,10 @@ static void fixbot_set_fly_parameters(edict_t *self, bool heal, bool weld)
 		self->monsterinfo.fly_max_distance = 100.f;
 		self->monsterinfo.fly_thrusters = true;
 	}
-	else if (weld)
+	else if (weld || roam)
 	{
-		self->monsterinfo.fly_min_distance = 24.f;
-		self->monsterinfo.fly_max_distance = 24.f;
+		self->monsterinfo.fly_min_distance = 16.f;
+		self->monsterinfo.fly_max_distance = 16.f;
 	}
 	else
 	{
@@ -139,7 +102,7 @@ int fixbot_search(edict_t *self)
 			self->enemy->monsterinfo.healer = self;
 			self->monsterinfo.aiflags |= AI_MEDIC;
 			FoundTarget(self);
-			fixbot_set_fly_parameters(self, true, false);
+			fixbot_set_fly_parameters(self, true, false, false);
 			return (1);
 		}
 	}
@@ -204,33 +167,37 @@ void takeoff_goal(edict_t *self)
 	M_SetAnimation(self, &fixbot_move_takeoff);
 }
 
+
+constexpr spawnflags_t SPAWNFLAG_FIXBOT_FLAGS = SPAWNFLAG_FIXBOT_FIXIT | SPAWNFLAG_FIXBOT_TAKEOFF | SPAWNFLAG_FIXBOT_LANDING | SPAWNFLAG_FIXBOT_WORKING;
+
 void change_to_roam(edict_t *self)
 {
 
 	if (fixbot_search(self))
 		return;
 
+	fixbot_set_fly_parameters(self, false, false, true);
 	M_SetAnimation(self, &fixbot_move_roamgoal);
 
 	if (self->spawnflags.has(SPAWNFLAG_FIXBOT_LANDING))
 	{
 		landing_goal(self);
 		M_SetAnimation(self, &fixbot_move_landing);
-		self->spawnflags &= ~SPAWNFLAG_FIXBOT_LANDING;
-		self->spawnflags = SPAWNFLAG_FIXBOT_WORKING;
+		self->spawnflags &= ~SPAWNFLAG_FIXBOT_FLAGS;
+		self->spawnflags |= SPAWNFLAG_FIXBOT_WORKING;
 	}
 	if (self->spawnflags.has(SPAWNFLAG_FIXBOT_TAKEOFF))
 	{
 		takeoff_goal(self);
 		M_SetAnimation(self, &fixbot_move_takeoff);
-		self->spawnflags &= ~SPAWNFLAG_FIXBOT_TAKEOFF;
-		self->spawnflags = SPAWNFLAG_FIXBOT_WORKING;
+		self->spawnflags &= ~SPAWNFLAG_FIXBOT_FLAGS;
+		self->spawnflags |= SPAWNFLAG_FIXBOT_WORKING;
 	}
 	if (self->spawnflags.has(SPAWNFLAG_FIXBOT_FIXIT))
 	{
 		M_SetAnimation(self, &fixbot_move_roamgoal);
-		self->spawnflags &= ~SPAWNFLAG_FIXBOT_FIXIT;
-		self->spawnflags = SPAWNFLAG_FIXBOT_WORKING;
+		self->spawnflags &= ~SPAWNFLAG_FIXBOT_FLAGS;
+		self->spawnflags |= SPAWNFLAG_FIXBOT_WORKING;
 	}
 	if (!self->spawnflags)
 	{
@@ -321,9 +288,9 @@ void use_scanner(edict_t *self)
 					vec = self->s.origin - self->goalentity->s.origin;
 					len = vec.normalize();
 
-					fixbot_set_fly_parameters(self, false, true);
+					fixbot_set_fly_parameters(self, false, true, false);
 
-					if (len < 32)
+					if (len < 86.0f)
 					{
 						M_SetAnimation(self, &fixbot_move_weld_start);
 						return;
@@ -343,7 +310,7 @@ void use_scanner(edict_t *self)
 	vec = self->s.origin - self->goalentity->s.origin;
 	len = vec.length();
 
-	if (len < 32)
+	if (len < 86.0f)
 	{
 		if (strcmp(self->goalentity->classname, "object_repair") == 0)
 		{
@@ -357,27 +324,6 @@ void use_scanner(edict_t *self)
 			M_SetAnimation(self, &fixbot_move_stand);
 		}
 		return;
-	}
-
-	vec = self->s.origin - self->s.old_origin;
-	len = vec.length();
-
-	/*
-	  bot is stuck get new goalentity
-	*/
-	if (len == 0)
-	{
-		if (strcmp(self->goalentity->classname, "object_repair") == 0)
-		{
-			M_SetAnimation(self, &fixbot_move_stand);
-		}
-		else
-		{
-			self->goalentity->nextthink = level.time + 100_ms;
-			self->goalentity->think = G_FreeEdict;
-			self->goalentity = self->enemy = nullptr;
-			M_SetAnimation(self, &fixbot_move_stand);
-		}
 	}
 }
 
@@ -919,7 +865,8 @@ mframe_t fixbot_frames_attack1[] = {
 MMOVE_T(fixbot_move_attack1) = { FRAME_shoot_01, FRAME_shoot_06, fixbot_frames_attack1, nullptr };
 #endif
 
-void abortHeal(edict_t *self, bool change_frame, bool gib, bool mark);
+void abortHeal(edict_t *self, bool gib, bool mark);
+bool finishHeal(edict_t *self);
 
 PRETHINK(fixbot_laser_update) (edict_t *laser) -> void
 {
@@ -955,114 +902,33 @@ void fixbot_fire_laser(edict_t *self)
 		return;
 	}
 
-	monster_fire_dabeam(self, -1, false, fixbot_laser_update);
+	// fire the beam until they're within res range
+	bool firedLaser = false;
 
-	if (self->enemy->health > (self->enemy->mass / 10))
+	if (self->enemy->health < (self->enemy->mass / 10))
 	{
-		vec3_t maxs;
-		self->enemy->spawnflags = SPAWNFLAG_NONE;
-		self->enemy->monsterinfo.aiflags &= AI_STINKY | AI_SPAWNED_MASK;
-		self->enemy->target = nullptr;
-		self->enemy->targetname = nullptr;
-		self->enemy->combattarget = nullptr;
-		self->enemy->deathtarget = nullptr;
-		self->enemy->healthtarget = nullptr;
-		self->enemy->itemtarget = nullptr;
-		self->enemy->monsterinfo.healer = self;
+		firedLaser = true;
+		monster_fire_dabeam(self, -1, false, fixbot_laser_update);
+	}
 
-		maxs = self->enemy->maxs;
-		maxs[2] += 48; // compensate for change when they die
-
-		trace_t tr = gi.trace(self->enemy->s.origin, self->enemy->mins, maxs, self->enemy->s.origin, self->enemy, MASK_MONSTERSOLID);
-		if (tr.startsolid || tr.allsolid)
-		{
-			abortHeal(self, false, true, false);
-			return;
-		}
-		else if (tr.ent != world)
-		{
-			abortHeal(self, false, true, false);
-			return;
-		}
+	if (self->enemy->health >= (self->enemy->mass / 10))
+	{
+		// we have enough health now; if we didn't fire
+		// a laser, just make a fake one
+		if (!firedLaser)
+			monster_fire_dabeam(self, 0, false, fixbot_laser_update);
 		else
+			self->monsterinfo.fly_position_time = {};
+		
+		// change our fly parameter slightly so we back away
+		self->monsterinfo.fly_min_distance = self->monsterinfo.fly_max_distance = 200.f;
+
+		// don't revive if we are too close
+		if ((self->s.origin - self->enemy->s.origin).length() > 86.f)
 		{
-			self->enemy->monsterinfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT;
-
-			// backup & restore health stuff, because of multipliers
-			int32_t old_max_health = self->enemy->max_health;
-			item_id_t old_power_armor_type = self->enemy->monsterinfo.initial_power_armor_type;
-			int32_t old_power_armor_power = self->enemy->monsterinfo.max_power_armor_power;
-			int32_t old_base_health = self->enemy->monsterinfo.base_health;
-			int32_t old_health_scaling = self->enemy->monsterinfo.health_scaling;
-			auto reinforcements = self->enemy->monsterinfo.reinforcements;
-			int32_t monster_slots = self->enemy->monsterinfo.monster_slots;
-			int32_t monster_used = self->enemy->monsterinfo.monster_used;
-			int32_t old_gib_health = self->enemy->gib_health;
-
-			st = {};
-			st.keys_specified.emplace("reinforcements");
-			st.reinforcements = "";
-
-			ED_CallSpawn(self->enemy);
-
-			self->enemy->monsterinfo.reinforcements = reinforcements;
-			self->enemy->monsterinfo.monster_slots = monster_slots;
-			self->enemy->monsterinfo.monster_used = monster_used;
-
-			self->enemy->gib_health = old_gib_health / 2;
-			self->enemy->health = self->enemy->max_health = old_max_health;
-			self->enemy->monsterinfo.power_armor_power = self->enemy->monsterinfo.max_power_armor_power = old_power_armor_power;
-			self->enemy->monsterinfo.power_armor_type = self->enemy->monsterinfo.initial_power_armor_type = old_power_armor_type;
-			self->enemy->monsterinfo.base_health = old_base_health;
-			self->enemy->monsterinfo.health_scaling = old_health_scaling;
-
-			if (self->enemy->monsterinfo.setskin)
-				self->enemy->monsterinfo.setskin(self->enemy);
-
-			if (self->enemy->think)
-			{
-				self->enemy->nextthink = level.time;
-				self->enemy->think(self->enemy);
-			}
-			self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
-			self->enemy->monsterinfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT;
-			// turn off flies
-			self->enemy->s.effects &= ~EF_FLIES;
-			self->enemy->monsterinfo.healer = nullptr;
-
-			// clean up target, if we have one and it's legit
-			if (self->enemy && self->enemy->inuse)
-			{
-				cleanupHealTarget(self->enemy);
-
-				if ((self->oldenemy) && (self->oldenemy->inuse) && (self->oldenemy->health > 0))
-				{
-					self->enemy->enemy = self->oldenemy;
-					FoundTarget(self->enemy);
-				}
-				else
-				{
-					self->enemy->enemy = nullptr;
-					if (!FindTarget(self->enemy))
-					{
-						// no valid enemy, so stop acting
-						self->enemy->monsterinfo.pausetime = HOLD_FOREVER;
-						self->enemy->monsterinfo.stand(self->enemy);
-					}
-					self->enemy = nullptr;
-					self->oldenemy = nullptr;
-					if (!FindTarget(self))
-					{
-						// no valid enemy, so stop acting
-						self->monsterinfo.pausetime = HOLD_FOREVER;
-						self->monsterinfo.stand(self);
-						return;
-					}
-				}
-			}
+			finishHeal(self);
+			M_SetAnimation(self, &fixbot_move_stand);
 		}
-
-		M_SetAnimation(self, &fixbot_move_stand);
 	}
 	else
 		self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;
@@ -1132,7 +998,10 @@ void weldstate(edict_t *self)
 			M_SetAnimation(self, &fixbot_move_weld_end);
 		}
 		else
-			self->goalentity->health -= 10;
+		{
+			if (!(self->spawnflags.has(SPAWNFLAG_MONSTER_SCENIC)))
+				self->goalentity->health -= 10;
+		}
 	}
 	else
 	{
@@ -1205,6 +1074,14 @@ void fixbot_fire_welder(edict_t *self)
 
 	if (!self->enemy)
 		return;
+
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_SCENIC))
+	{
+		if (self->timestamp >= level.time)
+			return;
+
+		self->timestamp = level.time + random_time(450_ms, 1500_ms);
+	}
 
 	vec[0] = 24.0;
 	vec[1] = -0.8f;
@@ -1315,7 +1192,7 @@ MONSTERINFO_ATTACK(fixbot_attack) (edict_t *self) -> void
 	}
 	else
 	{
-		fixbot_set_fly_parameters(self, false, false);
+		fixbot_set_fly_parameters(self, false, false, false);
 		M_SetAnimation(self, &fixbot_move_attack2);
 	}
 }
@@ -1325,7 +1202,7 @@ PAIN(fixbot_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 	if (level.time < self->pain_debounce_time)
 		return;
 
-	fixbot_set_fly_parameters(self, false, false);
+	fixbot_set_fly_parameters(self, false, false, false);
 	self->pain_debounce_time = level.time + 3_sec;
 	gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 
@@ -1336,7 +1213,7 @@ PAIN(fixbot_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 	else
 		M_SetAnimation(self, &fixbot_move_paina);
 
-	abortHeal(self, false, false, false);
+	abortHeal(self, false, false);
 }
 
 void fixbot_dead(edict_t *self)
@@ -1361,6 +1238,8 @@ DIE(fixbot_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
  */
 void SP_monster_fixbot(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -1397,7 +1276,7 @@ void SP_monster_fixbot(edict_t *self)
 	M_SetAnimation(self, &fixbot_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
-	fixbot_set_fly_parameters(self, false, false);
+	fixbot_set_fly_parameters(self, false, false, false);
 
 	flymonster_start(self);
 }

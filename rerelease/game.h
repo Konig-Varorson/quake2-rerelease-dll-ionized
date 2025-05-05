@@ -100,13 +100,15 @@ using bit_t = std::conditional_t<n >= 32, uint64_t, uint32_t>;
 template<size_t n>
 constexpr bit_t<n> bit_v = 1ull << n;
 
-#if defined(KEX_Q2GAME_EXPORTS)
-    #define Q2GAME_API extern "C" __declspec( dllexport )
-#elif defined(KEX_Q2GAME_IMPORTS)
-    #define Q2GAME_API extern "C" __declspec( dllimport )
+#if defined(_WIN32)
+    #define Q2DLL_EXPORT   __declspec( dllexport )
+#elif defined(__linux__)
+    #define Q2DLL_EXPORT   __attribute__((visibility("default")))
 #else
-    #define Q2GAME_API
+    #define Q2DLL_EXPORT
 #endif
+
+#define Q2GAME_API extern "C" Q2DLL_EXPORT
 
 // game.h -- game dll information visible to server
 // PARIL_NEW_API - value likely not used by any other Q2-esque engine in the wild
@@ -388,6 +390,7 @@ enum pmflags_t : uint16_t
     PMF_NO_ANGULAR_PREDICTION = bit_v<8>, // temporary disables angular prediction
     PMF_IGNORE_PLAYER_COLLISION = bit_v<9>, // don't collide with other players
     PMF_TIME_TRICK = bit_v<10>, // pm_time is trick jump time
+    PMF_NO_GROUND_SEEK = bit_v<11>, // temporarily disable ground seeking
 };
 
 MAKE_ENUM_BITFLAGS(pmflags_t);
@@ -612,6 +615,7 @@ enum renderfx_t : uint32_t
 MAKE_ENUM_BITFLAGS(renderfx_t);
 
 constexpr renderfx_t RF_BEAM_LIGHTNING = RF_BEAM | RF_GLOW; // [Paril-KEX] make a lightning bolt instead of a laser
+//constexpr renderfx_t RF_BEAM_REACTOR = RF_BEAM | RF_USE_DISGUISE; // [Paril-KEX] make reactor FX, like PSX version
 
 MAKE_ENUM_BITFLAGS(refdef_flags_t);
 

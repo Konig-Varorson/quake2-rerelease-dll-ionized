@@ -23,6 +23,17 @@ static cached_soundindex sound_pain3;
 static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 
+// he fly
+static void boss2_set_fly_parameters(edict_t *self, bool firing)
+{
+	self->monsterinfo.fly_thrusters = false;
+	self->monsterinfo.fly_acceleration = firing ? 1.5f : 3.f;
+	self->monsterinfo.fly_speed = firing ? 10.f : 80.f;
+	// BOSS2 stays far-ish away if he's in the open
+	self->monsterinfo.fly_min_distance = 400.f;
+	self->monsterinfo.fly_max_distance = 600.f;
+}
+
 MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void
 {
 	if (frandom() < 0.5f)
@@ -462,6 +473,8 @@ MONSTERINFO_STAND(boss2_stand) (edict_t *self) -> void
 
 MONSTERINFO_RUN(boss2_run) (edict_t *self) -> void
 {
+	boss2_set_fly_parameters(self, false);
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &boss2_move_stand);
 	else
@@ -485,6 +498,8 @@ MONSTERINFO_ATTACK(boss2_attack) (edict_t *self) -> void
 		M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_hb : &boss2_move_attack_pre_mg);
 	else
 		M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_rocket2 : &boss2_move_attack_rocket);
+
+	boss2_set_fly_parameters(self, true);
 }
 
 void boss2_attack_mg(edict_t *self)
@@ -617,6 +632,8 @@ MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool
  */
 void SP_monster_boss2(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;
@@ -657,7 +674,7 @@ void SP_monster_boss2(edict_t *self)
 
 	self->health = 2000 * st.health_multiplier;
 	self->gib_health = -200;
-	self->mass = 1000;
+	self->mass = 2000;
 
 	self->yaw_speed = 50;
 
@@ -680,6 +697,9 @@ void SP_monster_boss2(edict_t *self)
 
 	// [Paril-KEX]
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
+
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
+	boss2_set_fly_parameters(self, false);
 
 	flymonster_start(self);
 }

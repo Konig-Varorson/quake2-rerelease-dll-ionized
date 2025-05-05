@@ -22,8 +22,8 @@ static void InitCGame()
 
 	cgame_init_time = cgi.CL_ClientRealTime();
 
-	pm_config.n64_physics = !!atoi(cgi.get_configstring(CONFIG_N64_PHYSICS));
 	pm_config.airaccel = atoi(cgi.get_configstring(CS_AIRACCEL));
+	pm_config.physics_flags = (physics_flags_t) atoi(cgi.get_configstring(CONFIG_PHYSICS_FLAGS));
 }
 
 static void ShutdownCGame()
@@ -66,8 +66,8 @@ int16_t CG_GetHitMarkerDamage(const player_state_t *ps)
 
 static void CG_ParseConfigString(int32_t i, const char *s)
 {
-	if (i == CONFIG_N64_PHYSICS)
-		pm_config.n64_physics = !!atoi(s);
+	if (i == CONFIG_PHYSICS_FLAGS)
+		pm_config.physics_flags = (physics_flags_t) atoi(s);
 	else if (i == CS_AIRACCEL)
 		pm_config.airaccel = atoi(s);
 }

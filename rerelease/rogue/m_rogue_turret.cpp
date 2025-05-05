@@ -729,7 +729,7 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void
 
 	gi.linkentity(ent);
 
-	stationarymonster_start(ent);
+	stationarymonster_start(ent, spawn_temp_t::empty);
 
 	if (ent->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
 	{
@@ -916,6 +916,7 @@ When activated, wall units move 32 units in the direction they're facing.
 */
 void SP_monster_turret(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	int angle;
 
 	if ( !M_AllowSpawn( self ) ) {
@@ -1030,7 +1031,7 @@ void SP_monster_turret(edict_t *self)
 	}
 	else
 	{
-		stationarymonster_start(self);
+		stationarymonster_start(self, ED_GetSpawnTemp());
 	}
 
 	if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))

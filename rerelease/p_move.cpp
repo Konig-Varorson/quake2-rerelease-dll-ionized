@@ -6,6 +6,36 @@
 #define GAME_INCLUDE
 #include "bg_local.h"
 
+// In PSX SP, step-ups aren't allowed
+inline bool PM_AllowStepUp()
+{
+	if (pm_config.physics_flags & PHYSICS_PSX_MOVEMENT)
+		return !!(pm_config.physics_flags & PHYSICS_DEATHMATCH);
+
+	return true;
+}
+
+template<typename T>
+inline T PM_ApplyPSXScalar(T v, float scalar = PSX_PHYSICS_SCALAR)
+{
+	if (pm_config.physics_flags & PHYSICS_PSX_SCALE)
+		return static_cast<T>(v * scalar);
+
+	return v;
+}
+
+// PSX / N64 can't trick-jump except in DM
+inline bool PM_AllowTrickJump()
+{
+	return !(pm_config.physics_flags & (PHYSICS_N64_MOVEMENT | PHYSICS_PSX_MOVEMENT)) || (pm_config.physics_flags & PHYSICS_DEATHMATCH);
+}
+
+// PSX / N64 (single player) require landing before a next jump
+inline bool PM_NeedsLandTime()
+{
+	return (pm_config.physics_flags & (PHYSICS_N64_MOVEMENT | PHYSICS_PSX_MOVEMENT)) && !(pm_config.physics_flags & PHYSICS_DEATHMATCH);
+}
+
 // [Paril-KEX] generic code to detect & fix a stuck object
 stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &own_mins, const vec3_t &own_maxs, std::function<stuck_object_trace_fn_t> trace)
 {
@@ -458,6 +488,13 @@ void PM_StepSlideMove()
 
 	PM_StepSlideMove_();
 
+	if (!PM_AllowStepUp())
+	{
+		// no step up
+		if (!(pm->s.pm_flags & PMF_ON_GROUND))
+			return;
+	}
+
 	down_o = pml.origin;
 	down_v = pml.velocity;
 
@@ -563,14 +600,16 @@ void PM_Friction()
 	// apply ground friction
 	if ((pm->groundentity && pml.groundsurface && !(pml.groundsurface->flags & SURF_SLICK)) || (pm->s.pm_flags & PMF_ON_LADDER))
 	{
-		friction = pm_friction;
-		control = speed < pm_stopspeed ? pm_stopspeed : speed;
+		friction = PM_ApplyPSXScalar(pm_friction);
+		control = speed < PM_ApplyPSXScalar(pm_stopspeed) ? PM_ApplyPSXScalar(pm_stopspeed) : speed;
 		drop += control * friction * pml.frametime;
 	}
 
 	// apply water friction
 	if (pm->waterlevel && !(pm->s.pm_flags & PMF_ON_LADDER))
-		drop += speed * pm_waterfriction * (float) pm->waterlevel * pml.frametime;
+	{
+		drop += speed * PM_ApplyPSXScalar(pm_waterfriction) * (float) pm->waterlevel * pml.frametime;
+	}
 
 	// scale the velocity
 	newspeed = speed - drop;
@@ -594,37 +633,35 @@ Handles user intended acceleration
 */
 void PM_Accelerate(const vec3_t &wishdir, float wishspeed, float accel)
 {
-	int	  i;
-	float addspeed, accelspeed, currentspeed;
+	wishspeed = PM_ApplyPSXScalar(wishspeed);
+	accel = PM_ApplyPSXScalar(accel);
 
-	currentspeed = pml.velocity.dot(wishdir);
-	addspeed = wishspeed - currentspeed;
+	float currentspeed = pml.velocity.dot(wishdir);
+	float addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0)
 		return;
-	accelspeed = accel * pml.frametime * wishspeed;
+	float accelspeed = accel * pml.frametime * wishspeed;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
-	for (i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		pml.velocity[i] += accelspeed * wishdir[i];
 }
 
 void PM_AirAccelerate(const vec3_t &wishdir, float wishspeed, float accel)
 {
-	int	  i;
-	float addspeed, accelspeed, currentspeed, wishspd = wishspeed;
-
+	float wishspd = wishspeed;
 	if (wishspd > 30)
 		wishspd = 30;
-	currentspeed = pml.velocity.dot(wishdir);
-	addspeed = wishspd - currentspeed;
+	float currentspeed = pml.velocity.dot(wishdir);
+	float addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
-	accelspeed = accel * wishspeed * pml.frametime;
+	float accelspeed = accel * wishspeed * pml.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
-	for (i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		pml.velocity[i] += accelspeed * wishdir[i];
 }
 
@@ -825,10 +862,12 @@ void PM_WaterMove()
 	}
 	wishspeed *= 0.5f;
 
-	if ((pm->s.pm_flags & PMF_DUCKED) && wishspeed > pm_duckspeed)
+	float duckspeed = PM_ApplyPSXScalar(pm_duckspeed, 1.25f);
+
+	if ((pm->s.pm_flags & PMF_DUCKED) && wishspeed > duckspeed)
 	{
-		wishvel *= pm_duckspeed / wishspeed;
-		wishspeed = pm_duckspeed;
+		wishvel *= duckspeed / wishspeed;
+		wishspeed = duckspeed;
 	}
 
 	PM_Accelerate(wishdir, wishspeed, pm_wateraccelerate);
@@ -863,10 +902,12 @@ void PM_AirMove()
 	wishdir = wishvel;
 	wishspeed = wishdir.normalize();
 
+	float duckspeed = PM_ApplyPSXScalar(pm_duckspeed, 1.25f);
+
 	//
 	// clamp to server defined max speed
 	//
-	maxspeed = (pm->s.pm_flags & PMF_DUCKED) ? pm_duckspeed : pm_maxspeed;
+	maxspeed = (pm->s.pm_flags & PMF_DUCKED) ? duckspeed : pm_maxspeed;
 
 	if (wishspeed > maxspeed)
 	{
@@ -978,7 +1019,7 @@ void PM_CatagorizePosition()
 	point[1] = pml.origin[1];
 	point[2] = pml.origin[2] - 0.25f;
 
-	if (pml.velocity[2] > 180 || pm->s.pm_type == PM_GRAPPLE) //!!ZOID changed from 100 to 180 (ramp accel)
+	if ((pm->s.pm_flags & PMF_NO_GROUND_SEEK) || pml.velocity[2] > 180 || pm->s.pm_type == PM_GRAPPLE) //!!ZOID changed from 100 to 180 (ramp accel)
 	{
 		pm->s.pm_flags &= ~PMF_ON_GROUND;
 		pm->groundentity = nullptr;
@@ -1025,7 +1066,7 @@ void PM_CatagorizePosition()
 				// just hit the ground
 
 				// [Paril-KEX]
-				if (!pm_config.n64_physics && pml.velocity[2] >= 100.f && pm->groundplane.normal[2] >= 0.9f && !(pm->s.pm_flags & PMF_DUCKED))
+				if (PM_AllowTrickJump() && pml.velocity[2] >= 100.f && pm->groundplane.normal[2] >= 0.9f && !(pm->s.pm_flags & PMF_DUCKED))
 				{
 					pm->s.pm_flags |= PMF_TIME_TRICK;
 					pm->s.pm_time = 64;
@@ -1035,14 +1076,14 @@ void PM_CatagorizePosition()
 				vec3_t clipped_velocity;
 				PM_ClipVelocity(pml.velocity, pm->groundplane.normal, clipped_velocity, 1.01f);
 
-				pm->impact_delta = pml.start_velocity[2] - clipped_velocity[2];
+				pm->impact_delta = PM_ApplyPSXScalar(pml.start_velocity[2] - clipped_velocity[2], 1.f / PSX_PHYSICS_SCALAR);
 
 				pm->s.pm_flags |= PMF_ON_GROUND;
 
-				if (pm_config.n64_physics || (pm->s.pm_flags & PMF_DUCKED))
+				if (PM_NeedsLandTime() || (pm->s.pm_flags & PMF_DUCKED))
 				{
 					pm->s.pm_flags |= PMF_TIME_LAND;
-					pm->s.pm_time = 128;
+					pm->s.pm_time = PM_ApplyPSXScalar(128, 0.5f);
 				}
 			}
 		}
@@ -1095,7 +1136,7 @@ void PM_CheckJump()
 	pm->groundentity = nullptr;
 	pm->s.pm_flags &= ~PMF_ON_GROUND;
 
-	float jump_height = 270.f;
+	float jump_height = PM_ApplyPSXScalar(270.f, (PSX_PHYSICS_SCALAR * 1.15f));
 
 	pml.velocity[2] += jump_height;
 	if (pml.velocity[2] < jump_height)
@@ -1381,7 +1422,7 @@ bool PM_CheckDuck()
 		(pm->cmd.buttons & BUTTON_CROUCH) &&
 		(pm->groundentity || (pm->waterlevel <= WATER_FEET && !PM_AboveWater())) &&
 		!(pm->s.pm_flags & PMF_ON_LADDER) &&
-		!pm_config.n64_physics)
+		!PM_CrouchingDisabled(pm_config.physics_flags))
 	{ // duck
 		if (!(pm->s.pm_flags & PMF_DUCKED))
 		{

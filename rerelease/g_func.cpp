@@ -47,6 +47,7 @@ constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_X_AXIS = 64_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_Y_AXIS = 128_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_INACTIVE = 0x10000_spawnflag; // Paril: moved to non-reserved
 constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN = 0x20000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_DOOR_ROTATING_NO_COLLISION = 0x40000_spawnflag;
 
 // support routine for setting moveinfo sounds
 inline int32_t G_GetMoveinfoSoundIndex(edict_t *self, const char *default_value, const char *wanted_value)
@@ -66,6 +67,8 @@ inline int32_t G_GetMoveinfoSoundIndex(edict_t *self, const char *default_value,
 
 void G_SetMoveinfoSounds(edict_t *self, const char *default_start, const char *default_mid, const char *default_end)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->moveinfo.sound_start = G_GetMoveinfoSoundIndex(self, default_start, st.noise_start);
 	self->moveinfo.sound_middle = G_GetMoveinfoSoundIndex(self, default_mid, st.noise_middle);
 	self->moveinfo.sound_end = G_GetMoveinfoSoundIndex(self, default_end, st.noise_end);
@@ -647,6 +650,8 @@ TOUCH(Touch_Plat_Center) (edict_t *ent, edict_t *other, const trace_t &tr, bool 
 // PGM - plat2's change the trigger field
 edict_t *plat_spawn_inside_trigger(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	edict_t *trigger;
 	vec3_t	 tmin, tmax;
 
@@ -710,6 +715,8 @@ Set "sounds" to one of the following:
 */
 void SP_func_plat(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	ent->s.angles = {};
 	ent->solid = SOLID_BSP;
 	ent->movetype = MOVETYPE_PUSH;
@@ -736,16 +743,18 @@ void SP_func_plat(edict_t *ent)
 	if (!ent->dmg)
 		ent->dmg = 2;
 
-	if (!st.lip)
-		st.lip = 8;
+	float lip = st.lip;
+
+	if (!st.was_key_specified("lip"))
+		lip = 8;
 
 	// pos1 is the top position, pos2 is the bottom
 	ent->pos1 = ent->s.origin;
-	ent->pos2 = ent->s.origin;
+	ent->pos2 = ent->s.origin; 
 	if (st.height)
 		ent->pos2[2] -= st.height;
 	else
-		ent->pos2[2] -= (ent->maxs[2] - ent->mins[2]) - st.lip;
+		ent->pos2[2] -= (ent->maxs[2] - ent->mins[2]) - lip;
 
 	ent->use = Use_Plat;
 
@@ -898,6 +907,8 @@ USE(rotating_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_rotating(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	ent->solid = SOLID_BSP;
 	if (ent->spawnflags.has(SPAWNFLAG_ROTATING_STOP))
 		ent->movetype = MOVETYPE_STOP;
@@ -1135,6 +1146,7 @@ DIE(button_killed) (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 
 void SP_func_button(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 	float  dist;
 
@@ -1157,14 +1169,17 @@ void SP_func_button(edict_t *ent)
 
 	if (!ent->wait)
 		ent->wait = 3;
-	if (!st.lip)
-		st.lip = 4;
+
+	float lip = st.lip;
+
+	if (!lip)
+		lip = 4;
 
 	ent->pos1 = ent->s.origin;
 	abs_movedir[0] = fabsf(ent->movedir[0]);
 	abs_movedir[1] = fabsf(ent->movedir[1]);
 	abs_movedir[2] = fabsf(ent->movedir[2]);
-	dist = abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - st.lip;
+	dist = abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - lip;
 	ent->pos2 = ent->pos1 + (ent->movedir * dist);
 
 	ent->use = button_use;
@@ -1532,8 +1547,15 @@ TOUCH(Touch_DoorTrigger) (edict_t *self, edict_t *other, const trace_t &tr, bool
 	if (!(other->svflags & SVF_MONSTER) && (!other->client))
 		return;
 
-	if (self->owner->spawnflags.has(SPAWNFLAG_DOOR_NOMONSTER) && (other->svflags & SVF_MONSTER))
-		return;
+	if (other->svflags & SVF_MONSTER)
+	{
+		if (self->owner->spawnflags.has(SPAWNFLAG_DOOR_NOMONSTER))
+			return;
+		// [Paril-KEX] this is for PSX; the scale is so small that monsters walking
+		// around to path_corners often initiate doors unintentionally.
+		else if (other->spawnflags.has(SPAWNFLAG_MONSTER_NO_IDLE_DOORS) && !other->enemy)
+			return;
+	}
 
 	if (level.time < self->touch_debounce_time)
 		return;
@@ -1695,6 +1717,7 @@ THINK(Think_DoorActivateAreaPortal) (edict_t *ent) -> void
 
 void SP_func_door(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 
 	if (ent->sounds != 1)
@@ -1731,7 +1754,7 @@ void SP_func_door(edict_t *ent)
 		ent->speed = 100;
 	if (deathmatch->integer)
 		ent->speed *= 2;
-
+	
 	if (!ent->accel)
 		ent->accel = ent->speed;
 	if (!ent->decel)
@@ -1739,8 +1762,9 @@ void SP_func_door(edict_t *ent)
 
 	if (!ent->wait)
 		ent->wait = 3;
-	if (!st.lip)
-		st.lip = 8;
+	float lip = st.lip;
+	if (!lip)
+		lip = 8;
 	if (!ent->dmg)
 		ent->dmg = 2;
 
@@ -1750,7 +1774,7 @@ void SP_func_door(edict_t *ent)
 	abs_movedir[1] = fabsf(ent->movedir[1]);
 	abs_movedir[2] = fabsf(ent->movedir[2]);
 	ent->moveinfo.distance =
-		abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - st.lip;
+		abs_movedir[0] * ent->size[0] + abs_movedir[1] * ent->size[1] + abs_movedir[2] * ent->size[2] - lip;
 	ent->pos2 = ent->pos1 + (ent->movedir * ent->moveinfo.distance);
 
 	// if it starts open, switch the positions
@@ -1881,16 +1905,19 @@ void SP_func_door_rotating(edict_t *ent)
 	if (ent->spawnflags.has(SPAWNFLAG_DOOR_REVERSE))
 		ent->movedir = -ent->movedir;
 
-	if (!st.distance)
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+	int distance = st.distance;
+
+	if (!distance)
 	{
 		gi.Com_PrintFmt("{}: no distance set\n", *ent);
-		st.distance = 90;
+		distance = 90;
 	}
 
 	ent->pos1 = ent->s.angles;
-	ent->pos2 = ent->s.angles + (ent->movedir * st.distance);
-	ent->pos3 = ent->s.angles + (ent->movedir * -st.distance);
-	ent->moveinfo.distance = (float) st.distance;
+	ent->pos2 = ent->s.angles + (ent->movedir * distance);
+	ent->pos3 = ent->s.angles + (ent->movedir * -distance);
+	ent->moveinfo.distance = (float) distance;
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
@@ -1947,6 +1974,9 @@ void SP_func_door_rotating(edict_t *ent)
 		ent->pos1 = ent->s.angles;
 		ent->movedir = -ent->movedir;
 	}
+
+	if (ent->spawnflags.has(SPAWNFLAG_DOOR_ROTATING_NO_COLLISION))
+		ent->clipmask = CONTENTS_AREAPORTAL; // just because zero is automatic
 
 	if (ent->health)
 	{
@@ -2036,6 +2066,7 @@ SMART causes the water to adjust its speed depending on distance to player.
 
 void SP_func_water(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	vec3_t abs_movedir;
 
 	G_SetMovedir(self->s.angles, self->movedir);
@@ -2337,6 +2368,23 @@ void train_resume(edict_t *self)
 			dest -= vec3_t{1.f, 1.f, 1.f};
 	}
 
+	// PGM (Paril)
+	if (ent->speed)
+	{
+		self->speed = ent->speed;
+		self->moveinfo.speed = ent->speed;
+		if (ent->accel)
+			self->moveinfo.accel = ent->accel;
+		else
+			self->moveinfo.accel = ent->speed;
+		if (ent->decel)
+			self->moveinfo.decel = ent->decel;
+		else
+			self->moveinfo.decel = ent->speed;
+		self->moveinfo.current_speed = 0;
+	}
+	// PGM
+
 	self->s.sound = self->moveinfo.sound_middle;
 
 	self->moveinfo.state = STATE_TOP;
@@ -2410,6 +2458,7 @@ USE(train_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_train(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	self->movetype = MOVETYPE_PUSH;
 
 	self->s.angles = {};
@@ -2566,6 +2615,7 @@ USE(func_timer_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 
 void SP_func_timer(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	if (!self->wait)
 		self->wait = 1.0;
 
@@ -2768,7 +2818,10 @@ void SP_func_door_secret(edict_t *ent)
 	if (!ent->wait)
 		ent->wait = 5;
 
-	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = 50;
+	if (!ent->speed)
+		ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = 50;
+	else
+		ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed * 0.1f;
 
 	// calculate positions
 	AngleVectors(ent->s.angles, forward, right, up);
@@ -2960,6 +3013,7 @@ THINK(func_eye_setup) (edict_t *self) -> void
 
 void SP_func_eye(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	gi.setmodel(ent, ent->model);
@@ -2971,6 +3025,10 @@ void SP_func_eye(edict_t *ent)
 
 	if (!ent->speed)
 		ent->speed = 45;
+
+	// set vision cone
+	if (st.was_key_specified("vision_cone"))
+		ent->yaw_speed = ent->vision_cone;
 
 	if (!ent->yaw_speed)
 		ent->yaw_speed = 0.5f;

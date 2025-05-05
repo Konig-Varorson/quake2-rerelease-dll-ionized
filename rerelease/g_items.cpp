@@ -27,6 +27,8 @@ void Weapon_Trap(edict_t *ent);
 void Weapon_ChainFist(edict_t *ent);
 void Weapon_Disintegrator(edict_t *ent);
 void Weapon_ETF_Rifle(edict_t *ent);
+// NP
+//void Weapon_ETF_Chaingun(edict_t* ent);
 void Weapon_Heatbeam(edict_t *ent);
 void Weapon_Prox(edict_t *ent);
 void Weapon_Tesla(edict_t *ent);
@@ -36,6 +38,7 @@ void Weapon_Beta_Disintegrator(edict_t *ent);
 
 void	   Use_Quad(edict_t *ent, gitem_t *item);
 static gtime_t quad_drop_timeout_hack;
+
 
 // RAFAEL
 void	   Use_QuadFire(edict_t *ent, gitem_t *item);
@@ -1139,32 +1142,35 @@ THINK(droptofloor) (edict_t *ent) -> void
 	else
 		gi.setmodel(ent, ent->item->world_model);
 	ent->solid = SOLID_TRIGGER;
-	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 
-	dest = ent->s.origin + vec3_t { 0, 0, -128 };
-
-	tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
-	if (tr.startsolid)
+	if (!ent->spawnflags.has(SPAWNFLAG_ITEM_NO_DROP))
 	{
-		if (G_FixStuckObject(ent, ent->s.origin) == stuck_result_t::NO_GOOD_POSITION)
+		ent->movetype = MOVETYPE_TOSS;
+		dest = ent->s.origin + vec3_t { 0, 0, -128 };
+
+		tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
+		if (tr.startsolid)
 		{
-			// RAFAEL
-			if (strcmp(ent->classname, "item_foodcube") == 0)
-				ent->velocity[2] = 0;
-			else
+			if (G_FixStuckObject(ent, ent->s.origin) == stuck_result_t::NO_GOOD_POSITION)
 			{
 				// RAFAEL
-				gi.Com_PrintFmt("{}: droptofloor: startsolid\n", *ent);
-				G_FreeEdict(ent);
-				return;
+				if (strcmp(ent->classname, "item_foodcube") == 0)
+					ent->velocity[2] = 0;
+				else
+				{
+					// RAFAEL
+					gi.Com_PrintFmt("{}: droptofloor: startsolid\n", *ent);
+					G_FreeEdict(ent);
+					return;
+					// RAFAEL
+				}
 				// RAFAEL
 			}
-			// RAFAEL
 		}
+		else
+			ent->s.origin = tr.endpos;
 	}
-	else
-		ent->s.origin = tr.endpos;
 
 	if (ent->team)
 	{
@@ -1278,7 +1284,7 @@ Items can't be immediately dropped to floor, because they might
 be on an entity that hasn't spawned yet.
 ============
 */
-void SpawnItem(edict_t *ent, gitem_t *item)
+void SpawnItem(edict_t *ent, gitem_t *item, const spawn_temp_t &st)
 {
 	// [Sam-KEX]
 	// Paril: allow all keys to be trigger_spawn'd (N64 uses this
@@ -1462,8 +1468,11 @@ void SpawnItem(edict_t *ent, gitem_t *item)
 	ent->item = item;
 	ent->nextthink = level.time + 20_hz; // items start after other solids
 	ent->think = droptofloor;
-	ent->s.effects = item->world_model_flags;
-	ent->s.renderfx = RF_GLOW | RF_NO_LOD;
+	if (!(level.is_spawning && st.was_key_specified("effects")) && !ent->s.effects)
+		ent->s.effects = item->world_model_flags;
+	if (!(level.is_spawning && st.was_key_specified("renderfx")) && !ent->s.renderfx)
+		ent->s.renderfx = RF_GLOW;
+	ent->s.renderfx |= RF_NO_LOD;
 	if (ent->model)
 		gi.modelindex(ent->model);
 
@@ -1869,7 +1878,7 @@ always owned, never in the world
 		/* quantity */ 0,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_WEAPON_BLASTER,
-		/* flags */ IF_WEAPON | IF_STAY_COOP | IF_NO_HASTE,
+		/* flags */ IF_WEAPON | IF_STAY_COOP,
 		/* vwep_model */ "#w_chainfist.md2",
 		/* armor_info */ nullptr,
 		/* tag */ 0,
@@ -2401,6 +2410,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* tag */ 0,
 		/* precaches */ "models/proj/disintegrator/tris.md2 weapons/disrupt.wav weapons/disint2.wav weapons/disrupthit.wav",
 	},
+	
 
 	// ROGUE WEAPONS
 	// =========================

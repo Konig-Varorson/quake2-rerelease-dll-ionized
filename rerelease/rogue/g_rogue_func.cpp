@@ -54,18 +54,18 @@ MOVEINFO_ENDFUNC(plat2_hit_top) (edict_t *ent) -> void
 		if (!ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
 		{
 			ent->think = plat2_go_down;
-			ent->nextthink = level.time + 5_sec;
+			ent->nextthink = level.time + gtime_t::from_sec(ent->wait * 2.5f);
 		}
 		if (deathmatch->integer)
-			ent->last_move_time = level.time - 1_sec;
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait * 0.5f);
 		else
-			ent->last_move_time = level.time - 2_sec;
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait);
 	}
 	else if (!(ent->spawnflags & SPAWNFLAGS_PLAT2_TOP) && !ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
 	{
 		ent->plat2flags = PLAT2_NONE;
 		ent->think = plat2_go_down;
-		ent->nextthink = level.time + 2_sec;
+		ent->nextthink = level.time + gtime_t::from_sec(ent->wait);
 		ent->last_move_time = level.time;
 	}
 	else
@@ -93,18 +93,18 @@ MOVEINFO_ENDFUNC(plat2_hit_bottom) (edict_t *ent) -> void
 		if (!(ent->spawnflags & SPAWNFLAGS_PLAT2_TOGGLE))
 		{
 			ent->think = plat2_go_up;
-			ent->nextthink = level.time + 5_sec;
+			ent->nextthink = level.time + gtime_t::from_sec(ent->wait * 2.5f);
 		}
 		if (deathmatch->integer)
-			ent->last_move_time = level.time - 1_sec;
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait * 0.5f);
 		else
-			ent->last_move_time = level.time - 2_sec;
+			ent->last_move_time = level.time - gtime_t::from_sec(ent->wait);
 	}
 	else if (ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOP) && !ent->spawnflags.has(SPAWNFLAGS_PLAT2_TOGGLE))
 	{
 		ent->plat2flags = PLAT2_NONE;
 		ent->think = plat2_go_up;
-		ent->nextthink = level.time + 2_sec;
+		ent->nextthink = level.time + gtime_t::from_sec(ent->wait);
 		ent->last_move_time = level.time;
 	}
 	else
@@ -164,7 +164,7 @@ void plat2_operate(edict_t *ent, edict_t *other)
 	if (ent->plat2flags & PLAT2_MOVING)
 		return;
 
-	if ((ent->last_move_time + 2_sec) > level.time)
+	if ((ent->last_move_time + gtime_t::from_sec(ent->wait)) > level.time)
 		return;
 
 	platCenter = (trigger->absmin[2] + trigger->absmax[2]) / 2;
@@ -338,6 +338,8 @@ If the "height" key is set, that will determine the amount the plat moves, inste
 */
 void SP_func_plat2(edict_t *ent)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	edict_t *trigger;
 
 	ent->s.angles = {};
@@ -373,9 +375,6 @@ void SP_func_plat2(edict_t *ent)
 	// PMM Added to kill things it's being blocked by
 	if (!ent->dmg)
 		ent->dmg = 2;
-
-	//	if (!st.lip)
-	//		st.lip = 8;
 
 	// pos1 is the top position, pos2 is the bottom
 	ent->pos1 = ent->s.origin;
@@ -425,6 +424,9 @@ void SP_func_plat2(edict_t *ent)
 	ent->moveinfo.start_angles = ent->s.angles;
 	ent->moveinfo.end_origin = ent->pos2;
 	ent->moveinfo.end_angles = ent->s.angles;
+
+	if (!ent->wait)
+		ent->wait = 2.0f;
 
 	G_SetMoveinfoSounds(ent, "plats/pt1_strt.wav", "plats/pt1_mid.wav", "plats/pt1_end.wav");
 }

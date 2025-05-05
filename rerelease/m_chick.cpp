@@ -790,6 +790,8 @@ MONSTERINFO_SIDESTEP(chick_sidestep) (edict_t *self) -> bool
  */
 void SP_monster_chick(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

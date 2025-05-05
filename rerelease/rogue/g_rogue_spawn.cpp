@@ -30,9 +30,7 @@
 //
 edict_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
 {
-	edict_t *newEnt;
-
-	newEnt = G_Spawn();
+	edict_t *newEnt = G_Spawn();
 
 	newEnt->s.origin = origin;
 	newEnt->s.angles = angles;

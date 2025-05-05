@@ -338,6 +338,8 @@ static void flipper_set_fly_parameters(edict_t *self)
  */
 void SP_monster_flipper(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

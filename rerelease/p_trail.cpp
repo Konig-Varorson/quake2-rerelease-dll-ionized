@@ -70,7 +70,10 @@ static edict_t *PlayerTrail_Spawn(edict_t *owner)
 void PlayerTrail_Destroy(edict_t *player)
 {
 	for (size_t i = 0; i < globals.num_edicts; i++)
-		if (g_edicts[i].classname && strcmp(g_edicts[i].classname, "player_trail") == 0)
+		if (g_edicts[i].classname && 
+			(strcmp(g_edicts[i].classname, "player_trail") == 0 ||
+			strcmp(g_edicts[i].classname, "player_noise") == 0)
+			)
 			if (!player || g_edicts[i].owner == player)
 				G_FreeEdict(&g_edicts[i]);
 

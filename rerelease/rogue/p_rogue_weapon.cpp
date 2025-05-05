@@ -272,7 +272,7 @@ void weapon_etf_rifle_fire(edict_t *ent)
 	if (deathmatch->integer)
 		damage = 10;
 	else
-		damage = 10;
+		damage = 10; // 10 is default
 
 	if (!(ent->client->buttons & BUTTON_ATTACK))
 	{
@@ -315,7 +315,7 @@ void weapon_etf_rifle_fire(edict_t *ent)
 
 	vec3_t start, dir;
 	P_ProjectSource(ent, ent->client->v_angle + kick_angles, offset, start, dir);
-	fire_flechette(ent, start, dir, damage, 1150, kick);
+	fire_flechette(ent, start, dir, damage, 1150, kick); //default speed 1150
 	Weapon_PowerupSound(ent);
 
 	// send muzzle flash
@@ -348,6 +348,113 @@ void Weapon_ETF_Rifle(edict_t *ent)
 
 	Weapon_Repeating(ent, 4, 7, 37, 41, pause_frames, weapon_etf_rifle_fire);
 }
+
+/*
+======================================================================
+
+ETF CHAINGUN
+
+======================================================================
+*/
+
+/*
+
+void weapon_etf_rifle_fire(edict_t* ent)
+{
+	int	   damage;
+	int	   kick = 3;
+	int	   i;
+	vec3_t offset;
+
+	if (deathmatch->integer)
+		damage = 10;
+	else
+		damage = 10; // 10 is default
+
+	if (!(ent->client->buttons & BUTTON_ATTACK))
+	{
+		ent->client->ps.gunframe = 8;
+		return;
+	}
+
+	if (ent->client->ps.gunframe == 6)
+		ent->client->ps.gunframe = 7;
+	else
+		ent->client->ps.gunframe = 6;
+
+	// PGM - adjusted to use the quantity entry in the weapon structure.
+	if (ent->client->pers.inventory[ent->client->pers.weapon->ammo] < ent->client->pers.weapon->quantity)
+	{
+		ent->client->ps.gunframe = 8;
+		NoAmmoWeaponChange(ent, true);
+		return;
+	}
+
+	if (is_quad)
+	{
+		damage *= damage_multiplier;
+		kick *= damage_multiplier;
+	}
+
+	vec3_t kick_origin{}, kick_angles{};
+	for (i = 0; i < 3; i++)
+	{
+		kick_origin[i] = crandom() * 0.85f;
+		kick_angles[i] = crandom() * 0.85f;
+	}
+	P_AddWeaponKick(ent, kick_origin, kick_angles);
+
+	// get start / end positions
+	if (ent->client->ps.gunframe == 6)
+		offset = { 15, 8, -8 };
+	else
+		offset = { 15, 6, -8 };
+
+	vec3_t start, dir;
+	P_ProjectSource(ent, ent->client->v_angle + kick_angles, offset, start, dir);
+	fire_flechette(ent, start, dir, damage, 1150, kick); //default speed 1150
+	Weapon_PowerupSound(ent);
+
+	// send muzzle flash
+	gi.WriteByte(svc_muzzleflash);
+	gi.WriteEntity(ent);
+	gi.WriteByte((ent->client->ps.gunframe == 6 ? MZ_ETF_RIFLE : MZ_ETF_RIFLE_2) | is_silenced);
+	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
+
+	G_RemoveAmmo(ent);
+
+	ent->client->anim_priority = ANIM_ATTACK;
+	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
+	{
+		ent->s.frame = FRAME_crattak1 - (int)(frandom() + 0.25f);
+		ent->client->anim_end = FRAME_crattak9;
+	}
+	else
+	{
+		ent->s.frame = FRAME_attack1 - (int)(frandom() + 0.25f);
+		ent->client->anim_end = FRAME_attack8;
+	}
+	ent->client->anim_time = 0_ms;
+}
+
+void Weapon_ETF_Rifle(edict_t* ent)
+{
+	constexpr int pause_frames[] = { 18, 28, 0 };
+
+	Weapon_Repeating(ent, 4, 7, 37, 41, pause_frames, weapon_etf_rifle_fire);
+}
+
+*/
+
+/*
+======================================================================
+
+HEAT BEAM
+
+======================================================================
+*/
 
 constexpr int32_t HEATBEAM_DM_DMG = 15;
 constexpr int32_t HEATBEAM_SP_DMG = 15;

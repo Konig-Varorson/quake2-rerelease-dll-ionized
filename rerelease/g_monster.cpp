@@ -37,11 +37,12 @@ void monster_fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimd
 	monster_muzzleflash(self, start, flashtype);
 }
 
-void monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+edict_t *monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 						  monster_muzzleflash_id_t flashtype, effects_t effect)
 {
-	fire_blaster(self, start, dir, damage, speed, effect, MOD_BLASTER);
+	edict_t *e = fire_blaster(self, start, dir, damage, speed, effect, MOD_BLASTER);
 	monster_muzzleflash(self, start, flashtype);
+	return e;
 }
 
 void monster_fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
@@ -65,15 +66,17 @@ void monster_fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, 
 	monster_muzzleflash(self, start, flashtype);
 }
 
-void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
+bool monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
 						  monster_muzzleflash_id_t flashtype)
 {
 	if (gi.pointcontents(start) & MASK_SOLID)
-		return;
+		return false;
 
-	fire_rail(self, start, aimdir, damage, kick);
+	bool hit = fire_rail(self, start, aimdir, damage, kick);
 
 	monster_muzzleflash(self, start, flashtype);
+
+	return hit;
 }
 
 void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
@@ -141,6 +144,10 @@ void M_CheckGround(edict_t *ent, contents_t mask)
 {
 	vec3_t	point;
 	trace_t trace;
+
+	// [Paril-KEX]
+	if (ent->no_gravity_time > level.time)
+		return;
 
 	if (ent->flags & (FL_SWIM | FL_FLY))
 		return;
@@ -238,43 +245,31 @@ void M_WorldEffects(edict_t *ent)
 
 	if (ent->health > 0)
 	{
+		bool take_drown_damage = false;
+
 		if (!(ent->flags & FL_SWIM))
 		{
 			if (ent->waterlevel < WATER_UNDER)
-			{
 				ent->air_finished = level.time + 12_sec;
-			}
 			else if (ent->air_finished < level.time)
-			{ // drown!
-				if (ent->pain_debounce_time < level.time)
-				{
-					dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
-					if (dmg > 15)
-						dmg = 15;
-					T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
-							 MOD_WATER);
-					ent->pain_debounce_time = level.time + 1_sec;
-				}
-			}
+				take_drown_damage = true;
 		}
 		else
 		{
 			if (ent->waterlevel > WATER_NONE)
-			{
 				ent->air_finished = level.time + 9_sec;
-			}
 			else if (ent->air_finished < level.time)
-			{ // suffocate!
-				if (ent->pain_debounce_time < level.time)
-				{
-					dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
-					if (dmg > 15)
-						dmg = 15;
-					T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
-							 MOD_WATER);
-					ent->pain_debounce_time = level.time + 1_sec;
-				}
-			}
+				take_drown_damage = true;
+		}
+
+		if (take_drown_damage && ent->pain_debounce_time < level.time)
+		{
+			dmg = 2 + (int) (2 * floorf((level.time - ent->air_finished).seconds()));
+			if (dmg > 15)
+				dmg = 15;
+			T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR,
+						MOD_WATER);
+			ent->pain_debounce_time = level.time + 1_sec;
 		}
 	}
 
@@ -666,30 +661,16 @@ void M_ProcessPain(edict_t *e)
 		}
 		// ROGUE
 
+		bool dead_commander_check = false;
+
 		if (!e->deadflag)
 		{
 			e->enemy = e->monsterinfo.damage_attacker;
 
 			// ROGUE
 			// ROGUE - free up slot for spawned monster if it's spawned
-			if (e->monsterinfo.aiflags & AI_SPAWNED_CARRIER)
-			{
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse &&
-					!strcmp(e->monsterinfo.commander->classname, "monster_carrier"))
-					e->monsterinfo.commander->monsterinfo.monster_slots++;
-				e->monsterinfo.commander = nullptr;
-			}
-			if (e->monsterinfo.aiflags & AI_SPAWNED_WIDOW)
-			{
-				// need to check this because we can have variable numbers of coop players
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse &&
-					!strncmp(e->monsterinfo.commander->classname, "monster_widow", 13))
-				{
-					if (e->monsterinfo.commander->monsterinfo.monster_used > 0)
-						e->monsterinfo.commander->monsterinfo.monster_used--;
-					e->monsterinfo.commander = nullptr;
-				}
-			}
+			if ((e->monsterinfo.aiflags & AI_SPAWNED_COMMANDER) && !(e->monsterinfo.aiflags & AI_SPAWNED_NEEDS_GIB))
+				dead_commander_check = true;
 
 			if (!(e->monsterinfo.aiflags & AI_DO_NOT_COUNT) && !(e->spawnflags & SPAWNFLAG_MONSTER_DEAD))
 				G_MonsterKilled(e);
@@ -703,13 +684,18 @@ void M_ProcessPain(edict_t *e)
 		// [Paril-KEX] medic commander only gets his slots back after the monster is gibbed, since we can revive them
 		if (e->health <= e->gib_health)
 		{
-			if (e->monsterinfo.aiflags & AI_SPAWNED_MEDIC_C)
-			{
-				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse && !strcmp(e->monsterinfo.commander->classname, "monster_medic_commander"))
-					e->monsterinfo.commander->monsterinfo.monster_used -= e->monsterinfo.monster_slots;
+			if ((e->monsterinfo.aiflags & AI_SPAWNED_COMMANDER) && (e->monsterinfo.aiflags & AI_SPAWNED_NEEDS_GIB))
+				dead_commander_check = true;
+		}
 
-				e->monsterinfo.commander = nullptr;
-			}
+		if (dead_commander_check)
+		{
+			edict_t *&commander = e->monsterinfo.commander;
+
+			if (commander && commander->inuse)
+				commander->monsterinfo.monster_used = max(0, commander->monsterinfo.monster_used - e->monsterinfo.slots_from_commander);
+
+			commander = nullptr;
 		}
 
 		if (e->inuse && e->health > e->gib_health && e->s.frame == e->monsterinfo.active_move->lastframe)
@@ -1152,7 +1138,7 @@ enemy as activator.
 void monster_death_use(edict_t *self)
 {
 	self->flags &= ~(FL_FLY | FL_SWIM);
-	self->monsterinfo.aiflags &= (AI_DOUBLE_TROUBLE | AI_GOOD_GUY | AI_STINKY | AI_SPAWNED_MASK);
+	self->monsterinfo.aiflags &= AI_DEATH_MASK;
 
 	if (self->item)
 	{
@@ -1176,8 +1162,10 @@ void monster_death_use(edict_t *self)
 	// [Paril-KEX] fire health target
 	if (self->healthtarget)
 	{
+		const char *target = self->target;
 		self->target = self->healthtarget;
 		G_UseTargets(self, self->enemy);
+		self->target = target;
 	}
 }
 
@@ -1221,7 +1209,7 @@ void G_Monster_CheckCoopHealthScaling()
 //============================================================================
 constexpr spawnflags_t SPAWNFLAG_MONSTER_FUBAR = 4_spawnflag;
 
-bool monster_start(edict_t *self)
+bool monster_start(edict_t *self, const spawn_temp_t &st)
 {
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
@@ -1284,6 +1272,9 @@ bool monster_start(edict_t *self)
 		self->mass *= self->s.scale;
 	}
 
+	if (level.is_psx)
+		self->s.origin[2] -= self->mins[2] - (self->mins[2] * PSX_PHYSICS_SCALAR);
+
 	// set combat style if unset
 	if (self->monsterinfo.combat_style == COMBAT_UNKNOWN)
 	{
@@ -1326,6 +1317,12 @@ bool monster_start(edict_t *self)
 	// [Paril-KEX] co-op health scale
 	G_Monster_ScaleCoopHealth(self);
 
+	// set vision cone
+	if (!st.was_key_specified("vision_cone"))
+	{
+		self->vision_cone = -2.0f; // special value to use old algorithm
+	}
+
 	return true;
 }
 
@@ -1341,7 +1338,7 @@ stuck_result_t G_FixStuckObject(edict_t *self, vec3_t check)
 
 	self->s.origin = check;
 
-	if (result == stuck_result_t::FIXED)
+	if (result == stuck_result_t::FIXED && developer->integer)
 		gi.Com_PrintFmt("fixed stuck {}\n", *self);
 
 	return result;
@@ -1569,7 +1566,7 @@ THINK(walkmonster_start_go) (edict_t *self) -> void
 void walkmonster_start(edict_t *self)
 {
 	self->think = walkmonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 THINK(flymonster_start_go) (edict_t *self) -> void
@@ -1587,7 +1584,7 @@ void flymonster_start(edict_t *self)
 {
 	self->flags |= FL_FLY;
 	self->think = flymonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 THINK(swimmonster_start_go) (edict_t *self) -> void
@@ -1605,7 +1602,7 @@ void swimmonster_start(edict_t *self)
 {
 	self->flags |= FL_SWIM;
 	self->think = swimmonster_start_go;
-	monster_start(self);
+	monster_start(self, ED_GetSpawnTemp());
 }
 
 USE(trigger_health_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void

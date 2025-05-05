@@ -217,6 +217,8 @@ THINK(turret_breach_finish_init) (edict_t *self) -> void
 
 void SP_turret_breach(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
 
@@ -230,17 +232,21 @@ void SP_turret_breach(edict_t *self)
 	if (!self->dmg)
 		self->dmg = 10;
 
-	if (!st.minpitch)
-		st.minpitch = -30;
-	if (!st.maxpitch)
-		st.maxpitch = 30;
-	if (!st.maxyaw)
-		st.maxyaw = 360;
+	float minpitch = st.minpitch;
+	float maxpitch = st.maxpitch;
+	float maxyaw = st.maxyaw;
 
-	self->pos1[PITCH] = -1 * st.minpitch;
+	if (!minpitch)
+		minpitch = -30;
+	if (!maxpitch)
+		maxpitch = 30;
+	if (!maxyaw)
+		maxyaw = 360;
+
+	self->pos1[PITCH] = -1 * minpitch;
 	self->pos1[YAW] = st.minyaw;
-	self->pos2[PITCH] = -1 * st.maxpitch;
-	self->pos2[YAW] = st.maxyaw;
+	self->pos2[PITCH] = -1 * maxpitch;
+	self->pos2[YAW] = maxyaw;
 
 	// scale used for rocket scale
 	self->dmg_radius = self->s.scale;
@@ -263,6 +269,8 @@ MUST be teamed with a turret_breach.
 
 void SP_turret_base(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
 
@@ -310,6 +318,7 @@ DIE(turret_driver_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 		self->movetype = MOVETYPE_STEP;
 
 		self->think = monster_think;
+		self->classname = "monster_infantry"; // [Paril-KEX] fix revive
 	}
 
 	infantry_die(self, inflictor, attacker, damage, point, mod);
@@ -412,6 +421,8 @@ void InfantryPrecache();
 
 void SP_turret_driver(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if (deathmatch->integer)
 	{
 		G_FreeEdict(self);

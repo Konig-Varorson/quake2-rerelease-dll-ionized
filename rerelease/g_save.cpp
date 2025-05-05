@@ -22,7 +22,6 @@
 // - backwards & forwards compatible with this same format
 // - I wrote this initially when the codebase was in C, so it
 //   does have some C-isms in here.
-constexpr size_t SAVE_FORMAT_VERSION = 1;
 
 #include <unordered_map>
 
@@ -105,6 +104,26 @@ void InitSave()
 		list_str_hash.emplace(link->name, link);
 		list_from_ptr_hash.emplace(std::make_tuple(link->ptr, link->tag), link);
 	}
+
+#ifdef _DEBUG
+	// verify integrity of mmove_t's; ideally this would be done
+	// at compile time but it complicates the code a bit
+	for (const save_data_list_t *link = list_head; link; link = link->next)
+	{
+		if (link->tag == SAVE_DATA_MMOVE)
+		{
+			// mmove_t integrity check
+			const mmove_t *move = reinterpret_cast<const mmove_t *>(link->ptr);
+			size_t defined_frames = (move->lastframe - move->firstframe + 1);
+
+			if (defined_frames != move->framecount)
+			{
+				gi.Com_ErrorFmt("monster move {} has mismatched frame counts (defined as {} frames, but array has {} elements)",
+					link->name, defined_frames, move->framecount);
+			}
+		}
+	}
+#endif
 
 	save_data_initialized = true;
 }
@@ -223,6 +242,12 @@ struct save_type_t
 
 	void (*read)(void *data, const Json::Value &json, const char *field) = nullptr; // for custom reading
 	bool (*write)(const void *data, bool null_for_empty, Json::Value &output) = nullptr; // for custom writing
+};
+
+constexpr size_t SAVE_FORMAT_VERSION = 2;
+
+constexpr save_type_t save_version_type = {
+	ST_UINT32
 };
 
 struct save_field_t
@@ -738,7 +763,11 @@ SAVE_STRUCT_START
 	FIELD_AUTO(health_bar_entities),
 	FIELD_AUTO(intermission_server_frame),
 	FIELD_AUTO(story_active),
-	FIELD_AUTO(next_auto_save)
+	FIELD_AUTO(next_auto_save),
+	FIELD_LEVEL_STRING(primary_objective_string),
+	FIELD_LEVEL_STRING(secondary_objective_string),
+	FIELD_LEVEL_STRING(primary_objective_title),
+	FIELD_LEVEL_STRING(secondary_objective_title)
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT
 
@@ -929,6 +958,8 @@ SAVE_STRUCT_START
 	FIELD_AUTO(sound2_entity_time),
 
 	FIELD_AUTO(last_firing_time),
+	FIELD_AUTO(blaster_charge_time),
+	FIELD_AUTO(blaster_ready_time),
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT
 // clang-format on
@@ -966,6 +997,8 @@ SAVE_STRUCT_START
 	FIELD_AUTO(s.alpha),
 	FIELD_AUTO(s.scale),
 	FIELD_AUTO(s.instance_bits),
+	FIELD_AUTO(s.loop_volume),
+	FIELD_AUTO(s.loop_attenuation),
 
 	// server stuff
 	// client is auto-set
@@ -1095,6 +1128,7 @@ SAVE_STRUCT_START
 
 	FIELD_AUTO(item),
 	FIELD_AUTO(crosslevel_flags),
+	FIELD_AUTO(no_gravity_time),
 
 	// moveinfo_t
 	FIELD_AUTO(moveinfo.start_origin),
@@ -1193,6 +1227,7 @@ SAVE_STRUCT_START
 	FIELD_AUTO(monsterinfo.jump_height),
 	FIELD_AUTO(monsterinfo.blind_fire_delay),
 	FIELD_AUTO(monsterinfo.blind_fire_target),
+	FIELD_AUTO(monsterinfo.slots_from_commander),
 	FIELD_AUTO(monsterinfo.monster_slots),
 	FIELD_AUTO(monsterinfo.monster_used),
 	FIELD_AUTO(monsterinfo.commander),
@@ -1302,6 +1337,8 @@ SAVE_STRUCT_START
 	
 	FIELD_AUTO( lastMOD.id ),
 	FIELD_AUTO( lastMOD.friendly_fire ),
+
+	FIELD_AUTO(vision_cone),
 
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT
@@ -1535,7 +1572,7 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 	case ST_FLOAT:
 		if (!json.isDouble())
 			json_print_error(field, "expected number", false);
-		else if (isnan(json.asDouble()))
+		else if (std::isnan(json.asDouble()))
 			*((float *) data) = std::numeric_limits<float>::quiet_NaN();
 		else
 			*((float *) data) = json.asFloat();
@@ -2420,6 +2457,10 @@ char *WriteGameJson(bool autosave, size_t *out_size)
 
 void G_PrecacheInventoryItems();
 
+static void upgrade_client(gclient_t *client, const Json::Value &json, const uint32_t &save_version)
+{
+}
+
 // new entry point for ReadGame.
 // takes in pointer to JSON data. does
 // not store or modify it.
@@ -2431,6 +2472,10 @@ void ReadGameJson(const char *jsonString)
 
 	uint32_t max_entities = game.maxentities;
 	uint32_t max_clients = game.maxclients;
+
+	// pull version
+	uint32_t save_version;
+	read_save_type_json(json["save_version"], &save_version, &save_version_type, "save_version");
 	
 	game = {};
 	g_edicts = (edict_t *) gi.TagMalloc(max_entities * sizeof(g_edicts[0]), TAG_GAME);
@@ -2455,8 +2500,10 @@ void ReadGameJson(const char *jsonString)
 	for (auto &v : clients)
 	{
 		json_push_stack(fmt::format("clients[{}]", i));
-		read_save_struct_json(v, &game.clients[i++], &gclient_t_savestruct);
+		read_save_struct_json(v, &game.clients[i], &gclient_t_savestruct);
+		upgrade_client(&game.clients[i], v, save_version);
 		json_pop_stack();
+		i++;
 	}
 
 	G_PrecacheInventoryItems();
@@ -2506,6 +2553,24 @@ char *WriteLevelJson(bool transition, size_t *out_size)
 	return saveJson(json, out_size);
 }
 
+static void upgrade_edict(edict_t *ent, const Json::Value &json, const uint32_t &save_version)
+{
+	// 1 -> 2
+	if (save_version <= 1)
+	{
+		// func_plat2 gained "wait" key.
+		// used to be hardcoded to 2.0f
+		if (ent->classname && !strcmp(ent->classname, "func_plat2"))
+		{
+			ent->wait = 2.0f;
+		}
+	}
+}
+
+static void upgrade_level(const Json::Value &json, const uint32_t &save_version)
+{
+}
+
 // new entry point for ReadLevel.
 // takes in pointer to JSON data. does
 // not store or modify it.
@@ -2521,9 +2586,14 @@ void ReadLevelJson(const char *jsonString)
 	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
 	globals.num_edicts = game.maxclients + 1;
 
+	// pull version
+	uint32_t save_version;
+	read_save_type_json(json["save_version"], &save_version, &save_version_type, "save_version");
+
 	// read level
 	json_push_stack("level");
 	read_save_struct_json(json["level"], &level, &level_locals_t_savestruct);
+	upgrade_level(json["level"], save_version);
 	json_pop_stack();
 
 	// read entities
@@ -2532,13 +2602,11 @@ void ReadLevelJson(const char *jsonString)
 	if (!entities.isObject())
 		gi.Com_Error("expected \"entities\" to be object");
 
-	//for (auto key : json.getMemberNames())
 	for (auto it = entities.begin(); it != entities.end(); it++)
 	{
-		//const char		   *classname = key.c_str();
 		const char *dummy;
 		const char *id = it.memberName(&dummy);
-		const Json::Value  &value = *it;//json[key];
+		const Json::Value  &value = *it;
 		uint32_t		   number = strtoul(id, nullptr, 10);
 
 		if (number >= globals.num_edicts)
@@ -2548,6 +2616,7 @@ void ReadLevelJson(const char *jsonString)
 		G_InitEdict(ent);
 		json_push_stack(fmt::format("entities[{}]", number));
 		read_save_struct_json(value, ent, &edict_t_savestruct);
+		upgrade_edict(ent, value, save_version);
 		json_pop_stack();
 		gi.linkentity(ent);
 	}

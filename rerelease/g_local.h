@@ -464,7 +464,6 @@ constexpr gtime_t operator"" _hz(unsigned long long int s)
 	return gtime_t::from_ms(static_cast<int64_t>((1.0 / s) * 1000));
 }
 
-#define SERVER_TICK_RATE gi.tick_rate // in hz
 extern gtime_t FRAME_TIME_S;
 extern gtime_t FRAME_TIME_MS;
 
@@ -677,9 +676,8 @@ enum monster_ai_flags_t : uint64_t
 	// PMM - FIXME - last second added for E3 .. there's probably a better way to do this, but
 	// this works
 	AI_DO_NOT_COUNT = bit_v<21>,	 // set for healed monsters
-	AI_SPAWNED_CARRIER = bit_v<22>, // both do_not_count and spawned are set for spawned monsters
-	AI_SPAWNED_MEDIC_C = bit_v<23>, // both do_not_count and spawned are set for spawned monsters
-	AI_SPAWNED_WIDOW = bit_v<24>,	 // both do_not_count and spawned are set for spawned monsters
+	AI_SPAWNED_COMMANDER = bit_v<22>, // both do_not_count and spawned are set for spawned monsters
+	AI_SPAWNED_NEEDS_GIB = bit_v<23>, // only return commander slots when gibbed
 	AI_BLOCKED = bit_v<25>, // used by blocked_checkattack: set to say I'm attacking while blocked
 							// (prevents run-attacks)
 							// ROGUE
@@ -700,8 +698,10 @@ enum monster_ai_flags_t : uint64_t
 };
 MAKE_ENUM_BITFLAGS(monster_ai_flags_t);
 
-constexpr monster_ai_flags_t AI_SPAWNED_MASK =
-	AI_SPAWNED_CARRIER | AI_SPAWNED_MEDIC_C | AI_SPAWNED_WIDOW; // mask to catch all three flavors of spawned
+// flags saved when monster is respawned
+constexpr monster_ai_flags_t AI_RESPAWN_MASK = AI_STINKY | AI_SPAWNED_COMMANDER | AI_SPAWNED_NEEDS_GIB;
+// flags saved when a monster dies
+constexpr monster_ai_flags_t AI_DEATH_MASK = (AI_DOUBLE_TROUBLE | AI_GOOD_GUY | AI_RESPAWN_MASK);
 
 // monster attack state
 enum monster_attack_state_t
@@ -1075,7 +1075,8 @@ enum mod_id_t : uint8_t
 	// ROGUE
 	//========
 	MOD_GRAPPLE,
-	MOD_BLUEBLASTER
+	MOD_BLUEBLASTER,
+	
 };
 
 struct mod_t
@@ -1091,10 +1092,6 @@ struct mod_t
 	{
 	}
 };
-
-// the total number of levels we'll track for the
-// end of unit screen.
-constexpr size_t MAX_LEVELS_PER_UNIT = 8;
 
 struct level_entry_t
 {
@@ -1154,8 +1151,9 @@ constexpr size_t MAX_HEALTH_BARS = 2;
 //
 struct level_locals_t
 {
-	bool in_frame;
-	gtime_t time;
+	bool in_frame = false;
+	bool is_spawning = false; // whether we're still doing SpawnEntities
+	gtime_t time = {};
 
 	char level_name[MAX_QPATH]; // the descriptive name (Outer Base, etc)
 	char mapname[MAX_QPATH];	// the server name (base1, etc)
@@ -1201,7 +1199,7 @@ struct level_locals_t
 	// ROGUE
 	
 	int32_t shadow_light_count; // [Sam-KEX]
-	bool is_n64;
+	bool is_n64, is_psx;
 	gtime_t coop_level_restart_time; // restart the level after this time
 	bool instantitems; // instantitems 1 set in worldspawn
 
@@ -1250,6 +1248,12 @@ struct level_locals_t
 	bool story_active;
 	gtime_t next_auto_save;
 	gtime_t next_match_report;
+
+	const char *primary_objective_string;
+	const char *secondary_objective_string;
+
+	const char *primary_objective_title;
+	const char *secondary_objective_title;
 };
 
 struct shadow_light_temp_t
@@ -1275,9 +1279,9 @@ struct spawn_temp_t
 	int32_t skyautorotate = 1;
 	const char	 *nextmap;
 
-	int32_t		lip;
-	int32_t		distance;
-	int32_t		height;
+	float		lip;
+	float		distance;
+	float		height;
 	const char	*noise;
 	float		pausetime;
 	const char	*item;
@@ -1306,6 +1310,7 @@ struct spawn_temp_t
 	const char *start_items;
 	int no_grapple = 0;
 	float health_multiplier = 1.0f;
+	int physics_flags_sp = 0, physics_flags_dm = 0;
 
 	const char *reinforcements; // [Paril-KEX]
 	const char *noise_start, *noise_middle, *noise_end; // [Paril-KEX]
@@ -1313,10 +1318,18 @@ struct spawn_temp_t
 
 	std::unordered_set<const char *> keys_specified;
 
+	const char *primary_objective_string;
+	const char *secondary_objective_string;
+
+	const char *primary_objective_title;
+	const char *secondary_objective_title;
+
 	inline bool was_key_specified(const char *key) const
 	{
 		return keys_specified.find(key) != keys_specified.end();
 	}
+
+	static const spawn_temp_t empty;
 };
 
 enum move_state_t
@@ -1468,14 +1481,6 @@ struct mframe_t
 	int32_t lerp_frame = -1;
 };
 
-// this check only works on windows, and is only
-// of importance to developers anyways
-#if defined(_WIN32) && defined(_MSC_VER)
-#if _MSC_VER >= 1934
-#define COMPILE_TIME_MOVE_CHECK
-#endif
-#endif
-
 struct mmove_t
 {
 	int32_t	  firstframe;
@@ -1484,33 +1489,29 @@ struct mmove_t
 	void (*endfunc)(edict_t *self);
 	float sidestep_scale;
 
-#ifdef COMPILE_TIME_MOVE_CHECK
+#ifdef _DEBUG
+	size_t framecount;
+#endif
+
 	template<size_t N>
-	constexpr mmove_t(int32_t firstframe, int32_t lastframe, const mframe_t (&frames)[N], void (*endfunc)(edict_t *self) = nullptr, float sidestep_scale = 0.0f) :
+	inline mmove_t(int32_t firstframe, int32_t lastframe, const mframe_t (&frames)[N], void (*endfunc)(edict_t *self) = nullptr, float sidestep_scale = 0.0f) :
 		firstframe(firstframe),
 		lastframe(lastframe),
 		frame(frames),
 		endfunc(endfunc),
 		sidestep_scale(sidestep_scale)
-	{
-		if ((lastframe - firstframe + 1) != N)
-			throw std::exception("bad animation frames; check your numbers!");
-	}
+#ifdef _DEBUG
+		, framecount(N)
 #endif
+	{
+	}
 };
 
 using save_mmove_t = save_data_t<mmove_t, SAVE_DATA_MMOVE>;
-#ifdef COMPILE_TIME_MOVE_CHECK
-#define MMOVE_T(n) \
-	extern const mmove_t n; \
-	static const save_data_list_t save__##n(#n, SAVE_DATA_MMOVE, &n); \
-	constexpr mmove_t n
-#else
 #define MMOVE_T(n) \
 	extern const mmove_t n; \
 	static const save_data_list_t save__##n(#n, SAVE_DATA_MMOVE, &n); \
 	const mmove_t n
-#endif
 
 DEFINE_DATA_FUNC(monsterinfo_stand, MONSTERINFO_STAND, void, edict_t *self);
 #define MONSTERINFO_STAND(n) \
@@ -1600,6 +1601,9 @@ struct reinforcement_list_t
 
 constexpr size_t MAX_REINFORCEMENTS = 5; // max number of spawns we can do at once.
 
+void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &list);
+std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t *self, int32_t &num_chosen, int32_t max_slots = 0);
+
 constexpr gtime_t HOLD_FOREVER = gtime_t::from_ms(std::numeric_limits<int64_t>::max());
 
 struct monsterinfo_t
@@ -1669,8 +1673,9 @@ struct monsterinfo_t
 	gtime_t blind_fire_delay;
 	vec3_t	blind_fire_target;
 	// used by the spawners to not spawn too much and keep track of #s of monsters spawned
-	int32_t	 monster_slots; // nb: for spawned monsters, this is how many slots we took from our commander
-	int32_t	 monster_used;
+	int32_t  slots_from_commander; // for spawned monsters, this is how many slots we took from our commander
+	int32_t	 monster_slots; // for commanders, total slots we can occupy
+	int32_t	 monster_used; // for commanders, total slots currently used
 	edict_t *commander;
 	// powerup timers, used by widow, our friend
 	gtime_t quad_time;
@@ -1777,7 +1782,6 @@ constexpr gtime_t DUCK_INTERVAL = 5000_ms;
 extern game_locals_t  game;
 extern level_locals_t level;
 extern game_export_t  globals;
-extern spawn_temp_t	  st;
 
 extern edict_t *g_edicts;
 
@@ -1878,6 +1882,7 @@ template<typename T>
 	return irandom(2) == 0;
 }
 
+extern cvar_t *developer;
 extern cvar_t *deathmatch;
 extern cvar_t *coop;
 extern cvar_t *skill;
@@ -1912,6 +1917,7 @@ extern cvar_t *bob_roll;
 extern cvar_t *sv_cheats;
 extern cvar_t *g_debug_monster_paths;
 extern cvar_t *g_debug_monster_kills;
+extern cvar_t *g_debug_poi;
 extern cvar_t *maxspectators;
 
 extern cvar_t *bot_debug_follow_actor;
@@ -1994,7 +2000,8 @@ uint32_t GetUnicastKey();
 constexpr spawnflags_t SPAWNFLAG_ITEM_TRIGGER_SPAWN = 0x00000001_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_NO_TOUCH = 0x00000002_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_TOSS_SPAWN = 0x00000004_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_MAX = 0x00000008_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_NO_DROP = 0x00000008_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_MAX = 0x00000016_spawnflag;
 // 8 bits reserved for editor flags & power cube bits
 // (see SPAWNFLAG_NOT_EASY above)
 constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED = 0x00010000_spawnflag;
@@ -2021,7 +2028,7 @@ gitem_t	*FindItemByClassname(const char *classname);
 edict_t	*Drop_Item(edict_t *ent, gitem_t *item);
 void	  SetRespawn(edict_t *ent, gtime_t delay, bool hide_self = true);
 void	  ChangeWeapon(edict_t *ent);
-void	  SpawnItem(edict_t *ent, gitem_t *item);
+void	  SpawnItem(edict_t *ent, gitem_t *item, const spawn_temp_t &st);
 void	  Think_Weapon(edict_t *ent);
 item_id_t ArmorIndex(edict_t *ent);
 item_id_t PowerArmorType(edict_t *ent);
@@ -2039,7 +2046,7 @@ void      Compass_Update(edict_t *ent, bool first);
 //
 // g_utils.c
 //
-bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod = MOD_TELEFRAG, bool bsp_clipping = true);
+bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod = MOD_TELEFRAG, bool bsp_clipping = true, bool allow_safety = false);
 edict_t *G_Find(edict_t *from, std::function<bool(edict_t *e)> matcher);
 
 // utility template for getting the type of a field
@@ -2085,6 +2092,9 @@ void G_PlayerNotifyGoal(edict_t *player);
 //
 // g_spawn.c
 //
+const spawn_temp_t &ED_GetSpawnTemp();
+void  ED_ParseField(const char *key, const char *value, edict_t *ent, spawn_temp_t &st);
+void  ED_CallSpawn(edict_t *ent, const spawn_temp_t &spawntemp);
 void  ED_CallSpawn(edict_t *ent);
 char *ED_NewString(char *string);
 
@@ -2103,6 +2113,8 @@ constexpr spawnflags_t SPAWNFLAG_LASER_ORANGE = 0x0020_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_LASER_FAT = 0x0040_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_LASER_ZAP = 0x80000000_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_LASER_LIGHTNING = 0x10000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_LASER_REACTOR = 0x20000_spawnflag; // PSX reactor effect instead of beam
+constexpr spawnflags_t SPAWNFLAG_LASER_NO_PROTECTION = 0x40000_spawnflag; // no protection
 
 constexpr spawnflags_t SPAWNFLAG_HEALTHBAR_PVS_ONLY = 1_spawnflag;
 
@@ -2177,7 +2189,7 @@ void monster_fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &dir, 
 						 int vspread, monster_muzzleflash_id_t flashtype);
 void monster_fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 						  int vspread, int count, monster_muzzleflash_id_t flashtype);
-void monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+edict_t *monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 						  monster_muzzleflash_id_t flashtype, effects_t effect);
 void monster_fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 						    monster_muzzleflash_id_t flashtype);
@@ -2185,7 +2197,7 @@ void monster_fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimd
 						  monster_muzzleflash_id_t flashtype, float right_adjust, float up_adjust);
 void monster_fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 						 monster_muzzleflash_id_t flashtype);
-void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
+bool monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
 						  monster_muzzleflash_id_t flashtype);
 void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
 					  float damage_radius, monster_muzzleflash_id_t flashtype);
@@ -2217,13 +2229,15 @@ constexpr size_t HACKFLAG_ATTACK_PLAYER = 1;
 // used in N64, appears to change their behavior for the end scene.
 constexpr size_t HACKFLAG_END_CUTSCENE = 4;
 
-bool monster_start(edict_t *self);
+bool monster_start(edict_t *self, const spawn_temp_t &st);
 void monster_start_go(edict_t *self);
 // RAFAEL
 void monster_fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 							monster_muzzleflash_id_t flashtype, effects_t effect);
 void monster_fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 					   monster_muzzleflash_id_t flashtype, float lerp_factor);
+constexpr spawnflags_t SPAWNFLAG_DABEAM_SECONDARY = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_DABEAM_SPAWNED = 2_spawnflag;
 void monster_fire_dabeam(edict_t *self, int damage, bool secondary, void(*update_func)(edict_t *self));
 void dabeam_update(edict_t *self, bool damage);
 void monster_fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
@@ -2237,7 +2251,7 @@ void monster_fire_tracker(edict_t *self, const vec3_t &start, const vec3_t &dir,
 						  monster_muzzleflash_id_t flashtype);
 void monster_fire_heatbeam(edict_t *self, const vec3_t &start, const vec3_t &dir, const vec3_t &offset, int damage,
 						   int kick, monster_muzzleflash_id_t flashtype);
-void stationarymonster_start(edict_t *self);
+void stationarymonster_start(edict_t *self, const spawn_temp_t &st);
 void monster_done_dodge(edict_t *self);
 // ROGUE
 
@@ -2253,6 +2267,7 @@ constexpr spawnflags_t SPAWNFLAG_MONSTER_DEAD = 16_spawnflag_bit;
 constexpr spawnflags_t SPAWNFLAG_MONSTER_SUPER_STEP = 17_spawnflag_bit;
 constexpr spawnflags_t SPAWNFLAG_MONSTER_NO_DROP = 18_spawnflag_bit;
 constexpr spawnflags_t SPAWNFLAG_MONSTER_SCENIC = 19_spawnflag_bit;
+constexpr spawnflags_t SPAWNFLAG_MONSTER_NO_IDLE_DOORS = 20_spawnflag_bit;
 
 // fixbot spawnflags
 constexpr spawnflags_t SPAWNFLAG_FIXBOT_FIXIT = 4_spawnflag;
@@ -2265,7 +2280,7 @@ constexpr spawnflags_t SPAWNFLAG_FIXBOT_WORKING = 32_spawnflag;
 //
 void ThrowClientHead(edict_t *self, int damage);
 void gib_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
-edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t type, float scale);
+edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t type, float scale, int frame = 0);
 void BecomeExplosion1(edict_t *self);
 void misc_viper_use(edict_t *self, edict_t *other, edict_t *activator);
 void misc_strogg_ship_use(edict_t *self, edict_t *other, edict_t *activator);
@@ -2303,6 +2318,7 @@ float range_to(edict_t *self, edict_t *other);
 
 void FoundTarget(edict_t *self);
 void HuntTarget(edict_t *self, bool animate_state = true);
+bool infront_cone(edict_t *self, edict_t *other, float cone);
 bool infront(edict_t *self, edict_t *other);
 bool visible(edict_t *self, edict_t *other, bool through_glass = true);
 bool FacingIdeal(edict_t *self);
@@ -2318,7 +2334,7 @@ void fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int d
 void fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 				  int vspread, int count, mod_t mod);
 void blaster_touch(edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self);
-void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
+edict_t *fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
 				  mod_t mod);
 void Grenade_Explode(edict_t *ent);
 void fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
@@ -2328,7 +2344,7 @@ void fire_grenade2(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int
 void rocket_touch(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
 edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
 				 int radius_damage);
-void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick);
+bool fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick);
 void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius);
 // RAFAEL
 void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect);
@@ -2431,6 +2447,15 @@ bool SV_FilterPacket(const char *from);
 //
 // p_view.c
 //
+struct step_parameters_t
+{
+	float			xyspeed;
+	float			bobmove;
+	int				bobcycle, bobcycle_run;	  // odd cycles are right foot going forward
+	float			bobfracsin; // sinf(bobfrac*M_PI)
+};
+
+void G_SetClientFrame(edict_t *ent, const step_parameters_t &step);
 void ClientEndServerFrame(edict_t *ent);
 void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &dir);
 void G_UnLagCompensate();
@@ -2451,7 +2476,7 @@ void G_ReportMatchDetails(bool is_end);
 // p_weapon.c
 //
 void PlayerNoise(edict_t *who, const vec3_t &where, player_noise_t type);
-void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir);
+void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir, bool adjust_for_pierce = false);
 void NoAmmoWeaponChange(edict_t *ent, bool sound);
 void G_RemoveAmmo(edict_t *ent);
 void G_RemoveAmmo(edict_t *ent, int32_t quantity);
@@ -3006,6 +3031,9 @@ struct gclient_t
 	gtime_t	 last_attacker_time;
 	// saved - for coop; last time we were in a firing state
 	gtime_t	 last_firing_time;
+
+	gtime_t  blaster_charge_time;
+	gtime_t  blaster_ready_time;
 };
 
 // ==========================================
@@ -3233,6 +3261,8 @@ struct edict_t
 	mod_t	lastMOD;
 	const char	*style_on, *style_off;
 	uint32_t crosslevel_flags;
+	gtime_t no_gravity_time;
+	float vision_cone; // TODO: migrate vision_cone on old loads to -2.0f
 	// NOTE: if adding new elements, make sure to add them
 	// in g_save.cpp too!
 };
@@ -3442,6 +3472,7 @@ struct gib_def_t
 	const char *gibname;
 	float scale;
 	gib_type_t type;
+	int framenum = 0;
 
 	constexpr gib_def_t(size_t count, const char *gibname) :
 		count(count),
@@ -3506,6 +3537,12 @@ struct gib_def_t
 		type(GIB_NONE)
 	{
 	}
+
+	inline gib_def_t &frame(int f)
+	{
+		framenum = f;
+		return *this;
+	}
 };
 
 // convenience function to throw different gib types
@@ -3515,7 +3552,7 @@ inline void ThrowGibs(edict_t *self, int32_t damage, std::initializer_list<gib_d
 {
 	for (auto &gib : gibs)
 		for (size_t i = 0; i < gib.count; i++)
-			ThrowGib(self, gib.gibname, damage, gib.type, gib.scale * (self->s.scale ? self->s.scale : 1));
+			ThrowGib(self, gib.gibname, damage, gib.type, gib.scale * (self->s.scale ? self->s.scale : 1), gib.framenum);
 }
 
 inline bool M_CheckGib(edict_t *self, const mod_t &mod)
@@ -3540,7 +3577,7 @@ struct fmt::formatter<edict_t>
 	}
 
     template<typename FormatContext>
-    auto format(const edict_t &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const edict_t &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
 		if (p.linked)
 			return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, (p.absmax + p.absmin) * 0.5f);

@@ -351,8 +351,6 @@ Fires a single blaster bolt.  Used by the blaster and hyper blaster.
 =================
 */
 
-//Shart: Nicco's Blaster MK II code
-/*
 THINK(blaster_sparks) (edict_t *self) -> void
 {
 	gi.WriteByte(svc_temp_entity);
@@ -365,8 +363,6 @@ THINK(blaster_sparks) (edict_t *self) -> void
 
 	G_FreeEdict(self);
 }
-*/
-
 
 TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
@@ -384,7 +380,10 @@ TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool oth
 		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
 
 	if (other->takedamage)
+	{
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY, static_cast<mod_id_t>(self->style));
+		G_FreeEdict(self);
+	}
 	else
 	{
 		gi.WriteByte(svc_temp_entity);
@@ -392,39 +391,57 @@ TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool oth
 		gi.WritePosition(self->s.origin);
 		gi.WriteDir(tr.plane.normal);
 		gi.multicast(self->s.origin, MULTICAST_PHS, false);
-	}
 
-	G_FreeEdict(self);
+		if (self->movetype != MOVETYPE_WALLBOUNCE)
+            G_FreeEdict(self);
+	}
 }
 
-void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, mod_t mod)
+edict_t *fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, mod_t mod)
 {
 	edict_t *bolt;
 	trace_t	 tr;
 
 	bolt = G_Spawn();
-	bolt->svflags = SVF_PROJECTILE;
 	bolt->s.origin = start;
 	bolt->s.old_origin = start;
 	bolt->s.angles = vectoangles(dir);
 	bolt->velocity = dir * speed;
-	bolt->movetype = MOVETYPE_FLYMISSILE;
 	bolt->clipmask = MASK_PROJECTILE;
+	
+	if (effect == EF_BLUEHYPERBLASTER)
+	{
+		bolt->movetype = MOVETYPE_WALLBOUNCE;
+		bolt->s.skinnum = 1;
+		bolt->think = blaster_sparks;
+		bolt->s.scale = 3;
+		bolt->style = MOD_BLUEBLASTER;
+		bolt->s.effects |= EF_FLAG2;
+		bolt->s.renderfx |= RF_FULLBRIGHT;
+	}
+	else
+	{
+		bolt->movetype = MOVETYPE_FLYMISSILE;
+		bolt->s.skinnum = 0;
+		bolt->think = G_FreeEdict;
+		bolt->style = mod.id;
+		bolt->s.effects |= EF_BLASTER;// EF_BLASTER is default
+	}
+
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
 		bolt->clipmask &= ~CONTENTS_PLAYER;
-	bolt->flags |= FL_DODGE;
+
 	bolt->solid = SOLID_BBOX;
-	bolt->s.effects |= effect;
+	bolt->svflags |= SVF_PROJECTILE;
+	bolt->flags |= FL_DODGE;
 	bolt->s.modelindex = gi.modelindex("models/objects/laser/tris.md2");
 	bolt->s.sound = gi.soundindex("misc/lasfly.wav");
 	bolt->owner = self;
 	bolt->touch = blaster_touch;
 	bolt->nextthink = level.time + 2_sec;
-	bolt->think = G_FreeEdict;
 	bolt->dmg = damage;
 	bolt->classname = "bolt";
-	bolt->style = mod.id;
 	gi.linkentity(bolt);
 
 	tr = gi.traceline(self->s.origin, bolt->s.origin, bolt, bolt->clipmask);
@@ -433,6 +450,8 @@ void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int dam
 		bolt->s.origin = tr.endpos + (tr.plane.normal * 1.f);
 		bolt->touch(bolt, tr.ent, tr, false);
 	}
+
+	return bolt;
 }
 
 constexpr spawnflags_t SPAWNFLAG_GRENADE_HAND = 1_spawnflag;
@@ -443,7 +462,7 @@ constexpr spawnflags_t SPAWNFLAG_GRENADE_HELD = 2_spawnflag;
 fire_grenade
 =================
 */
-THINK(Grenade_Explode) (edict_t *ent) -> void
+static void Grenade_ExplodeReal(edict_t *ent, edict_t *other, vec3_t normal)
 {
 	vec3_t origin;
 	mod_t  mod;
@@ -452,22 +471,14 @@ THINK(Grenade_Explode) (edict_t *ent) -> void
 		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
 
 	// FIXME: if we are onground then raise our Z just a bit since we are a point?
-	if (ent->enemy)
+	if (other)
 	{
-		float  points;
-		vec3_t v;
-		vec3_t dir;
-
-		v = ent->enemy->mins + ent->enemy->maxs;
-		v = ent->enemy->s.origin + (v * 0.5f);
-		v = ent->s.origin - v;
-		points = ent->dmg - 0.5f * v.length();
-		dir = ent->enemy->s.origin - ent->s.origin;
+		vec3_t dir = other->s.origin - ent->s.origin;
 		if (ent->spawnflags.has(SPAWNFLAG_GRENADE_HAND))
 			mod = MOD_HANDGRENADE;
 		else
 			mod = MOD_GRENADE;
-		T_Damage(ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int) points, (int) points, DAMAGE_RADIUS, mod);
+		T_Damage(other, ent, ent->owner, dir, ent->s.origin, normal, ent->dmg, ent->dmg, mod.id == MOD_HANDGRENADE ? DAMAGE_RADIUS : DAMAGE_NONE, mod);
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_GRENADE_HELD))
@@ -476,9 +487,9 @@ THINK(Grenade_Explode) (edict_t *ent) -> void
 		mod = MOD_HG_SPLASH;
 	else
 		mod = MOD_G_SPLASH;
-	T_RadiusDamage(ent, ent->owner, (float) ent->dmg, ent->enemy, ent->dmg_radius, DAMAGE_NONE, mod);
+	T_RadiusDamage(ent, ent->owner, (float) ent->dmg, other, ent->dmg_radius, DAMAGE_NONE, mod);
 
-	origin = ent->s.origin + (ent->velocity * -0.02f);
+	origin = ent->s.origin + normal;
 	gi.WriteByte(svc_temp_entity);
 	if (ent->waterlevel)
 	{
@@ -498,6 +509,11 @@ THINK(Grenade_Explode) (edict_t *ent) -> void
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
 	G_FreeEdict(ent);
+}
+
+THINK(Grenade_Explode) (edict_t *ent) -> void
+{
+	Grenade_ExplodeReal(ent, nullptr, ent->velocity * -0.02f);
 }
 
 TOUCH(Grenade_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
@@ -527,8 +543,7 @@ TOUCH(Grenade_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool othe
 		return;
 	}
 
-	ent->enemy = other;
-	Grenade_Explode(ent);
+	Grenade_ExplodeReal(ent, other, tr.plane.normal);
 }
 
 THINK(Grenade4_Think) (edict_t *self) -> void
@@ -687,7 +702,7 @@ TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other
 
 	if (other->takedamage)
 	{
-		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 0, DAMAGE_NONE, MOD_ROCKET);
+		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, ent->dmg, DAMAGE_NONE, MOD_ROCKET);
 	}
 	else
 	{
@@ -850,7 +865,7 @@ uint32_t GetUnicastKey()
 fire_rail
 =================
 */
-void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick)
+bool fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick)
 {
 	fire_rail_pierce_t args = {
 		self,
@@ -890,6 +905,8 @@ void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int dam
 
 	if (self->client)
 		PlayerNoise(self, args.tr.endpos, PNOISE_IMPACT);
+
+	return args.num_pierced;
 }
 
 static vec3_t bfg_laser_pos(vec3_t p, float dist)
@@ -922,7 +939,7 @@ THINK(bfg_laser_update) (edict_t *self) -> void
 static void bfg_spawn_laser(edict_t *self)
 {
 	vec3_t end = bfg_laser_pos(self->s.origin, 256);
-	trace_t tr = gi.traceline(self->s.origin, end, self, MASK_OPAQUE);
+	trace_t tr = gi.traceline(self->s.origin, end, self, MASK_OPAQUE | CONTENTS_PROJECTILECLIP);
 
 	if (tr.fraction == 1.0f)
 		return;
@@ -1071,10 +1088,10 @@ struct bfg_laser_pierce_t : pierce_args_t
 			gi.WriteByte(svc_temp_entity);
 			gi.WriteByte(TE_LASER_SPARKS);
 			gi.WriteByte(4);
-			gi.WritePosition(tr.endpos);
+			gi.WritePosition(tr.endpos + tr.plane.normal);
 			gi.WriteDir(tr.plane.normal);
-			gi.WriteByte(self->s.skinnum);
-			gi.multicast(tr.endpos, MULTICAST_PVS, false);
+			gi.WriteByte(208);
+			gi.multicast(tr.endpos + tr.plane.normal, MULTICAST_PVS, false);
 			return false;
 		}
 
@@ -1132,10 +1149,12 @@ THINK(bfg_think) (edict_t *self) -> void
 		end = start + (dir * 2048);
 
 		// [Paril-KEX] don't fire a laser if we're blocked by the world
-		tr = gi.traceline(start, point, nullptr, MASK_SOLID);
+		tr = gi.traceline(start, point, nullptr, CONTENTS_SOLID | CONTENTS_PROJECTILECLIP);
 
 		if (tr.fraction < 1.0f)
 			continue;
+
+		tr = gi.traceline(start, end, nullptr, CONTENTS_SOLID | CONTENTS_PROJECTILECLIP);
 
 		bfg_laser_pierce_t args {
 			self,
@@ -1143,7 +1162,7 @@ THINK(bfg_think) (edict_t *self) -> void
 			dmg
 		};
 		
-		pierce_trace(start, end, self, args, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
+		pierce_trace(start, end, self, args, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER | CONTENTS_PROJECTILECLIP);
 
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_BFG_LASER);

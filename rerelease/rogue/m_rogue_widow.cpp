@@ -274,11 +274,12 @@ void WidowSpawn(edict_t *self)
 
 			self->monsterinfo.monster_used++;
 			ent->monsterinfo.commander = self;
+			ent->monsterinfo.slots_from_commander = 1;
 
 			ent->nextthink = level.time;
 			ent->think(ent);
 
-			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+			ent->monsterinfo.aiflags |= AI_SPAWNED_COMMANDER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 
 			if (!coop->integer)
 			{
@@ -1243,6 +1244,8 @@ void WidowPrecache()
  */
 void SP_monster_widow(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

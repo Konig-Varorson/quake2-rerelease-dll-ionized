@@ -97,8 +97,6 @@ void dabeam_update(edict_t *self, bool damage)
 	gi.linkentity(self);
 }
 
-constexpr spawnflags_t SPAWNFLAG_DABEAM_SECONDARY = 1_spawnflag;
-
 THINK(beam_think) (edict_t *self) -> void
 {
 	if (self->spawnflags.has(SPAWNFLAG_DABEAM_SECONDARY))
@@ -137,6 +135,8 @@ void monster_fire_dabeam(edict_t *self, int damage, bool secondary, void(*update
 	}
 
 	beam_ptr->nextthink = level.time + 200_ms;
+	beam_ptr->spawnflags &= ~SPAWNFLAG_DABEAM_SPAWNED;
 	update_func(beam_ptr);
 	dabeam_update(beam_ptr, true);
+	beam_ptr->spawnflags |= SPAWNFLAG_DABEAM_SPAWNED;
 }

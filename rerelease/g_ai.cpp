@@ -428,13 +428,31 @@ bool visible(edict_t *self, edict_t *other, bool through_glass)
     spot2 = other->s.origin;
     spot2[2] += other->viewheight;
 
-    contents_t mask = MASK_OPAQUE;
+    contents_t mask = MASK_OPAQUE | CONTENTS_PROJECTILECLIP;
 
     if (!through_glass)
         mask |= CONTENTS_WINDOW;
 
     trace = gi.traceline(spot1, spot2, self, mask);
     return trace.fraction == 1.0f || trace.ent == other; // PGM
+}
+
+/*
+=============
+infront_cone
+
+returns 1 if the entity is in front (in sight) of self
+=============
+*/
+bool infront_cone(edict_t *self, edict_t *other, float cone)
+{
+    vec3_t forward;
+
+    AngleVectors(self->s.angles, forward, nullptr, nullptr);
+
+    vec3_t vec = (other->s.origin - self->s.origin).normalized();
+
+    return vec.dot(forward) > cone;
 }
 
 /*
@@ -446,21 +464,19 @@ returns 1 if the entity is in front (in sight) of self
 */
 bool infront(edict_t *self, edict_t *other)
 {
-    vec3_t vec;
-    float  dot;
-    vec3_t forward;
+    float cone = self->vision_cone;
 
-    AngleVectors(self->s.angles, forward, nullptr, nullptr);
-    vec = other->s.origin - self->s.origin;
-    vec.normalize();
-    dot = vec.dot(forward);
+    if (self->vision_cone < -1.0f)
+    {
+        // [Paril-KEX] if we're an ambush monster, reduce our cone of
+        // vision to not ruin surprises, unless we already had an enemy.
+        if (self->spawnflags.has(SPAWNFLAG_MONSTER_AMBUSH) && !self->monsterinfo.trail_time && !self->enemy)
+            cone = 0.15f;
+        else
+            cone = -0.30f;
+    }
 
-    // [Paril-KEX] if we're an ambush monster, reduce our cone of
-    // vision to not ruin surprises, unless we already had an enemy.
-    if (self->spawnflags.has(SPAWNFLAG_MONSTER_AMBUSH) && !self->monsterinfo.trail_time && !self->enemy)
-        return dot > 0.15f;
-
-    return dot > -0.30f;
+    return infront_cone(self, other, cone);
 }
 
 //============================================================================
@@ -935,7 +951,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
             spot2[2] += self->enemy->viewheight;
 
             tr = gi.traceline(spot1, spot2, self,
-                MASK_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_SLIME | CONTENTS_LAVA);
+                MASK_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_SLIME | CONTENTS_LAVA | CONTENTS_PROJECTILECLIP);
         }
         else
         {
@@ -1330,7 +1346,7 @@ bool ai_checkattack(edict_t *self, float dist)
     enemy_vis = visible(self, self->enemy);
     if (enemy_vis)
     {
-        self->monsterinfo.had_visibility = true;
+        self->monsterinfo.had_visibility = visible(self, self->enemy, false);
         self->enemy->show_hostile = level.time + 1_sec; // wake up other monsters
         self->monsterinfo.search_time = level.time + 5_sec;
         self->monsterinfo.last_sighting = self->monsterinfo.saved_goal = self->enemy->s.origin;
@@ -1341,6 +1357,8 @@ bool ai_checkattack(edict_t *self, float dist)
 
             if (self->monsterinfo.move_block_change_time < level.time)
                 self->monsterinfo.aiflags &= ~AI_TEMP_MELEE_COMBAT;
+
+            self->monsterinfo.checkattack_time = level.time + random_time(50_ms, 200_ms);
         }
         self->monsterinfo.trail_time = level.time;
         self->monsterinfo.blind_fire_target = self->monsterinfo.last_sighting + (self->enemy->velocity * -0.1f);
@@ -1523,7 +1541,7 @@ void ai_run(edict_t *self, float dist)
 
         bool touching_noise = SV_CloseEnough(self, self->enemy, dist * (gi.tick_rate / 10));
 
-        if ((!self->enemy) || (touching_noise && FacingIdeal(self)))
+        if ((!self->enemy || !self->enemy->inuse) || (touching_noise && FacingIdeal(self)))
         // pmm
         {
             self->monsterinfo.aiflags |= (AI_STAND_GROUND | AI_TEMP_STAND_GROUND);

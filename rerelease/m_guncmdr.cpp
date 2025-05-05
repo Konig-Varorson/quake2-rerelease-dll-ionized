@@ -297,7 +297,7 @@ MMOVE_T(guncmdr_move_death1) = { FRAME_c_death101, FRAME_c_death118, guncmdr_fra
 
 void guncmdr_pain5_to_death1(edict_t *self)
 {
-	if (self->health < 0)
+	if (self->health <= 0)
 		M_SetAnimation(self, &guncmdr_move_death1, false);
 }
 
@@ -311,7 +311,7 @@ MMOVE_T(guncmdr_move_death2) = { FRAME_c_death201, FRAME_c_death204, guncmdr_fra
 
 void guncmdr_pain5_to_death2(edict_t *self)
 {
-	if (self->health < 0 && brandom())
+	if (self->health <= 0 && brandom())
 		M_SetAnimation(self, &guncmdr_move_death2, false);
 }
 
@@ -380,7 +380,7 @@ MMOVE_T(guncmdr_move_death6) = { FRAME_c_death601, FRAME_c_death614, guncmdr_fra
 
 static void guncmdr_pain6_to_death6(edict_t *self)
 {
-	if (self->health < 0)
+	if (self->health <= 0)
 		M_SetAnimation(self, &guncmdr_move_death6, false);
 }
 
@@ -786,9 +786,9 @@ void GunnerCmdrFire(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 	PredictAim(self, self->enemy, start, 800, false, frandom() * 0.3f, &aim, nullptr);
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++) // Default for (int i = 0; i < 3; i++)
 		aim[i] += crandom_open() * 0.025f;
-	monster_fire_flechette(self, start, aim, 4, 800, flash_number);
+	monster_fire_flechette(self, start, aim, 4, 800, flash_number); // Default monster_fire_flechette(self, start, aim, 4, 800, flash_number);
 }
 
 mframe_t guncmdr_frames_attack_chain[] = {
@@ -1399,6 +1399,8 @@ model="models/monsters/guncmdr/tris.md2"
 */
 void SP_monster_guncmdr(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

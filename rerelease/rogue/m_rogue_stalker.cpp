@@ -58,7 +58,7 @@ bool stalker_ok_to_transition(edict_t *self)
 	else
 	{
 		// her stalkers are just better
-		if (self->monsterinfo.aiflags & AI_SPAWNED_WIDOW)
+		if (self->monsterinfo.commander && self->monsterinfo.commander->inuse && !strncmp(self->monsterinfo.commander->classname, "monster_widow", 13))
 			max_dist = 256;
 		else
 			max_dist = 180;
@@ -626,7 +626,7 @@ bool stalker_do_pounce(edict_t *self, const vec3_t &dest)
 	if (fabsf(jumpAngles[YAW] - self->s.angles[YAW]) > 45)
 		return false; // not facing the player...
 
-	if (isnan(jumpAngles[YAW]))
+	if (std::isnan(jumpAngles[YAW]))
 		return false; // Switch why
 
 	self->ideal_yaw = jumpAngles[YAW];
@@ -974,6 +974,8 @@ constexpr spawnflags_t SPAWNFLAG_STALKER_NOJUMPING = 16_spawnflag;
 
 void SP_monster_stalker(edict_t *self)
 {
+	const spawn_temp_t &st = ED_GetSpawnTemp();
+
 	if ( !M_AllowSpawn( self ) ) {
 		G_FreeEdict( self );
 		return;

@@ -29,7 +29,7 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
 	{
 		dest = closest_point_to_box(inflictor_center, targ->absmin, targ->absmax);
 
-		trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
+		trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 		if (trace.fraction == 1.0f)
 			return true;
 	}
@@ -41,35 +41,35 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
 	else
 		targ_center = targ->s.origin;
 
-	trace = gi.traceline(inflictor_center, targ_center, inflictor, MASK_SOLID);
+	trace = gi.traceline(inflictor_center, targ_center, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 	if (trace.fraction == 1.0f)
 		return true;
 
 	dest = targ_center;
 	dest[0] += 15.0f;
 	dest[1] += 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
+	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 	if (trace.fraction == 1.0f)
 		return true;
 
 	dest = targ_center;
 	dest[0] += 15.0f;
 	dest[1] -= 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
+	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 	if (trace.fraction == 1.0f)
 		return true;
 
 	dest = targ_center;
 	dest[0] -= 15.0f;
 	dest[1] += 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
+	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 	if (trace.fraction == 1.0f)
 		return true;
 
 	dest = targ_center;
 	dest[0] -= 15.0f;
 	dest[1] -= 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
+	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID | CONTENTS_PROJECTILECLIP);
 	if (trace.fraction == 1.0f)
 		return true;
 
