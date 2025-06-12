@@ -267,7 +267,7 @@ void ShamblerSaveLoc(edict_t* self)
 	shambler_lightning_update(self);
 }
 
-constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 8_spawnflag;
 
 vec3_t FindShamblerOffset(edict_t *self)
 {
