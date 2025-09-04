@@ -314,24 +314,24 @@
 @PointClass base(Items) model({ "path": ":models/items/cloaker/tris.md2" }) = item_invisibility : "Invisibility" []
 
 @PointClass base(Keys) model({ "path": ":models/items/keys/target/tris.md2" }) = key_airstrike_target : "Tank commander's head" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/key/tris.md2" }) = key_blue_key : "Normal door key - blue" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/key/tris.md2" }) = key_blue_key : "Blue Key (card)" []
 @PointClass base(Keys) model({ "path": ":models/monsters/commandr/head/tris.md2" }) = key_commander_head : "Tank commander's head (key)" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/data_cd/tris.md2" }) = key_data_cd : "Data CD key for computer centers" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/spinner/tris.md2" }) = key_data_spinner : "Data Spinner key for city computer" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/pass/tris.md2" }) = key_pass : "Security pass for secret level" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/pass/tris.md2" }) = key_pass : "Security Pass" []
 
 @PointClass base(Keys) model({ "path": ":models/items/keys/power/tris.md2" }) = key_power_cube : "Warehouse circuits" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/pyramid/tris.md2" }) = key_pyramid : "Pyramid Key for entrance to jail3" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/red_key/tris.md2" }) = key_red_key : "normal door key - red" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/red_key/tris.md2" }) = key_red_key : "Red Key (card)" []
 // Expansions
 
-@PointClass base(Keys) model({ "path": ":models/items/keys/green_key/tris.md2" }) = key_green_key : "normal door key - green" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/green_key/tris.md2" }) = key_green_key : "Green Key (gear)" []
 @PointClass base(Keys) model({ "path": ":models/weapons/g_nuke/tris.md2" }) = key_nuke_container : "Antimatter Pod (nuke key part 1)" []
 @PointClass base(Keys) model({ "path": ":models/weapons/g_nuke/tris.md2" }) = key_nuke : "Antimatter Bomb (nuke key part 2)" []
 // N64
 
 @PointClass base(Keys) model({ "path": ":models/items/n64/charge/tris.md2" }) = key_explosive_charges : "Explosive Charge" []
-@PointClass base(Keys) model({ "path": ":models/items/n64/yellow_key/tris.md2" }) = key_yellow_key : "Yellow Key" []
+@PointClass base(Keys) model({ "path": ":models/items/n64/yellow_key/tris.md2" }) = key_yellow_key : "Yellow  Key (card)" []
 @PointClass base(Keys) model({ "path": ":models/items/n64/power_core/tris.md2" }) = key_power_core : "Power Core" []
 // CTF
 
@@ -775,6 +775,14 @@ misc_satellite_dish : "Satellite Dish"
         1 : "Screen"
         2 : "Shield"
     ]
+    armor_power(integer) : "Override power armor amount"
+    armor_type(Choices) : "Override power armor type" : 0 =
+    [
+        0 : "None"
+        1 : "Jacket Armor (30% absorption)"
+        2 : "Combat Armor (60% absorption)"
+	3 : "Body Armor (80% absorption)"
+    ]
 ]
 
 @PointClass base(Monsters) color(255 128 0) size(-16 -16 -24, 16 16 32) model({{
@@ -871,7 +879,7 @@ Health: 175"
         8 : "No jumping" : 0
     ]
 ]
-@PointClass base(Monsters) model({ "path": ":models/monsters/gunner/tris.md2", "frame": 249 }) = monster_guncmdr : "Gunner Commander
+@PointClass base(Monsters) model({ "path": ":models/monsters/gunner/tris.md2", "skin":2, "frame": 249 }) = monster_guncmdr : "Gunner Commander
 Role: Ranged projectile, explosive
 Health: 325
 Power Screen: 200"
@@ -902,7 +910,7 @@ Body Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra playe
 Spawnflag 8 removes Makron spawn, but adds 2,000 health to Jorg in all difficulties and Power Shield (same values as Body Armor)." [
     spawnflags(Flags) =
     [
-        8 : "No Makron" : 0
+        8 : "No Rider spawn" : 0
     ]
 ]
 
@@ -986,12 +994,12 @@ Role: Ranged hitscanner, projectile, explosive
 Health: 750
 Combat Armor: 200
 
-Spawnflag 8 turns tank into monster_tank_guardian"
+Spawnflag 8 turns tank into Tank Guardian"
 [
     speed(float) : "homing missile speed" : "0.0"
     spawnflags(Flags) =
     [
-        8 : "N64" : 0
+        8 : "Guardian" : 0
        16 : "Heat-Seeking Missiles" : 0
     65536 : "Spawn dead on ground" : 0
     ]
@@ -999,20 +1007,20 @@ Spawnflag 8 turns tank into monster_tank_guardian"
 
 @PointClass base(Monsters) size(-32 -32 -16, 32 32 72) model({{
     spawnflags  == 65536   ->   {"path":":models/monsters/tank/tris.md2","skin":2, "scale":"1.0", "frame":"251"},
-    spawnflags  & "65536^8"   ->    {"path":":models/monsters/tank/tris.md2","skin":4, "scale":"1.5", "frame":"251"},
-    spawnflags  &   8   ->  {"path":":models/monsters/tank/tris.md2","skin":4,"scale":"1.5"},
+    spawnflags  & "65536^8"   ->    {"path":":models/monsters/tank/tris.md2","skin":6, "scale":"1.5", "frame":"251"},
+    spawnflags  &   8   ->  {"path":":models/monsters/tank/tris.md2","skin":6,"scale":"1.5"},
                             {"path":":models/monsters/tank/tris.md2","skin":2}
 }}) = monster_tank_commander : "Tank Commander
 Role: Ranged hitscanner, projectile, explosive
 Health: 950
 Combat Armor: 200
 
-Spawnflag 8 turns tank into monster_tank_guardian"
+Spawnflag 8 turns tank into Tank Commander Guardian"
 [
     speed(float) : "homing missile speed" : "0.0"
     spawnflags(Flags) =
     [
-        8 : "N64" : 0
+        8 : "Guardian" : 0
        16 : "Heat-Seeking Missiles" : 0
     65536 : "Spawn dead on ground" : 0
     ]
@@ -1107,7 +1115,7 @@ Health: 125"
     ]
 ]
 @PointClass base(Monsters) model({ "path": ":models/monsters/bitch/tris.md2", "skin": 2 }) size(-16 -16 0, 16 16 56) = monster_chick_heat : "Iron Maiden (Beta Class)
-Role: Ranged Heat-Seeking Explosives
+Role: Ranged Tracking Explosives
 Health: 175" []
 @PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/gladiatr/tris.md2", "skin": 2 }) = monster_gladb : "Gladiator (Beta Class)
 Role: Ranged Explosives
@@ -1115,7 +1123,7 @@ Health: 500
 Power Screen: 200" []
 
 @PointClass base(Monsters) size(-64 -64 0, 64 64 112) model({ "path": ":models/monsters/boss1/tris.md2", "skin": 2 }) = monster_boss5 : "Super Tank Boss (Beta Class)
-Role: Ranged Hitscan/Heat-Seeking Explosives Boss
+Role: Ranged Hitscan/Tracking Explosives Boss
 Health: 1,500 (Easy/Normal), 2,500 (Hard), 3,500 (Nightmare) + 250 per extra player in coop
 Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop" []
 
@@ -1885,6 +1893,7 @@ Combat Armor: 200" []
     ]
 
     angle(float) : "Direction. -3 = Track Player. -2 = Down, -1 = Up, 0 - 360 = Yaw" : "-3"
+	message(string) : "Text to display"
     radius(float) : "Text Size" : "0.2"
     sounds(integer) : "Color Of Text. 0 = White, 1 = Red, 2 = Blue, 3 = Green, 4 = Yellow, 5 = Black, 6 = Cyan, 7 = Orange" : 0
 ]
@@ -1989,8 +1998,12 @@ A decoratative player entity that will stand in idle animation holding the weapo
 //KONIG - Ionized additions
 //new items
 @PointClass base(Weapons) model({ "path": ":models/weapons/g_flareg/tris.md2" }) = weapon_grapple : "Grapple" []
+@PointClass base(Weapons) model({ "path": ":models/weapons/g_plasmr/tris.md2" }) = weapon_beta_disintegrator : "Disintegrator" []
 
-@PointClass base(Items) model({ "path": ":models/objects/trapfx/tris.md2" }) = item_foodcube : "+2 health" []
+@PointClass base(Items) model({ "path": ":models/objects/trapfx/tris.md2" }) = item_foodcube : "+2 health" [
+    count(integer) : "heal amount" : 2
+    scale(string) : "Scale"
+]
 
 @PointClass base(Ammo) model({ "path": ":models/vault/items/ammo/shells/small/tris.md2" }) = ammo_shells_small : "Shells (small)" []
 @PointClass base(Ammo) model({ "path": ":models/vault/items/ammo/bullets/small/tris.md2" }) = ammo_bullets_small : "Bullets (small)" []
@@ -1998,18 +2011,84 @@ A decoratative player entity that will stand in idle animation holding the weapo
 @PointClass base(Ammo) model({ "path": ":models/vault/items/ammo/rockets/small/tris.md2" }) = ammo_rockets_small : "Rockets (small)" []
 @PointClass base(Ammo) model({ "path": ":models/vault/items/ammo/slugs/small/tris.md2" }) = ammo_slugs_small : "Slugs ammo (small)" []
 
-@PointClass base(Ammo) model({ "path": ":models/items/ammo/flares/tris.md2" }) = ammo_flares : "Flare ammo" []
-@PointClass base(Ammo) model({ "path": ":models/items/ammo/fuel/medium/tris.md2" }) = ammo_fuel : "Fuel ammo" []
-
-@PointClass base(Keys) model({ "path": ":models/items/keys/clearance_key/tris.md2" }) = key_clearancepass : "Clearance Pass" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/red_gearkey/tris.md2" }) = key_red_gearkey : "Red Key (gear)" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/energy/tris.md2" }) = key_energy : "Energy Key" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/green_key_psx/tris.md2" }) = key_green_psx_key : "Green Key (PSX)" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/lab_key/tris.md2" }) = key_lab : "Laboratory Key" []
-@PointClass base(Keys) model({ "path": ":models/items/keys/landing_key/tris.md2" }) = key_landingarea : "Airfield Pass" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/green_key_psx/tris.md2" }) = key_green_psx_key : "Green Key" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/yellow_gearkey/tris.md2" }) = key_yellow_gearkey : "Yellow Key (gear)" []
+@PointClass base(Keys) model({ "path": ":models/items/keys/blue_gearkey/tris.md2" }) = key_blue_gearkey : "Blue Key (gear)" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/lava/tris.md2" }) = key_lava : "Lava Key" []
 @PointClass base(Keys) model({ "path": ":models/items/keys/slime/tris.md2" }) = key_slime : "Slime Key" []
 
 //new monsters
+//ZAERO monsters
+@PointClass base(Monsters) model({ "path": ":models/monsters/infantry/tris.md2", "skin": 2, "frame": 64}) = monster_infantry_handler : "Infantry Handler
+Role: Ranged
+Health: 100"
+[
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 24) model({ "path": ":models/monsters/guard/hound/tris.md2" }) = monster_hound : "Hound
+Role: Melee
+Health: 100" 
+[
+	spawnflags(Flags) =
+	[
+		8 : "No jumping" : 0
+	]
+]
+@PointClass base(Monsters) size(-28 -32 -16, 28 32 64) model({ "path": ":models/monsters/sentien/tris.md2" }) = monster_sentien : "Sentien
+Role: Ranged Hitscanner
+Health: 900
+Combat Armor: 200" []
+@PointClass base(Monsters) size(-12 -12 -28, 12 12 0) model({ "path": ":models/objects/acannon/base/tris.md2" }) = monster_autocannon : "Ceiling Autocannon Turret
+Role: Stationary Ranged
+Health: 100
+Combat Armor: 50"
+[
+	spawnflags(Flags) =
+	[
+		1 : "Start off" : 0
+		2 : "Berserk" : 0
+		4 : "Berserk Toggle" : 0
+	]
+	style(choices) : "Style" : 1 =
+	[
+		1 : "Bullet"
+		2 : "Rocket"
+		3 : "Hyperblaster"
+		4 : "Hyperblaster (slow)"
+	]
+	lip(integer) : "+-Range" : 0
+]
+@PointClass base(Monsters) size(-12 -12 -28, 12 12 0) model({ "path": ":models/objects/acannon/base2/tris.md2" }) = monster_autocannon_floor : "Floor Autocannon Turret
+Role: Stationary Ranged
+Health: 100
+Combat Armor: 50"
+[
+	spawnflags(Flags) =
+	[
+		1 : "Start off" : 0
+		2 : "Berserk" : 0
+		4 : "Berserk Toggle" : 0
+	]
+	style(choices) : "Style" : 1 =
+	[
+		2 : "Rocket"
+		3 : "Hyperblaster"
+		4 : "Hyperblaster (slow)"
+	]
+	lip(integer) : "+-Range" : 0
+]
+@PointClass base(Monsters) size(-24 -24 -30, 24 24 74) model({ "path": ":models/monsters/bossz/mech/tris.md2" }) = monster_zboss : "Z-Sentien
+Role: Ranged Explosives End Boss
+Health: 4,500 (Easy/Normal), 5,750 (Hard), 8,000 (Nightmare) + 500 per extra player in coop + 500 per skill in coop
+Power Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra player in coop + 250 per skill in coop
+Body Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra player in coop + 250 per skill in coop" []
+
+//UNSEEN monsters
 @PointClass base(Monsters) model({ "path": ":models/monsters/soldier2/tris.md2", "skin": 0 }) = monster_psoldier_light : "Buffed Light Soldier
 Role: Ranged Fodder
 Health: 30
@@ -2046,7 +2125,7 @@ Combat Armor: 100"
         8 : "Blind" : 0
     ]
 ]
-@PointClass base(Monsters) model({ "path": ":models/monsters/soldier2/tris.md2", "skin": 6 }) = monster_psoldier_elite : "Hyper Light Soldier
+@PointClass base(Monsters) model({ "path": ":models/monsters/soldier2/tris.md2", "skin": 6 }) = monster_psoldier_elite : "Flakblaster Soldier
 Role: Ranged
 Health: 40
 Combat Armor: 100"
@@ -2058,8 +2137,8 @@ Combat Armor: 100"
         8 : "Blind" : 0
     ]
 ]
-@PointClass base(Monsters) model({ "path": ":models/monsters/soldier2/tris.md2", "skin": 8 }) = monster_psoldier_special : "Hyper Shotgun Soldier
-Role: Ranged Hitscan
+@PointClass base(Monsters) model({ "path": ":models/monsters/soldier2/tris.md2", "skin": 8 }) = monster_psoldier_special : "Flakcannon Soldier
+Role: Ranged
 Health: 50
 Combat Armor: 100"
 [
@@ -2095,6 +2174,211 @@ Power Screen: 200"
         8 : "Blind" : 0
     ]
 ]
+@PointClass base(Monsters) model({ "path": ":models/monsters/infantry/tris.md2", "skin": 4, "frame": 64 }) = monster_heavy : "Infantry Heavy
+Role: Ranged Explosive
+Health: 120
+Combat Armor: 100"
+[
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+
+//QUAKE monsters
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/army/tris.md2" }) = monster_army : "Grunt
+Role: Hitscan Fodder
+Health: 45" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/centroid/tris.md2" }) = monster_centroid : "Centroid
+Role: Melee + Ranged
+Health: 250
+Combat Armor: 100" []
+@PointClass base(Monsters) size(-128 -128 -24, 128 128 256) model({ "path": ":models/monsters/chthon/tris.md2" }) = monster_chthon : "Chthon
+Role: Ranged Boss (only vulnerable to energy weapons)
+Health: 3,000 (Easy/Normal), 4,250 (Hard), 5,500 (Nightmare) + 500 per extra player in coop + 500 per skill in coop
+Body Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra player in coop + 250 per skill in coop" []
+@PointClass base(Monsters) size(-128 -128 -24, 128 128 256) model({ "path": ":models/monsters/chthon/tris.md2", "skin":2 }) = monster_lavaman : "Lavaman
+Role: Ranged Boss (only vulnerable to energy weapons)
+Health: 1,500 (Easy/Normal), 2,500 (Hard), 3,500 (Nightmare) + 250 per extra player in coop
+Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop" []
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 40) model({ "path": ":models/monsters/dog/tris.md2" }) = monster_dog : "Dog
+Role: Melee Fodder
+Health: 40" []
+
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/dragon/tris.md2", "frame": 13 }) = monster_dragon : "Dragon
+Role: Flying End Boss
+Health: 3,000 (Easy/Normal), 4,250 (Hard), 5,500 (Nightmare) + 500 per extra player in coop + 500 per skill in coop
+Body Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra player in coop + 250 per skill in coop" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/eel/tris.md2" }) = monster_eel : "Eel
+Role: Aquatic Ranged
+Health: 90" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/enforcer/tris.md2" }) = monster_enforcer : "Enforcer
+Role: Ranged Fodder
+Health: 80" []
+
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/fiend/tris.md2" }) = monster_fiend : "Fiend
+Role: Melee
+Health: 250" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/hknight/tris.md2" }) = monster_hknight : "Death Knight
+Role: Melee + Ranged
+Health: 250" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/hknight/tris.md2","skin":2 }) = monster_hstatue : "Hell Statue
+Role: Melee + Ranged
+Health: 350" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/knight/tris.md2" }) = monster_knight : "Knight
+Role: Melee
+Health: 75" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/knight/tris.md2","skin":2 }) = monster_statue : "Statue
+Role: Melee
+Health: 125" []
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/ogre/tris.md2" }) = monster_ogre : "Ogre
+Role: Melee + Ranged Explosives
+Health: 300" []
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/ogre/tris.md2", "skin": 2 }) = monster_ogre_marksman : "Ogre Marksman
+Role: Melee + Ranged
+Health: 300" []
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/oldone/tris.md2" }) = monster_oldone : "Shub-Niggurath
+Role: Stationary Monster Spawner
+Health: Invincible (requires telefrag)" [
+    reinforcements(string): "Semicolon separated list of entity classes and cost of monster to spawn" : "monster_scrag 1;monster_fiend 3;monster_vore 5;monster_shambler 6"
+    monster_slots(integer) : "How many points to spend on monster spawns. Increases by up to 2x for Hard skill" : 6
+]
+@PointClass base(Monsters)size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/overlord/tris.md2", "frame":15 }) = monster_overlord : "Overlord
+Role: Flying Teleporting Boss, Tracking Explosives
+Health: 3,000 (Easy/Normal), 4,250 (Hard), 5,500 (Nightmare) + 500 per extra player in coop + 500 per skill in coop
+Body Armor: 500 (Easy/Normal), 650 (Hard), 800 (Nightmare) + 250 per extra player in coop + 250 per skill in coop"
+[
+	spawnflags(Flags) = 
+	[
+		8 : "No Teleporting" : 0
+	]
+]
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 24) model({ "path": ":models/monsters/fish/tris.md2" }) = monster_rotfish : "Rotfish
+Role: Melee Aquatic
+Health: 40" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/scrag/tris.md2" }) = monster_scrag : "Scrag
+Role: Ranged Flyer
+Health: 80" []
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/shalrath/tris.md2" }) = monster_shalrath : "Shalrath
+Role: Tracking Explosives
+Health: 400" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 24) model({ "path": ":models/monsters/spikeball/tris.md2" }) = monster_mine : "Spawn
+Role: Flying, Melee Explosives
+Health: 200 (weak to flechettes)" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 40) model({ "path": ":models/monsters/sword/tris.md2" }) = monster_sword : "Phantom Swordsman
+Role: Flying Melee
+Health: 200" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 24) model({ "path": ":models/monsters/tarbaby/tris.md2" }) = monster_tarbaby : "Spawn
+Role: Melee Explosives
+Health: 120" []
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 24) model({ "path": ":models/monsters/tarbaby/tris.md2","skin":1 }) = monster_tarbaby_hell : "Hellspawn
+Role: Melee Explosives
+Health: 150
+Baby Variant: 90 Health" [
+    spawnflags(Flags) =
+    [
+        8 : "Baby Hellspawn" : 0
+    ]
+]
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/vore/tris.md2" }) = monster_vore : "Vore
+Role: Tracking Explosives
+Health: 600" []
+@PointClass base(Monsters)size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/wrath/tris.md2", "frame":1 }) = monster_wrath : "Wrath
+Role: Flying Tracking Explosives
+Health: 400" []
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/wyvern/tris.md2", "frame": 13 }) = monster_wyvern : "Wyvern
+Role: Flying Boss
+Health: 2,000 (Easy/Normal), 3,000 (Hard), 4,000 (Nightmare) + 250 per extra player in coop
+Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop" []
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/zombie/tris.md2" }) = monster_zombie : "Zombie
+Role: Ranged Self-Revivor
+Health: 90"
+[]
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/zombie/tris.md2", "skin":2 }) = monster_mummy : "Mummy
+Role: Ranged Self-Revivor Boss
+Health: 1,500 (Easy/Normal), 2,500 (Hard), 3,500 (Nightmare) + 100 per extra player in coop
+Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop"
+[]
+
+
+//DEMAKE monsters
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 24) model({ "path": ":models/monsters/fixbot/tris.md2", "skin": 1 }) = monster_fixbot2 : "Fixbot Beta
+Role: Flying Hitscan, Resurrector, Scenic
+Health: 150
+Combat Armor: 50"
+[
+    spawnflags(Flags) =
+    [
+        1 : "Ambush" : 0
+        2 : "Trigger Spawn" : 0
+        4 : "Fix stuff" : 0
+        8 : "Takeoff" : 0
+        16 : "Landing" : 0
+    ]
+]
+@PointClass base(Monsters) size(-48 -48 -20, 48 48 48) model({ "path": ":models/monsters/protector/tris.md2","scale":"1.5" }) = monster_protector : "Stream Protector
+Role: Ranged, Tracking Explosives, Summons (Nightmare only)
+Health: 950
+Power Armor: 200" []
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/tactical/male/tris.md2"}) = monster_tactical_male : "Male Tactical
+Role: Multi-Weapon, Melee + Ranged + Explosives
+Health: 350
+Combat Armor: 100
+Power Screen: 100" [
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/tactical/female/tris.md2"}) = monster_tactical_female : "Female Tactical
+Role: Multi-Weapon, Melee + Ranged + Explosives
+Health: 350
+Combat Armor: 100
+Power Screen: 100" [
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+
+@PointClass base(Monsters) size(-16 -16 -24, 16 16 32) model({ "path": ":models/monsters/tactical/cyborg/tris.md2"}) = monster_tactical_cyborg : "Cyborg Tactical
+Role: Multi-Weapon Miniboss, Melee + Ranged + Explosives
+Health: 850
+Combat Armor: 200
+Power Screen: 200" [
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+
+@PointClass base(Monsters) model({ "path": ":models/monsters/berserk/tris.md2", "skin":2,"scale":"1.2" }) = monster_berserk2 : "Berserker Beta
+Role: Leaping Melee, Ranged
+Health: 300
+Jacket Armor: 100" [
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+@PointClass base(Monsters) model({ "path": ":models/monsters/parasite/tris.md2", "skin": 2,"scale":"1.25" }) = monster_dropper : "Teleport Dropper
+Role: Non-Attacking Spawner (spawns various soldiers depending on difficulty)
+Health: 175
+Jacket Armor: 100"
+[
+    spawnflags(Flags) =
+    [
+        8 : "No jumping" : 0
+    ]
+]
+
+
+//CITADEL and 25A monsters
 @PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 0 }) = monster_soldier_cobalt : "Cobalt Soldier
 Role: Ranged
 Health: 60
@@ -2107,21 +2391,9 @@ Power Screen: 100"
         8 : "Blind" : 0
     ]
 ]
-@PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 2 }) = monster_soldier_deatom : "Deatomizer Soldier (Placeholder)
+@PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 6 }) = monster_soldier_dist : "Disruptor Soldier
 Role: Ranged
 Health: 80
-Combat Armor: 100"
-[
-    spawnflags(Flags) =
-    [
-        1 : "Ambush" : 0
-        2 : "Trigger Spawn" : 0
-        8 : "Blind" : 0
-    ]
-]
-@PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 4 }) = monster_soldier_discharger : "Discharger Soldier
-Role: Ranged
-Health: 70
 Power Screen: 100"
 [
     spawnflags(Flags) =
@@ -2131,9 +2403,28 @@ Power Screen: 100"
         8 : "Blind" : 0
     ]
 ]
-@PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 6 }) = monster_soldier_dist : "Disruptor Soldier
+@PointClass base(Monsters) size(-36 -36 -36, 36 36 64) model({ "path": ":models/monsters/gladiatr/tris.md2", "skin": 6, "scale":"1.5" }) = monster_bfgladiator : "BFG Gladiator
 Role: Ranged
-Health: 80
+Health: 800
+Combat Armor: 200
+Power Armor: 200" []
+@PointClass base(Monsters) size(-72 -72 0, 72 72 136) model({ "path": ":models/monsters/boss2/tris.md2","skin":4,"scale":"1.5" }) = monster_boss2_titan : "Hornet Titan
+Role: Flying Teleporting Boss, Hitscanner, Tracking Explosives
+Health: 3,000 (Easy/Normal), 4,000 (Hard), 5,000 (Nightmare) + 250 per extra player in coop
+Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop
+Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop"
+[]
+@PointClass base(Monsters) size(-80 -80 0, 80 80 128) model({ "path": ":models/monsters/boss1/tris.md2", "skin": 4, "scale":"1.25" }) = monster_boss5_gamma : "Supertank General
+Role: Boss, Hitscanner, Tracking Explosives
+Health: 3,000 (Easy/Normal), 4,000 (Hard), 5,000 (Nightmare) + 250 per extra player in coop
+Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop
+Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop" []
+
+
+//ORIGINAL monsters
+@PointClass base(Monsters) model({ "path": ":models/monsters/soldier3/tris.md2", "skin": 4 }) = monster_soldier_discharger : "Discharger Soldier
+Role: Ranged
+Health: 70
 Power Screen: 100"
 [
     spawnflags(Flags) =
@@ -2163,79 +2454,17 @@ Health: 400"
         8 : "No jumping" : 0
     ]
 ]
-@PointClass base(Monsters) size(-32 -32 -24, 32 32 24) model({ "path": ":models/monsters/fixbot/tris.md2", "skin": 1 }) = monster_fixbot2 : "Fixbot Beta
-Role: Flying Hitscan, Resurrector, Scenic
-Health: 150
-Combat Armor: 50"
-[
-    spawnflags(Flags) =
-    [
-        1 : "Ambush" : 0
-        2 : "Trigger Spawn" : 0
-        4 : "Fix stuff" : 0
-        8 : "Takeoff" : 0
-        16 : "Landing" : 0
-    ]
-]
-@PointClass base(Monsters) model({ "path": ":models/monsters/infantry/tris.md2", "skin": 2, "frame": 64}) = monster_infantry_handler : "Infantry Handler
+@PointClass base(Monsters) size(-32 -32 -24, 32 32 64) model({ "path": ":models/monsters/gladiatr/tris.md2", "skin": 4 }) = monster_gladiator_flak : "Security Gladiator
 Role: Ranged
-Health: 100"
-[
-    spawnflags(Flags) =
-    [
-        8 : "No jumping" : 0
-    ]
-]
-@PointClass base(Monsters) model({ "path": ":models/monsters/infantry/tris.md2", "skin": 4, "frame": 64 }) = monster_heavy : "Infantry Heavy
-Role: Ranged Explosive
-Health: 120
-Combat Armor: 100"
-[
-    spawnflags(Flags) =
-    [
-        8 : "No jumping" : 0
-    ]
-]
-@PointClass base(Monsters) size(-36 -36 -36, 36 36 64) model({ "path": ":models/monsters/gladiatr/tris.md2", "skin": 4, "scale":"1.5" }) = monster_bfgladiator : "BFG Gladiator
-Role: Ranged
-Health: 500
+Health: 600
 Combat Armor: 200" []
-@PointClass base(Monsters) size(-24 -16 -24, 16 16 24) model({ "path": ":models/monsters/guard/hound/tris.md2" }) = monster_hound : "Hellhound
-Role: Melee
-Health:100"
-[
-    spawnflags(Flags) =
-    [
-        8 : "No jumping" : 0
-    ]
-]
-@PointClass base(Monsters) size(-28 -32 -16, 28 32 64) model({ "path": ":models/monsters/sentien/tris.md2" }) = monster_sentien : "Sentien
-Role: Ranged Hitscanner
-Health: 900
-Combat Armor: 200" []
-@PointClass base(Monsters) size(-32 -32 -24, 32 32 80) model({ "path": ":models/monsters/tank/tris.md2", "skin":4, "scale":"1.5" }) = monster_tank_guardian : "Tank Guardian (N64)
-Role: Ranged Boss
-Health: 1,500 (Easy/Normal), 2,500 (Hard), 3,500 (Nightmare) + 250 per extra player in coop
-Body Armor: 250 (Easy/Normal), 350 (Hard), 450 (Nightmare) + 100 per extra player in coop"
-[
-    speed(float) : "homing missile speed" : "0.0"
-]
-@PointClass base(Monsters) size(-56 -56 0, 56 56 80) model({ "path": ":models/monsters/boss2/tris.md2","skin":2 }) = monster_boss2_guardian : "Hornet Guardian (N64)
-Role: Flying Boss, Explosives
-Health: 2,000 (Easy/Normal), 3,000 (Hard), 4,000 (Nightmare) + 250 per extra player in coop
-Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop"
-[]
-@PointClass base(Monsters) size(-72 -72 0, 72 72 136) model({ "path": ":models/monsters/boss2/tris.md2","skin":4,"scale":"1.5" }) = monster_boss2_titan : "Hornet Titan
-Role: Flying Boss, Hitscanner, Heat-Seeking Explosives
-Health: 3,000 (Easy/Normal), 4,000 (Hard), 5,000 (Nightmare) + 250 per extra player in coop
-Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop
-Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop"
-[]
-@PointClass base(Monsters) size(-80 -80 0, 80 80 128) model({ "path": ":models/monsters/boss1/tris.md2", "skin": 4, "scale":"1.25" }) = monster_boss5_gamma : "Super Tank Boss (Gamma)
-Role: Boss, Hitscanner, Heat-Seeking Explosives
-Health: 3,000 (Easy/Normal), 4,000 (Hard), 5,000 (Nightmare) + 250 per extra player in coop
-Body Armor: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop
-Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra player in coop" []
+@PointClass base(Monsters) model({ "path": ":models/monsters/flyer/tris.md2", "skin":2 }) = monster_cutter : "Cutter
+Role: Flying melee
+Health: 50" []
+@PointClass base(Monsters) model({ "path": ":models/monsters/shark/tris.md2" }) = monster_shark : "Shark
+Role: Swimming melee
+Health: 300" []
+
 
 //new targets
 @PointClass base(EditorFlags, Targetable, Angleable) color(255 0 0) size(-8 -8 -8, 8 8 8) model({"path":"models/objects/laser/tris.md2"}) = target_shooter_blaster : "Projectile Shooter (use angles to point it)"
@@ -2265,12 +2494,24 @@ Power Shield: 350 (Easy/Normal), 450 (Hard), 550 (Nightmare) + 100 per extra pla
     speed(float) : "Speed" : "1000"
     volume(float) : "Volume" : "0.75"
 ]
+@PointClass base(EditorFlags, Targetable, Angleable) color(255 0 0) size(-8 -8 -8, 8 8 8) model({"path":"models/proj/pod/tris.md2"}) = target_shooter_magic : "Magic Shooter (use angles to point it)"
+[
+    spawnflags(Flags) =
+    [
+        1 : "Flame" : 0
+        2 : "Vorepod" : 0
+	4 : "Wrathpod" : 0
+	5 : "Plasmaball" : 0
+    ]
+    dmg(float) : "Damage" : "15"
+    speed(float) : "Speed" : "1000"
+    volume(float) : "Volume" : "0.75"
+]
+@PointClass base(EditorFlags, Targetable) = target_zboss : "Z-Sentien Boss Target
+Boss fires at this point when triggered." []
+
 
 //new triggers
-@PointClass base(EditorFlags, Targetable, UseTargets) color(128 128 128) = trigger_setskill : "Trigger Set Skill"
-[
-    message(string) : "Skill level to set to (0 = easy, 1 = normal, 2 = hard, 3 = nightmare)" : "1"
-]
 
 
 //new misc
@@ -2305,9 +2546,9 @@ misc_commdish : "Communications Dish"
 		32 : "(editor only) Show End Position" : 0
    ]
 ]
-@PointClass base(misc_strogg_ship) model({ "path": ":models/ships/bulldog_s/main/tris.md2" }) = misc_bulldog_s : "Bulldog for flybys (wings not shown in editor)" []
-@PointClass base(misc_strogg_ship) model({ "path": ":models/ships/bulldog_m/main/tris.md2" }) = misc_bulldog_m : "Bulldog for flybys (wings not shown in editor)" []
-@PointClass base(EditorFlags, FX) color(255 128 0) size(-176 -120 -24, 176 120 72) model({ "path": ":models/ships/bulldog_l/main/tris.md2" }) = misc_bulldog_l : "Large stationary Bulldog (wings not shown in editor)" []
+@PointClass base(misc_strogg_ship) size(-116 -56 -32, 40 56 16) model({ "path": ":models/ships/bulldog_s/main/tris.md2" }) = misc_bulldog_s : "Strogg Bulldog for flybys (wings not shown in editor)" []
+@PointClass base(misc_strogg_ship) size(-224 -112 -32, 80 112 64) model({ "path": ":models/ships/bulldog_m/main/tris.md2" }) = misc_bulldog_m : "Strogg Bulldog for flybys (wings not shown in editor)" []
+@PointClass base(EditorFlags, FX) color(255 128 0) size(-432 -120 -32, 144 120 96) model({ "path": ":models/ships/bulldog_l/main/tris.md2" }) = misc_bulldog_l : "Large stationary Strogg Bulldog (wings not shown in editor)" []
 
 // set angle for gib direction, otherwise it just drops
 @PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(8 8 8) model({"path":":models/objects/gibs/head2/tris.md2"} ) = misc_gib_head2 : "Strogg head gibs, use with target_spawner" []
@@ -2333,4 +2574,4 @@ misc_commdish : "Communications Dish"
 @PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(32 32 32) model({ "path":":models/monsters/boss2/gibs/head.md2"}) = misc_gib_boss2 : "Hornet gibs, use with target_spawner" []
 @PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(32 32 32) model({ "path":":models/monsters/boss3/jorg/gibs/head.md2"}) = misc_gib_boss3 : "Jorg gibs, use with target_spawner" []
 @PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(32 32 32) model({ "path":":models/monsters/carrier/gibs/head.md2"}) = misc_gib_carrier : "Carrier gibs, use with target_spawner" []
-@PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(32 32 32) model({ "path":":models/monsters/guardian/gib3.md2"}) = misc_gib_guardian : "Strider Guardian gibs, use with target_spawner" []
+    @PointClass base(Angleable, EditorFlags, FX) color(255 0 0) size(32 32 32) model({ "path":":models/monsters/guardian/gib3.md2"}) = misc_gib_guardian : "Strider Guardian gibs, use with target_spawner" []
