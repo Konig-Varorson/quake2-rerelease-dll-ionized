@@ -1115,7 +1115,7 @@ void zboss_posthook(edict_t* self)
 
 void zboss_chooseHookRocket(edict_t* self)
 {
-	if (/*frandom() < 0.2 && */ !(self->monsterinfo.aiflags & AI_ONESHOTTARGET))
+	if (frandom() < 0.2 && !(self->monsterinfo.aiflags & AI_ONESHOTTARGET))
 	{
 		M_SetAnimation(self, &zboss_move_attack2a);
 	}
