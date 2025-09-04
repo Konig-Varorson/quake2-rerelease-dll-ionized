@@ -661,63 +661,6 @@ void gekk_check_refire(edict_t *self)
 	}
 }
 
-TOUCH(loogie_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
-
-	if (other == self->owner)
-		return;
-
-	if (tr.surface && (tr.surface->flags & SURF_SKY))
-	{
-		G_FreeEdict(self);
-		return;
-	}
-
-	if (self->owner->client)
-		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
-
-	if (other->takedamage)
-		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY, MOD_GEKK);
-	
-	gi.sound(self, CHAN_AUTO, loogie_hit, 1.0f, ATTN_NORM, 0);
-
-	G_FreeEdict(self);
-};
-
-void fire_loogie(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed)
-{
-	edict_t *loogie;
-	trace_t	 tr;
-
-	loogie = G_Spawn();
-	loogie->s.origin = start;
-	loogie->s.old_origin = start;
-	loogie->s.angles = vectoangles(dir);
-	loogie->velocity = dir * speed;
-	loogie->movetype = MOVETYPE_FLYMISSILE;
-	loogie->clipmask = MASK_PROJECTILE;
-	loogie->solid = SOLID_BBOX;
-	// Paril: this was originally the wrong effect,
-	// but it makes it look more acid-y.
-	loogie->s.effects |= EF_BLASTER;
-	loogie->s.renderfx |= RF_FULLBRIGHT;
-	loogie->s.modelindex = gi.modelindex("models/objects/loogy/tris.md2");
-	loogie->owner = self;
-	loogie->touch = loogie_touch;
-	loogie->nextthink = level.time + 2_sec;
-	loogie->think = G_FreeEdict;
-	loogie->dmg = damage;
-	loogie->svflags |= SVF_PROJECTILE;
-	gi.linkentity(loogie);
-
-	tr = gi.traceline(self->s.origin, loogie->s.origin, loogie, MASK_PROJECTILE);
-	if (tr.fraction < 1.0f)
-	{
-		loogie->s.origin = tr.endpos + (tr.plane.normal * 1.f);
-		loogie->touch(loogie, tr.ent, tr, false);
-	}
-}
-
 void loogie(edict_t *self)
 {
 	vec3_t start;
@@ -739,7 +682,7 @@ void loogie(edict_t *self)
 	dir = end - start;
 	dir.normalize();
 
-	fire_loogie(self, start, dir, 5, 550);
+	fire_acid(self, start, dir, 5, 550);
 
 	gi.sound(self, CHAN_BODY, sound_speet, 1.0f, ATTN_NORM, 0);
 }

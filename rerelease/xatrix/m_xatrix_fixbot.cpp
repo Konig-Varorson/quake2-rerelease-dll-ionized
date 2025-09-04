@@ -1306,5 +1306,5 @@ void SP_monster_fixbot2(edict_t* self)
 	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 	self->monsterinfo.armor_power = 50;
 	self->style = 1;
-	self->s.skinnum = 2;
+	self->s.skinnum = 1;
 }

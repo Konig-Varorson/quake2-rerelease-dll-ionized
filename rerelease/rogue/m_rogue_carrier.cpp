@@ -952,7 +952,7 @@ PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(carrier_setskin) (edict_t *self) -> void
 {
-	/* KONIG - allow multiple skins */
+	/* KONIG - set for multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -1020,9 +1020,9 @@ MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool
 			return true;
 		}
 	}
-
+	/* KONIG - universal boss powerup copy */
 	BossPowerups(self);
-	
+
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.5f, 0.f);
 }
 
@@ -1150,11 +1150,7 @@ void SP_monster_carrier(edict_t *self)
 	{
 		if (skill->integer)
 			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
-		/* KONIG - doubles reinforcement scaling in coop */
-		if (coop->integer)
-		{
-			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
-		}
+
 		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
 	}
 
@@ -1162,6 +1158,6 @@ void SP_monster_carrier(edict_t *self)
 	self->monsterinfo.fly_acceleration = 5.f;
 	self->monsterinfo.fly_speed = 50.f;
 	self->monsterinfo.fly_above = true;
-	self->monsterinfo.fly_min_distance = 1000.f;
-	self->monsterinfo.fly_max_distance = 1000.f;
+	self->monsterinfo.fly_min_distance = 500.f;
+	self->monsterinfo.fly_max_distance = 600.f;
 }

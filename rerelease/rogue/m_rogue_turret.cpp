@@ -297,6 +297,11 @@ MMOVE_T(turret_move_stand) = { FRAME_stand01, FRAME_stand02, turret_frames_stand
 
 MONSTERINFO_STAND(turret_stand) (edict_t *self) -> void
 {
+	if (self->waterlevel <= WATER_WAIST)
+		self->flags |= FL_SWIM;
+	else
+		self->flags &= FL_SWIM;
+
 	M_SetAnimation(self, &turret_move_stand);
 	if (self->target_ent)
 	{
@@ -368,8 +373,8 @@ MONSTERINFO_RUN(turret_run) (edict_t *self) -> void
 //  ATTACK
 // **********************
 
-constexpr int32_t TURRET_BLASTER_DAMAGE = 8;
-constexpr int32_t TURRET_BULLET_DAMAGE = 2;
+constexpr int32_t TURRET_BLASTER_DAMAGE	= 8;
+constexpr int32_t TURRET_BULLET_DAMAGE	= 2;
 constexpr int32_t TURRET_HEAT_DAMAGE	= 4;
 
 void TurretFire(edict_t *self)
@@ -427,7 +432,7 @@ void TurretFire(edict_t *self)
 		{
 			// on harder difficulties, randomly fire directly at enemy
 			// more often; makes them more unpredictable
-			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN))
+			if (self->spawnflags.has(SPAWNFLAG_TURRET_MACHINEGUN) || self->spawnflags.has(SPAWNFLAG_TURRET_HEATBEAM))
 				PredictAim(self, self->enemy, start, 0, true, 0.3f, &dir, nullptr);
 			else if (frandom() < skill->integer / 5.f)
 				PredictAim(self, self->enemy, start, (float) rocketSpeed, true, (frandom(3.f - skill->integer) / 3.f) - frandom(0.05f * (3.f - skill->integer)), &dir, nullptr);
@@ -475,7 +480,7 @@ void TurretFire(edict_t *self)
 					if (self->monsterinfo.next_duck_time < level.time &&
 						self->monsterinfo.melee_debounce_time <= level.time)
 					{
-						monster_fire_heatbeam(self, start, dir, vec3_origin, TURRET_HEAT_DAMAGE, 50, MZ2_TURRET_ROCKET);
+						monster_fire_heatbeam(self, start, dir, vec3_origin, TURRET_HEAT_DAMAGE, 10, MZ2_TURRET_ROCKET);
 						self->monsterinfo.melee_debounce_time = level.time + 10_hz;
 					}
 

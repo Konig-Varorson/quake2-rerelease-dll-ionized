@@ -874,7 +874,7 @@ PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 
 MONSTERINFO_SETSKIN(widow2_setskin) (edict_t *self) -> void
 {
-	/* KONIG - allow multiple skins */
+	/* KONIG - set for multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -1134,6 +1134,7 @@ void SP_monster_widow2(edict_t *self)
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 144 };
 
+	/* KONIG - rebalanced health and armor; power armor -> body armor for ETF efficiency */
 	self->health = max(2500, 2500 + 1250 * (skill->integer - 1)) * st.health_multiplier;
 	if (!st.was_key_specified("armor_type"))
 		self->monsterinfo.armor_type = IT_ARMOR_BODY;

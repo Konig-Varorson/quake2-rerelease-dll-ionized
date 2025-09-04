@@ -971,7 +971,7 @@ PAIN(widow_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 
 MONSTERINFO_SETSKIN(widow_setskin) (edict_t *self) -> void
 {
-	/* KONIG - allow multiple skins */
+	/* KONIG - set for multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -1028,6 +1028,7 @@ void WidowPowerArmor(edict_t *self)
 	// I don't like this, but it works
 	if (self->monsterinfo.power_armor_power <= 0)
 		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	/* KONIG - extra in coop */
 	if (coop->integer)
 		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
 }
@@ -1036,25 +1037,40 @@ void WidowRespondPowerup(edict_t *self, edict_t *other)
 {
 	if (other->s.effects & EF_QUAD)
 	{
-		WidowPowerArmor(self);
-		if (skill->integer >= 1)
+		if (skill->integer == 1)
+			WidowDouble(self, other->client->quad_time);
+		else if (skill->integer == 2)
 			WidowGoinQuad(self, other->client->quad_time);
+		else if (skill->integer == 3)
+		{
+			WidowGoinQuad(self, other->client->quad_time);
+			WidowPowerArmor(self);
+		}
 	}
 	else if (other->s.effects & EF_DOUBLE)
 	{
-		WidowPowerArmor(self);
-		if (skill->integer >= 1)
+		if (skill->integer == 2)
 			WidowDouble(self, other->client->double_time);
+		else if (skill->integer == 3)
+		{
+			WidowDouble(self, other->client->double_time);
+			WidowPowerArmor(self);
+		}
 	}
 	else
 		widow_damage_multiplier = 1;
 
 	if (other->s.effects & EF_PENT)
 	{
-		if (skill->integer >= 2)
-			WidowPent(self, other->client->invincible_time);
-		else if (skill->integer == 1)
+		if (skill->integer == 1)
 			WidowPowerArmor(self);
+		else if (skill->integer == 2)
+			WidowPent(self, other->client->invincible_time);
+		else if (skill->integer == 3)
+		{
+			WidowPent(self, other->client->invincible_time);
+			WidowPowerArmor(self);
+		}
 	}
 }
 
