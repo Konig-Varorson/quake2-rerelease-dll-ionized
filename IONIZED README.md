@@ -14,6 +14,20 @@ Version 0.3 will be focused on finishing Zaero compatbility and finishing Quake 
 Ionized won't be doing a full compatibility with Unseen, as most of the remaining content ranges from silly to limited. Several concepts will be carried over with Q4 demakes (for example: Sauron->Heavy Hover Tank, Dathren and Assassin -> Tacticals), however.
 
 ## Changelog
+### Version 0.3
+* Added Sentien, Z-Sentien, and Autocannons from Zaero
+* Added Grunt, Dog, Enforcer, Knight, Death Knight, Scrag, Zombie, Fiend, Rotfish, Vore, Spawn, Chthon, and Shub-Niggurath from Quake 1.
+* Added Centroid and Spike Mine from Scourge of Armagon.
+* Added Hellspawn, Phantom Swordsman, Knight Statue, Death Knight Statue, Lavaman, Wrath, Mummy, Overlord, and Dragon from Dissolution of Eternity.
+* Added Wyvern, Ogre Marksman, and Shalrath from QTest.
+* Added cut weapon Disintegrator, modeled after Quake 4's Dark Matter Gun.
+* Added Q4 demakes: Tactical Strogg (Male, Female, and Cyborg variants), Stream Protector, Berserker Beta, Repair Bot Beta, and Teleport Dropper.
+* Added two new strogg variants from request: Security Gladiator (fires a burst of nails) and Cutter (melee-only flyer).
+* Added a new "Magic Shooter" that fires voreballs, wrathballs, Dragon's plasmaballs, and Deaht Knight's flame attack.
+* Changed Makron's blaster attack to firing Ion Ripper blasters.
+* Added some Nightmare/Skill 3-only attacks/behaviors to Tank, Tank Commander, and Makron.
+* Had to undo a lot of code because changes became spagetti coded and started from scratch off of Paril's PSX mod again. Because of this, the full extent of changes is a bit lost and hard to keep track of.
+
 ### Version 0.2
 * Remade foundation using Paril's PSX Mod: https://www.moddb.com/mods/quake-ii-psx All code was redone from scratch.
 * bg_local.h:
