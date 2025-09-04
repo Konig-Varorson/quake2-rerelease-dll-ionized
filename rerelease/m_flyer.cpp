@@ -191,6 +191,55 @@ mframe_t flyer_frames_run[] = {
 };
 MMOVE_T(flyer_move_run) = { FRAME_stand01, FRAME_stand45, flyer_frames_run, nullptr };
 
+mframe_t flyer_frames_run2[] = {
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 },
+	{ ai_run, 25 }
+};
+MMOVE_T(flyer_move_run2) = { FRAME_stand01, FRAME_stand45, flyer_frames_run2, nullptr };
+
 mframe_t flyer_frames_kamizake[] = {
 	{ ai_charge, 40, flyer_kamikaze_check },
 	{ ai_charge, 40, flyer_kamikaze_check },
@@ -202,17 +251,19 @@ MMOVE_T(flyer_move_kamikaze) = { FRAME_rollr02, FRAME_rollr06, flyer_frames_kami
 
 MONSTERINFO_RUN(flyer_run) (edict_t *self) -> void
 {
-	if (self->mass > 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 		M_SetAnimation(self, &flyer_move_kamikaze);
 	else if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &flyer_move_stand);
+	else if (strcmp(self->classname, "monster_cutter") == 0)
+		M_SetAnimation(self, &flyer_move_run2);
 	else
 		M_SetAnimation(self, &flyer_move_run);
 }
 
 MONSTERINFO_WALK(flyer_walk) (edict_t *self) -> void
 {
-	if (self->mass > 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 		flyer_run(self);
 	else
 		M_SetAnimation(self, &flyer_move_walk);
@@ -220,7 +271,7 @@ MONSTERINFO_WALK(flyer_walk) (edict_t *self) -> void
 
 MONSTERINFO_STAND(flyer_stand) (edict_t *self) -> void
 {
-	if (self->mass > 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 		flyer_run(self);
 	else
 		M_SetAnimation(self, &flyer_move_stand);
@@ -499,7 +550,7 @@ void flyer_loop_melee(edict_t *self)
 
 static void flyer_set_fly_parameters(edict_t *self, bool melee)
 {
-	if (melee)
+	if (melee || strcmp(self->classname, "monster_cutter") == 0)
 	{
 		// engage thrusters for a slice
 		self->monsterinfo.fly_pinned = false;
@@ -522,7 +573,12 @@ static void flyer_set_fly_parameters(edict_t *self, bool melee)
 
 MONSTERINFO_ATTACK(flyer_attack) (edict_t *self) -> void
 {
-	if (self->mass > 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
+	{
+		flyer_run(self);
+		return;
+	}
+	else if (strcmp(self->classname, "monster_cutter") == 0)
 	{
 		flyer_run(self);
 		return;
@@ -561,7 +617,7 @@ MONSTERINFO_ATTACK(flyer_attack) (edict_t *self) -> void
 
 MONSTERINFO_MELEE(flyer_melee) (edict_t *self) -> void
 {
-	if (self->mass > 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 		flyer_run(self);
 	else
 	{
@@ -590,7 +646,7 @@ PAIN(flyer_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 	int n;
 
 	//	pmm	 - kamikaze's don't feel pain
-	if (self->mass != 50)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 		return;
 	// pmm
 
@@ -655,8 +711,7 @@ DIE(flyer_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 // PMM - kamikaze code .. blow up if blocked
 MONSTERINFO_BLOCKED(flyer_blocked) (edict_t *self, float dist) -> bool
 {
-	// kamikaze = 100, normal = 50
-	if (self->mass == 100)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 	{
 		flyer_kamikaze_check(self);
 
@@ -755,12 +810,20 @@ void SP_monster_flyer(edict_t *self)
 	M_SetAnimation(self, &flyer_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (self->s.effects & EF_ROCKET)
+	if (strcmp(self->classname, "monster_kamikaze") == 0)
 	{
-		// PMM - normal flyer has mass of 50
 		self->mass = 100;
 		self->yaw_speed = 5;
+		flyer_set_fly_parameters(self, true);
 		self->touch = kamikaze_touch;
+	}
+	else if (strcmp(self->classname, "monster_cutter") == 0)
+	{
+		self->mass = 100;
+		self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
+		self->monsterinfo.fly_buzzard = true;
+		flyer_set_fly_parameters(self, false);
+		self->touch = flyer_touch;
 	}
 	else
 	{
@@ -782,7 +845,27 @@ void SP_monster_kamikaze(edict_t *self)
 	}
 
 	self->s.effects |= EF_ROCKET;
-	self->s.skinnum = 2;
 
 	SP_monster_flyer(self);
+}
+
+// KONIG - Melee only fliers
+void SP_monster_cutter(edict_t* self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->s.skinnum = 2;
+
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_JACKET;
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = 100;
+
+	SP_monster_flyer(self);
+
 }

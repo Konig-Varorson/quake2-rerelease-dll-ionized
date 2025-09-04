@@ -445,17 +445,6 @@ PAIN(supertank_pain) (edict_t *self, edict_t *other, float kick, int damage, con
 		M_SetAnimation(self, &supertank_move_pain3);
 }
 
-MONSTERINFO_CHECKATTACK(supertank_CheckAttack) (edict_t* self) -> bool
-{
-	if (!self->enemy)
-		return false;
-
-	/* KONIG - boss powerups*/
-	BossPowerups(self);
-
-	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.6f, 0.7f, 0.85f, 0.f);
-}
-
 MONSTERINFO_SETSKIN(supertank_setskin) (edict_t *self) -> void
 {
 	if (self->health < (self->max_health / 2))
@@ -485,7 +474,6 @@ void supertankRocket(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	/* KONIG - spawnflag renamed; TODO - Gamma fire Hellfury or Guardian rockets */
 	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_HEATSEEKING))
 	{
 		vec = self->enemy->s.origin;
@@ -637,9 +625,16 @@ MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
+MONSTERINFO_CHECKATTACK(supertank_checkattack) (edict_t* self) -> bool
+{
+	if (!self->enemy)
+		return false;
+
+	BossPowerups(self);
+
+	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.6f, 0.7f, 0.85f, 0.f);
+}
 //
 // monster_supertank
 //
@@ -702,6 +697,8 @@ void SP_monster_supertank(edict_t *self)
 	}
 	else if (strcmp(self->classname, "monster_boss5_gamma") == 0)
 	{
+		self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+
 		if (!st.was_key_specified("armor_type"))
 			self->monsterinfo.armor_type = IT_ARMOR_BODY;
 		if (!st.was_key_specified("armor_power"))
@@ -725,7 +722,6 @@ void SP_monster_supertank(edict_t *self)
 		if (coop->integer)
 			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
 	}
-
 	self->gib_health = -500;
 	self->mass = 800;
 
@@ -740,7 +736,7 @@ void SP_monster_supertank(edict_t *self)
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = nullptr;
 	self->monsterinfo.blocked = supertank_blocked; // PGM
-	self->monsterinfo.checkattack = supertank_CheckAttack;
+	self->monsterinfo.checkattack = supertank_checkattack;
 	self->monsterinfo.setskin = supertank_setskin;
 
 	gi.linkentity(self);
@@ -771,14 +767,10 @@ void SP_monster_supertank(edict_t *self)
  */
 void SP_monster_boss5(edict_t *self)
 {
-	/* KONIG - changed unused spawnflag to just heatseeking, moved power armor to boss5 */
-	const spawn_temp_t& st = ED_GetSpawnTemp();
-
 	self->spawnflags |= SPAWNFLAG_SUPERTANK_HEATSEEKING;
 	SP_monster_supertank(self);
 	gi.soundindex("weapons/railgr1a.wav");
 	self->s.skinnum = 2;
-
 }
 
 //Citadel boss
@@ -786,7 +778,6 @@ void SP_monster_boss5(edict_t *self)
  */
 void SP_monster_boss5_gamma(edict_t* self)
 {
-	/* KONIG - changed unused spawnflag to just heatseeking, moved power armor to boss5 */
 	const spawn_temp_t& st = ED_GetSpawnTemp();
 
 	self->spawnflags |= SPAWNFLAG_SUPERTANK_HEATSEEKING;
@@ -799,6 +790,4 @@ void SP_monster_boss5_gamma(edict_t* self)
 
 	self->mins = { -80, -80, 0 };
 	self->maxs = { 80, 80, 128 };
-
-	self->health = max(3000, 3000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 }

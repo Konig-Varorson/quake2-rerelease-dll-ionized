@@ -17,9 +17,6 @@ static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
 static cached_soundindex sound_death;
 
-/* KONIG - universal boss powerup copy */
-void BossPowerups(edict_t* self);
-
 //
 // stand
 //
@@ -460,166 +457,6 @@ MMOVE_T(guardian_move_kick) = { FRAME_kick_in1, FRAME_kick_in13, guardian_frames
 fire_heat
 */
 
-static inline vec3_t heat_guardian_get_dist_vec(edict_t *heat, edict_t *target, float dist_to_target)
-{
-	return (((target->s.origin + vec3_t{0.f, 0.f, target->mins.z}) + (target->velocity * (clamp(dist_to_target / 500.f, 0.f, 1.f)) * 0.5f)) - heat->s.origin).normalized();
-}
-
-THINK(heat_guardian_think) (edict_t *self) -> void
-{
-	edict_t *acquire = nullptr;
-	float	 oldlen = 0;
-	float	 olddot = 1;
-
-	if (self->timestamp < level.time)
-	{
-		vec3_t fwd = AngleVectors(self->s.angles).forward;
-
-		if (self->oldenemy)
-		{
-			self->enemy = self->oldenemy;
-			self->oldenemy = nullptr;
-		}
-	
-		if (self->enemy)
-		{
-			acquire = self->enemy;
-
-			if (acquire->health <= 0 ||
-				!visible(self, acquire))
-			{
-				self->enemy = acquire = nullptr;
-			}
-			else
-			{
-				float dist_to_target = (self->s.origin - acquire->s.origin).normalize();
-				self->pos1 = heat_guardian_get_dist_vec(self, acquire, dist_to_target);
-			}
-		}
-
-		if (!acquire)
-		{
-			// acquire new target
-			edict_t *target = nullptr;
-
-			while ((target = findradius(target, self->s.origin, 1024)) != nullptr)
-			{
-				if (self->owner == target)
-					continue;
-				if (!target->client)
-					continue;
-				if (target->health <= 0)
-					continue;
-				if (!visible(self, target))
-					continue;
-
-				float dist_to_target = (self->s.origin - target->s.origin).normalize();
-				vec3_t vec = heat_guardian_get_dist_vec(self, target, dist_to_target);
-
-				float len = vec.normalize();
-				float dot = vec.dot(fwd);
-
-				// targets that require us to turn less are preferred
-				if (dot >= olddot)
-					continue;
-
-				if (acquire == nullptr || dot < olddot || len < oldlen)
-				{
-					acquire = target;
-					oldlen = len;
-					olddot = dot;
-					self->pos1 = vec;
-				}
-			}
-		}
-	}
-
-	vec3_t preferred_dir = self->pos1;
-
-	if (acquire != nullptr)
-	{
-		if (self->enemy != acquire)
-		{
-			gi.sound(self, CHAN_WEAPON, gi.soundindex("weapons/railgr1a.wav"), 1.f, 0.25f, 0);
-			self->enemy = acquire;
-		}
-	}
-	else
-		self->enemy = nullptr;
-
-	float t = self->accel;
-
-	if (self->enemy)
-		t *= 0.85f;
-
-	float d = self->movedir.dot(preferred_dir);
-
-	self->movedir = slerp(self->movedir, preferred_dir, t).normalized();
-	self->s.angles = vectoangles(self->movedir);
-
-	if (self->speed < self->yaw_speed)
-	{
-		self->speed += self->yaw_speed * gi.frame_time_s;
-	}
-
-	self->velocity = self->movedir * self->speed;
-	self->nextthink = level.time + FRAME_TIME_MS;
-}
-
-DIE(guardian_heat_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
-	BecomeExplosion1(self);
-}
-
-// RAFAEL
-void fire_guardian_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, const vec3_t &rest_dir, int damage, int speed, float damage_radius, int radius_damage, float turn_fraction)
-{
-	edict_t *heat;
-
-	heat = G_Spawn();
-	heat->s.origin = start;
-	heat->movedir = dir;
-	heat->s.angles = vectoangles(dir);
-	heat->velocity = dir * speed;
-	heat->movetype = MOVETYPE_FLYMISSILE;
-	heat->clipmask = MASK_PROJECTILE;
-	heat->flags |= FL_DAMAGEABLE;
-	heat->solid = SOLID_BBOX;
-	heat->s.effects |= EF_ROCKET;
-	heat->s.modelindex = gi.modelindex("models/objects/rocket/tris.md2");
-	heat->s.scale = 1.5f;
-	heat->owner = self;
-	heat->touch = rocket_touch;
-	heat->speed = speed / 2;
-	heat->yaw_speed = speed * 2;
-	heat->accel = turn_fraction;
-	heat->pos1 = rest_dir;
-	heat->mins = { -5, -5, -5 };
-	heat->maxs = { 5, 5, 5 };
-	heat->health = 15;
-	heat->takedamage = true;
-	heat->die = guardian_heat_die;
-
-	heat->nextthink = level.time + 0.20_sec;
-	heat->think = heat_guardian_think;
-
-	heat->dmg = damage;
-	heat->radius_dmg = radius_damage;
-	heat->dmg_radius = damage_radius;
-	heat->s.sound = gi.soundindex("weapons/rockfly.wav");
-
-	if (visible(heat, self->enemy))
-	{
-		heat->oldenemy = self->enemy;
-		heat->timestamp = level.time + 0.6_sec;
-		gi.sound(heat, CHAN_WEAPON, gi.soundindex("weapons/railgr1a.wav"), 1.f, 0.25f, 0);
-	}
-
-	gi.linkentity(heat);
-}
-
-// RAFAEL
-
 static void guardian_fire_rocket(edict_t *self, float offset)
 {
 	vec3_t forward, right, up;
@@ -859,23 +696,60 @@ DIE(guardian_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 	gi.sound(self, CHAN_BODY, sound_death, 1.f, 0.1f, 0.0f);
 }
 
+void GuardianPowerArmor(edict_t *self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	// I don't like this, but it works
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 200 * skill->integer;
+}
+
+void GuardianRespondPowerup(edict_t *self, edict_t *other)
+{
+	if (other->s.effects & (EF_QUAD | EF_DOUBLE | EF_DUALFIRE | EF_PENT))
+	{
+		GuardianPowerArmor(self);
+	}
+}
+
+static void GuardianPowerups(edict_t *self)
+{
+	edict_t *ent;
+
+	if (!coop->integer)
+	{
+		GuardianRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			GuardianRespondPowerup(self, ent);
+		}
+	}
+}
+
 MONSTERINFO_CHECKATTACK(Guardian_CheckAttack) (edict_t *self) -> bool
 {
 	if (!self->enemy)
 		return false;
 
-	BossPowerups(self);
+	GuardianPowerups(self);
 
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.6f, 0.7f, 0.85f, 0.f);
 }
 
 MONSTERINFO_SETSKIN(guardian_setskin) (edict_t *self) -> void
 {
-	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum |= 1;
+		self->s.skinnum = 1;
 	else
-		self->s.skinnum &= ~1;
+		self->s.skinnum = 0;
 }
 
 
@@ -914,19 +788,13 @@ void SP_monster_guardian(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	/* KONIG - GZ health scaling; add body armor */
-	self->health = max (2500, 2500 + 1250 * (skill->integer - 1)) * st.health_multiplier;
+	self->health = 2500 * st.health_multiplier;
 	self->gib_health = -200;
 
-	if (!st.was_key_specified("armor_type"))
-		self->monsterinfo.armor_type = IT_ARMOR_BODY;
-	if (!st.was_key_specified("armor_power"))
-		self->monsterinfo.armor_power = max(200, 200 + 100 * (skill->integer - 1));
-	if (coop->integer)
-	{
-		self->health += (250 * (CountPlayers() - 1));
-		self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
-	}
+	if (skill->integer >= 3 || coop->integer)
+		self->health *= 2;
+	else if (skill->integer == 2)
+		self->health *= 1.5f;
 
 	self->monsterinfo.scale = MODEL_SCALE;
 

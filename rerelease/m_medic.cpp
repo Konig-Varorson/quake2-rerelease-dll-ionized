@@ -1531,7 +1531,7 @@ void SP_monster_medic(edict_t *self)
 	if (strcmp(self->classname, "monster_medic_commander") == 0)
 	{
 		/* KONIG - reduce health 600->500, add combat armor */
-		self->health = 500 * st.health_multiplier;
+		self->health = 550 * st.health_multiplier;
 		if (!st.was_key_specified("armor_type"))
 			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 		if (!st.was_key_specified("armor_power"))
@@ -1580,8 +1580,7 @@ void SP_monster_medic(edict_t *self)
 	// PMM
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
-	/* KONIG - changed if from mass to classname; just makes sense */
-	if (strcmp(self->classname, "monster_medic_commander") == 0)
+	if (self->mass > 400)
 	{
 		self->s.skinnum = 2;
 

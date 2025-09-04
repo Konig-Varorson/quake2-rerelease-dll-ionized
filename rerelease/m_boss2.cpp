@@ -34,7 +34,7 @@ static void boss2_set_fly_parameters(edict_t *self, bool firing)
 	self->monsterinfo.fly_speed = firing ? 10.f : 80.f;
 	// BOSS2 stays far-ish away if he's in the open
 	self->monsterinfo.fly_min_distance = 400.f;
-	self->monsterinfo.fly_max_distance = 600.f;
+	self->monsterinfo.fly_max_distance = 500.f;
 }
 
 MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void
@@ -313,11 +313,11 @@ void Boss2HyperBlaster(edict_t *self)
 	forward = target - start;
 	forward.normalize();
 
-	/* KONIG - flechettes instead of blaster, increase damage from 2 to 10*/
+	/* KONIG - flechettes instead of blaster, increase damage from 2 to 5; titan uses bullets still*/
 	if (strcmp(self->classname, "monster_boss2_titan") == 0)
 		monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD, id);
 	else
-		monster_fire_flechette(self, start, forward, 10, 1000, id);
+		monster_fire_flechette(self, start, forward, 5, 1000, id);
 }
 
 mframe_t boss2_frames_attack_hb[] = {
@@ -554,7 +554,7 @@ PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 
 MONSTERINFO_SETSKIN(boss2_setskin) (edict_t *self) -> void
 {
-	/*KONIG - Additional skin for N64*/
+	/*KONIG - adjust for multiple skins*/
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -640,6 +640,66 @@ MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool
 	/* KONIG - boss powerup response*/
 	BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
+}
+
+//
+// DODGES AND TITAN TELEPORT
+//
+
+void TitanTeleport(edict_t* self)
+{
+	if (skill->integer <= 3 && frandom() >= 0.5f)
+		return;
+
+	if (!TryRandomTeleportPosition(self, 256.0f)) {
+		return;
+	}
+}
+
+MONSTERINFO_DODGE(titan_dodge) (edict_t* self, edict_t* attacker, gtime_t eta, trace_t* tr, bool gravity) -> void
+{
+	if (!(strcmp(self->classname, "monster_boss2_titan") == 0))
+		return;
+
+	if (self->health <= 0)
+		return;
+
+	if (!self->enemy)
+	{
+		self->enemy = attacker;
+		FoundTarget(self);
+		return;
+	}
+
+	if ((eta < FRAME_TIME_MS) || (eta > 5_sec))
+		return;
+
+	if (self->timestamp > level.time)
+		return;
+
+	self->timestamp = level.time + random_time(1_sec, 5_sec);
+
+	TitanTeleport(self);
+}
+
+MONSTERINFO_SIDESTEP(boss2_sidestep) (edict_t* self) -> bool
+{
+	if (skill->integer < 3)
+		return false;
+
+	if ((self->monsterinfo.active_move == &boss2_move_attack_hb) ||
+		(self->monsterinfo.active_move == &boss2_move_attack_pre_mg) ||
+		(self->monsterinfo.active_move == &boss2_move_attack_mg) ||
+		(self->monsterinfo.active_move == &boss2_move_attack_rocket) ||
+		(self->monsterinfo.active_move == &boss2_move_attack_rocket2))
+	{
+		return false;
+	}
+
+	if (self->monsterinfo.active_move != &boss2_move_run)
+		M_SetAnimation(self, &boss2_move_run);
+
+	return true;
 }
 
 /*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight Hyperblaster
@@ -733,6 +793,8 @@ void SP_monster_boss2(edict_t *self)
 	self->monsterinfo.attack = boss2_attack;
 	self->monsterinfo.search = boss2_search;
 	self->monsterinfo.checkattack = Boss2_CheckAttack;
+	self->monsterinfo.dodge = titan_dodge;
+	self->monsterinfo.sidestep = boss2_sidestep;
 	self->monsterinfo.setskin = boss2_setskin;
 	gi.linkentity(self);
 
@@ -783,16 +845,4 @@ void SP_monster_boss2_titan(edict_t* self)
 		self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
 		self->monsterinfo.power_armor_power += (100 * (CountPlayers() - 1));
 	}
-}
-
-/*KONIG - function to make classname hornet guardians */
-/*QUAKED monster_boss2_guardian (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
- */
-void SP_monster_boss2_guardian(edict_t* self)
-{
-	const spawn_temp_t& st = ED_GetSpawnTemp();
-
-	self->spawnflags |= SPAWNFLAG_BOSS2_N64;
-
-	SP_monster_boss2(self);
 }

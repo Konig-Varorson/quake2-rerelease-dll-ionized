@@ -30,13 +30,10 @@ static cached_soundindex sound_step_right;
 static cached_soundindex sound_death_hit;
 
 /* KONIG - add powerup copy; makron corpse for disable makron spawn */
-unsigned int makron_damage_multiplier;
-void MakronPowerups(edict_t* self);
-
 constexpr spawnflags_t SPAWNFLAG_NO_MAKRON = 8_spawnflag;
 void makron_spawn_torso(edict_t* self);
 void makron_torso(edict_t* self);
-void BossPowerups(edict_t* self);
+unsigned int jorg_damage_multiplier;
 
 void MakronToss(edict_t *self);
 
@@ -469,11 +466,10 @@ PAIN(jorg_pain) (edict_t *self, edict_t *other, float kick, int damage, const mo
 
 MONSTERINFO_SETSKIN(jorg_setskin) (edict_t *self) -> void
 {
-	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum |= 1;
+		self->s.skinnum = 1;
 	else
-		self->s.skinnum &= ~1;
+		self->s.skinnum = 0;
 }
 
 void jorgBFG(edict_t *self)
@@ -491,7 +487,7 @@ void jorgBFG(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_WEAPON, sound_bfg_fire, 1, ATTN_NORM, 0);
-	monster_fire_bfg(self, start, dir, 50 * makron_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1);
+	monster_fire_bfg(self, start, dir, 50 * jorg_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1); //KONIG - powerup multiplier
 }
 
 void jorg_firebullet_right(edict_t *self)
@@ -500,7 +496,7 @@ void jorg_firebullet_right(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_JORG_MACHINEGUN_R1], forward, right);
 	PredictAim(self, self->enemy, start, 0, false, -0.2f, &forward, nullptr);
-	monster_fire_bullet(self, start, forward, 6 * makron_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1);
+	monster_fire_bullet(self, start, forward, 6 * jorg_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1); //KONIG - powerup multiplier
 }
 
 void jorg_firebullet_left(edict_t *self)
@@ -509,7 +505,7 @@ void jorg_firebullet_left(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_JORG_MACHINEGUN_L1], forward, right);
 	PredictAim(self, self->enemy, start, 0, false, 0.2f, &forward, nullptr);
-	monster_fire_bullet(self, start, forward, 6 * makron_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1);
+	monster_fire_bullet(self, start, forward, 6 * jorg_damage_multiplier, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1); //KONIG - powerup multiplier
 }
 
 void jorg_firebullet(edict_t *self)
@@ -570,37 +566,34 @@ DIE(jorg_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	self->deadflag = true;
 	self->takedamage = false;
 	self->count = 0;
-	self->monsterinfo.quad_time = 0_ms;
-	self->monsterinfo.double_time = 0_ms;
-	self->monsterinfo.invincible_time = 0_ms;
 	M_SetAnimation(self, &jorg_move_death);
 }
 
-void MakronQuad(edict_t* self, gtime_t time)
+void JorgQuad(edict_t* self, gtime_t time)
 {
 	self->monsterinfo.quad_time = time;
-	makron_damage_multiplier = 4;
+	jorg_damage_multiplier = 4;
 }
 
-void MakronQuadnDouble(edict_t* self, gtime_t time)
+void JorgQuadnDouble(edict_t* self, gtime_t time)
 {
 	self->monsterinfo.quad_time = time;
 	self->monsterinfo.double_time = time;
-	makron_damage_multiplier = 8;
+	jorg_damage_multiplier = 8;
 }
 
-void MakronDouble(edict_t* self, gtime_t time)
+void JorgDouble(edict_t* self, gtime_t time)
 {
 	self->monsterinfo.double_time = time;
-	makron_damage_multiplier = 2;
+	jorg_damage_multiplier = 2;
 }
 
-void MakronPent(edict_t* self, gtime_t time)
+void JorgPent(edict_t* self, gtime_t time)
 {
 	self->monsterinfo.invincible_time = time;
 }
 
-void MakronPowerArmor(edict_t* self)
+void JorgPowerArmor(edict_t* self)
 {
 	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 	// I don't like this, but it works
@@ -610,53 +603,53 @@ void MakronPowerArmor(edict_t* self)
 		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
 }
 
-void MakronRespondPowerup(edict_t* self, edict_t* other)
+void JorgRespondPowerup(edict_t* self, edict_t* other)
 {
 	if (other->s.effects & EF_QUAD & EF_DOUBLE)
 	{
-		MakronPowerArmor(self);
+		JorgPowerArmor(self);
 		if (skill->integer >= 1)
 		{
-			MakronQuadnDouble(self, other->client->quad_time);
+			JorgQuadnDouble(self, other->client->quad_time);
 		}
 	}
 	else if (other->s.effects & EF_QUAD)
 	{
-		MakronPowerArmor(self);
+		JorgPowerArmor(self);
 		if (skill->integer >= 1)
-			MakronQuad(self, other->client->quad_time);
+			JorgQuad(self, other->client->quad_time);
 	}
 	else if (other->s.effects & EF_DOUBLE)
 	{
-		MakronPowerArmor(self);
+		JorgPowerArmor(self);
 		if (skill->integer >= 1)
-			MakronDouble(self, other->client->double_time);
+			JorgDouble(self, other->client->double_time);
 	}
 	else if (other->s.effects & EF_DUALFIRE)
 	{
-		MakronPowerArmor(self);
+		JorgPowerArmor(self);
 		if (skill->integer >= 3)
-			MakronDouble(self, other->client->double_time);
+			JorgDouble(self, other->client->double_time);
 	}
 	else
-		makron_damage_multiplier = 1;
+		jorg_damage_multiplier = 1;
 
 	if (other->s.effects & EF_PENT)
 	{
 		if (skill->integer == 1)
-			MakronPowerArmor(self);
+			JorgPowerArmor(self);
 		else if (skill->integer >= 2)
-			MakronPent(self, other->client->invincible_time);
+			JorgPent(self, other->client->invincible_time);
 	}
 }
 
-void MakronPowerups(edict_t* self)
+void JorgPowerups(edict_t* self)
 {
 	edict_t* ent;
 
 	if (!coop->integer)
 	{
-		MakronRespondPowerup(self, self->enemy);
+		JorgRespondPowerup(self, self->enemy);
 	}
 	else
 	{
@@ -670,7 +663,7 @@ void MakronPowerups(edict_t* self)
 				continue;
 			if (ent->s.effects & EF_PENT)
 			{
-				MakronRespondPowerup(self, ent);
+				JorgRespondPowerup(self, ent);
 				return;
 			}
 		}
@@ -684,7 +677,7 @@ void MakronPowerups(edict_t* self)
 				continue;
 			if (ent->s.effects & EF_QUAD)
 			{
-				MakronRespondPowerup(self, ent);
+				JorgRespondPowerup(self, ent);
 				return;
 			}
 		}
@@ -698,7 +691,7 @@ void MakronPowerups(edict_t* self)
 				continue;
 			if (ent->s.effects & EF_DOUBLE)
 			{
-				MakronRespondPowerup(self, ent);
+				JorgRespondPowerup(self, ent);
 				return;
 			}
 		}
@@ -709,7 +702,7 @@ void MakronPowerups(edict_t* self)
 MONSTERINFO_CHECKATTACK(Jorg_CheckAttack) (edict_t *self) -> bool
 {
 	/* KONIG - add powerup copy */
-	MakronPowerups(self);
+	JorgPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -814,8 +807,6 @@ void SP_monster_jorg(edict_t *self)
 
 	M_SetAnimation(self, &jorg_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
-
-	makron_damage_multiplier = 1;
 
 	walkmonster_start(self);
 	// PMM

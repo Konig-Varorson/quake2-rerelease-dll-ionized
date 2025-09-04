@@ -587,11 +587,10 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	//ZAERO
 	if ((targ->svflags & SVF_MONSTER) && ((targ->monsterinfo.aiflags & AI_REDUCEDDAMAGE)))
 	{
-		damage *= 0.5;
+		damage *= 0.85;
 		if (!damage)
 			damage = 1;
 	}
-	//ZAERO-end
 
 	if ( ( targ->svflags & SVF_MONSTER ) != 0 ) {
 		damage *= ai_damage_scale->integer;

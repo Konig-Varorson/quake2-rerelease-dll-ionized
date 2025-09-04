@@ -695,8 +695,7 @@ enum monster_ai_flags_t : uint64_t
 	AI_DOUBLE_TROUBLE = bit_v<36>, // JORG only
 	AI_REACHED_HOLD_COMBAT = bit_v<37>,
 	AI_THIRD_EYE = bit_v<38>,
-
-	//Zaero flags, just the useful ones
+	//ZAERO
 	AI_REDUCEDDAMAGE = bit_v<39>,
 	AI_DODGETIMEOUT = bit_v<40>,
 	AI_ONESHOTTARGET = bit_v<41>
@@ -774,8 +773,10 @@ enum movetype_t {
 	MOVETYPE_WALLBOUNCE,
 	// RAFAEL
 	// ROGUE
-	MOVETYPE_NEWTOSS // PGM - for deathball
-					 // ROGUE
+	MOVETYPE_NEWTOSS, // PGM - for deathball
+	//ZAERO
+	MOVETYPE_FALLFLOAT,
+	MOVETYPE_RIDE
 };
 
 // edict->flags
@@ -876,7 +877,6 @@ enum item_id_t : int32_t {
 	IT_ITEM_POWER_SHIELD,
 
 	IT_WEAPON_GRAPPLE,
-	//IT_WEAPON_FLAREGUN, //ZAERO
 	IT_WEAPON_BLASTER,
 	IT_WEAPON_CHAINFIST,
 	IT_WEAPON_SHOTGUN,
@@ -887,28 +887,18 @@ enum item_id_t : int32_t {
 	IT_AMMO_GRENADES,
 	IT_AMMO_TRAP,
 	IT_AMMO_TESLA,
-	//IT_AMMO_LASERTRIPBOMB, //Zaero
-	//IT_AMMO_EMPNUKE, //Zaero
-	//IT_AMMO_LASERMINE, //Oblivion
 	IT_WEAPON_GLAUNCHER,
 	IT_WEAPON_PROXLAUNCHER,
 	IT_WEAPON_RLAUNCHER,
-	// IT_WEAPON_HRLAUNCHER, //Citadel-25A
-	// IT_WEAPON_HELLFURY, //Oblivion
-	IT_WEAPON_FLAMEGUN, // PSX
 	IT_WEAPON_HYPERBLASTER,
 	IT_WEAPON_IONRIPPER,
 	IT_WEAPON_PLASMABEAM,
 	IT_WEAPON_RAILGUN,
-	IT_WEAPON_SNIPERRIFLE, //Zaero
 	IT_WEAPON_PHALANX,
 	IT_WEAPON_BFG,
 	IT_WEAPON_DISRUPTOR,
-	//IT_WEAPON_SONICCANNON, //Zaero
-	IT_WEAPON_DISINTEGRATOR, // cut weapon
-	IT_WEAPON_DISCHARGER, // PSX
-	
-	IT_AMMO_FLARES,	//ZAERO
+	IT_WEAPON_DISINTEGRATOR,
+
 	IT_AMMO_SHELLS,
 	IT_AMMO_BULLETS,
 	IT_AMMO_CELLS,
@@ -919,10 +909,8 @@ enum item_id_t : int32_t {
 	IT_AMMO_PROX,
 	IT_AMMO_NUKE,
 	IT_AMMO_ROUNDS,
-	//IT_AMMO_PLASMA, //OBLIVION
-	IT_AMMO_BATTERIES, //PSX
-	IT_AMMO_FUEL, //PSX-25A
 
+	IT_ITEM_DOUBLE,
 	IT_ITEM_QUAD,
 	IT_ITEM_QUADFIRE,
 	IT_ITEM_INVULNERABILITY,
@@ -930,14 +918,12 @@ enum item_id_t : int32_t {
 	IT_ITEM_SILENCER,
 	IT_ITEM_REBREATHER,
 	IT_ITEM_ENVIROSUIT,
-	//IT_ITEM_PLASHMASHIELD, //ZAERO
 	IT_ITEM_ANCIENT_HEAD,
 	IT_ITEM_LEGACY_HEAD,
 	IT_ITEM_ADRENALINE,
 	IT_ITEM_BANDOLIER,
 	IT_ITEM_PACK,
 	IT_ITEM_IR_GOGGLES,
-	IT_ITEM_DOUBLE,
 	IT_ITEM_SPHERE_VENGEANCE,
 	IT_ITEM_SPHERE_HUNTER,
 	IT_ITEM_SPHERE_DEFENDER,
@@ -954,20 +940,23 @@ enum item_id_t : int32_t {
 	IT_KEY_PASS,
 	IT_KEY_BLUE_KEY,
 	IT_KEY_RED_KEY,
-	IT_KEY_GREEN_KEY,
+	IT_KEY_GREEN_GEAR,
 	IT_KEY_COMMANDER_HEAD,
 	IT_KEY_AIRSTRIKE,
 	IT_KEY_NUKE_CONTAINER,
 	IT_KEY_NUKE,
 	//ZAERO
-	IT_KEY_LANDING,
-	IT_KEY_LAB,
-	IT_KEY_CLEARANCE,
+	IT_KEY_RED_GEAR,
+	IT_KEY_YELLOW_GEAR,
+	IT_KEY_BLUE_GEAR,
 	IT_KEY_ENERGY,
 	IT_KEY_LAVA,
 	IT_KEY_SLIME,
 	//PSX
-	IT_KEY_GREEN_PSX,
+	IT_KEY_GREEN_KEY,
+	//Q1
+	IT_KEY_SILVER_KEY,
+	IT_KEY_GOLD_KEY,
 
 	IT_HEALTH_SMALL,
 	IT_HEALTH_MEDIUM,
@@ -1103,32 +1092,14 @@ enum mod_id_t : uint8_t
 	//========
 	MOD_GRAPPLE,
 	MOD_BLUEBLASTER,
-	/*KONIG
-	//PSX
-	MOD_FLAMEGUN,
-	MOD_DISCHARGER,
-	MOD_DC_SPLASH,
 	//ZAERO
-	MOD_SNIPERRIFLE,
-	MOD_TRIPBOMB,
+	MOD_A2K,
+	MOD_AUTOCANNON,
 	MOD_FLARE,
 	MOD_GL_POLYBLEND,
-	MOD_A2K,
 	MOD_SONICCANNON,
-	//OBLIVION
-	MOD_DEATOMIZER,
-	MOD_DOD,
-	MOD_HELLFURY,
-	MOD_MINE,
-	MOD_PLASMAPISTOL,
-	MOD_PLASMARIFLE
-	//QUAKE
-	MOD_AXE
-	MOD_PERFORATOR
-	MOD_THUNDERBOLT
-	MOD_PLASMABOLT
-	MOD_LG_SPLASH
-	*/
+	MOD_SNIPERRIFLE,
+	MOD_TRIPBOMB
 };
 
 struct mod_t
@@ -1733,9 +1704,6 @@ struct monsterinfo_t
 	gtime_t quad_time;
 	gtime_t invincible_time;
 	gtime_t double_time;
-	/* KONIG - expanded powerup copying for Ionized */
-	gtime_t quadfire_time;
-	gtime_t invisible_time;
 	// ROGUE
 
 	// Paril
@@ -1789,6 +1757,14 @@ struct monsterinfo_t
 
 	// NOTE: if adding new elements, make sure to add them
 	// in g_save.cpp too!
+
+	//ZAERO
+	float flashTime;
+	float flashBase;
+	float reducedDamageAmount;
+	float attack_angle_yaw; //created because old version used attack_state which got changed
+
+	vec3_t shottarget;
 };
 
 // non-monsterinfo save stuff
@@ -2310,12 +2286,6 @@ void stationarymonster_start(edict_t *self, const spawn_temp_t &st);
 void monster_done_dodge(edict_t *self);
 // ROGUE
 
-/*KONIG*/
-void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
-							monster_muzzleflash_id_t flashtype, effects_t effect);
-void monster_fire_plasma(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
-							float damage_radius, int radius_damage, monster_muzzleflash_id_t flashtype);
-
 stuck_result_t G_FixStuckObject(edict_t *self, vec3_t check);
 
 // this is for the count of monsters
@@ -2417,17 +2387,10 @@ void fire_plasma(edict_t *self, const vec3_t &start, const vec3_t &dir, int dama
 				 int radius_damage);
 void fire_trap(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed);
 // RAFAEL
-void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &dir, int speed);
+//void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &dir, int speed);
 vec3_t P_CurrentKickAngles(edict_t *ent);
 vec3_t P_CurrentKickOrigin(edict_t *ent);
 void P_AddWeaponKick(edict_t *ent, const vec3_t &origin, const vec3_t &angles);
-
-/*KONIG*/
-void fire_lightning(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed,
-					effects_t effect);
-void fire_acid(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed);
-void fire_blaster3(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
-					effects_t effect, bool hyper); //Oblivion compatibility
 
 // we won't ever pierce more than this many entities for a single trace.
 constexpr size_t MAX_PIERCE = 16;
@@ -2523,7 +2486,7 @@ struct step_parameters_t
 	float			bobfracsin; // sinf(bobfrac*M_PI)
 };
 
-void G_SetClientFrame(edict_t* ent, const step_parameters_t& step); 
+void G_SetClientFrame(edict_t *ent, const step_parameters_t &step);
 void ClientEndServerFrame(edict_t *ent);
 void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &dir);
 void G_UnLagCompensate();
@@ -3099,6 +3062,21 @@ struct gclient_t
 	gtime_t	 last_attacker_time;
 	// saved - for coop; last time we were in a firing state
 	gtime_t	 last_firing_time;
+
+	//ZAERO
+	float flashTime;
+	float flashBase;
+
+	gtime_t sniper_ready_time;
+	gtime_t scannon_sound_time;
+	gtime_t scannon_start_fire_time;
+	gtime_t scannon_ready_time;
+	gtime_t a2k_time;
+
+	edict_t* zaero_camera_tracking;
+	edict_t* zaero_camera_local_entity;
+	vec3_t zaero_camera_offset;
+	gtime_t zaero_camera_static_effect_time;
 };
 
 // ==========================================
@@ -3330,6 +3308,25 @@ struct edict_t
 	float vision_cone; // TODO: migrate vision_cone on old loads to -2.0f
 	// NOTE: if adding new elements, make sure to add them
 	// in g_save.cpp too!
+
+	//
+	// ZAERO
+	//
+
+	gtime_t timeout;
+
+	int active;
+	int seq;
+
+	edict_t* rideWith[2];
+	vec3_t rideWithOffset[2];
+	vec3_t mangle;
+	int visorFrames;
+
+	int onFloor;
+	gtime_t bossFireTimeout;
+	int bossFireCount;
+	gtime_t visor_time;
 };
 
 //=============
@@ -3741,3 +3738,73 @@ template<> cached_imageindex *cached_imageindex::head;
 
 extern cached_modelindex sm_meat_index;
 extern cached_soundindex snd_fry;
+
+/* KONIG - IONIZED*/
+//g_ionized_items.cpp
+
+//g_ionized_monster.cpp
+void fire_acid(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed);
+void fire_guardian_heat(edict_t* self, const vec3_t& start, const vec3_t& dir, const vec3_t& rest_dir, int damage, int speed,
+	float damage_radius, int radius_damage, float turn_fraction);
+void fire_dropper(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int speed);
+
+void monster_fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
+	monster_muzzleflash_id_t flashtype, effects_t effect);
+void monster_fire_plasma(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed,
+	float damage_radius, int radius_damage, monster_muzzleflash_id_t flashtype);
+void monster_fire_flakcannon(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, int hspread,
+	int vspread, int count, monster_muzzleflash_id_t flashtype);
+void monster_fire_flakblaster(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, int hspread,
+	int vspread, int count, monster_muzzleflash_id_t flashtype, effects_t effect, int skin);
+void monster_fire_flakripper(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, int kick, int hspread,
+	int vspread, int count, monster_muzzleflash_id_t flashtype, effects_t effect);
+
+bool IsEnergyWeapon(const mod_t& mod);
+bool IsExplosiveWeapon(const mod_t& mod);
+
+//g_ionized_weapon.cpp
+void fire_disintegrator(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius);
+void fire_lightning(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, effects_t effect);
+
+// ZAERO
+constexpr gtime_t TBOMB_DELAY = 1_sec;
+constexpr gtime_t TBOMB_TIMEOUT = 180_sec;
+constexpr int 	  TBOMB_DAMAGE = 150;
+constexpr int 	  TBOMB_RADIUS_DAMAGE = 384;
+constexpr int 	  TBOMB_HEALTH = 100;
+constexpr int 	  TBOMB_SHRAPNEL = 5;
+constexpr int 	  TBOMB_SHRAPNEL_DMG = 15;
+
+//g_zaero_camera.cpp
+
+//g_zaero_items.cpp
+
+//g_zaero_misc.cpp
+constexpr spawnflags_t SPAWNFLAG_CHECK_BACK_WALL = 1_spawnflag;
+
+//g_zaero_weapon.cpp
+void fire_flare(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, float damage_radius,
+	int radius_damage, float right_adjust, float up_adjust);
+bool EMPNukeCheck(edict_t* ent, vec3_t pos);
+void fire_empnuke(edict_t* ent, vec3_t center, int radius);
+
+//g_q1_ai.cpp
+bool TryRandomTeleportPosition(edict_t* self, float radius);
+void Q1BossExplode(edict_t* self);
+
+//g_q1_misc.cpp
+
+//g_q1_monster.cpp
+edict_t* fire_lavaball(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius,
+	int radius_damage);
+void fire_vorepod(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius,
+	int radius_damage, float turn_fraction, int skin);
+void fire_gib(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float right_adjust, float up_adjust);
+edict_t* fire_flame(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed);
+void fire_plasmaball(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius);
+
+void monster_fire_multigrenade(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed,
+	monster_muzzleflash_id_t flashtype, float right_adjust, float up_adjust);
+
+//g_q1_weapon.cpp
+void fire_multigrenade(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, gtime_t timer, float damage_radius, float right_adjust, float up_adjust, bool monster);

@@ -228,7 +228,7 @@ PAIN(shambler_pain) (edict_t* self, edict_t* other, float kick, int damage, cons
 
 MONSTERINFO_SETSKIN(shambler_setskin) (edict_t* self) -> void
 {
-	/*KONIG - set painskin*/
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -267,8 +267,7 @@ void ShamblerSaveLoc(edict_t* self)
 	shambler_lightning_update(self);
 }
 
-/* KONIG - fixing bug of spawnflag using 1_spawnflag rather than 8_spawnflag as Modir has spawnflag 8 checked despite it doing nothing. */
-constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 8_spawnflag; //KONIG - fixed bug
 
 vec3_t FindShamblerOffset(edict_t *self)
 {
@@ -521,19 +520,14 @@ DIE(shambler_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 	}
 
 	// check for gib
-	/* KONIG - add gib head from Q1; inrease generic gibs
-	TODO - make unique chest and limb gibs */
 	if (M_CheckGib(self, mod))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		// FIXME: better gibs for shambler, shambler head
 		ThrowGibs(self, damage, {
-			{ 2, "models/objects/gibs/bone/tris.md2" },
-			{ 1, "models/objects/gibs/bone2/tris.md2" },
-			{ 3, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/chest/tris.md2" },
-			{ "models/monsters/shambler/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
+			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 		});
 		self->deadflag = true;
 		return;
@@ -577,7 +571,7 @@ void SP_monster_shambler(edict_t* self)
 	sound_boom.assign("shambler/sboom.wav");
 
 	self->health = 600 * st.health_multiplier;
-	self->gib_health = -120;
+	self->gib_health = -60;
 
 	self->mass = 500;
 

@@ -183,7 +183,13 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 		case MOD_DOPPLE_EXPLODE:
 			base = "$g_mod_self_dopple_explode";
 			break;
-			// ROGUE
+			// ZAERO
+		case MOD_A2K:
+			base = "{0} realized they were expendable.\n";
+			break;
+		case MOD_SONICCANNON:
+			base = "{0} got carried away.\n";
+			break;
 		default:
 			base = "$g_mod_self_default";
 			break;
@@ -327,35 +333,22 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 		case MOD_GRAPPLE:
 			base = "$g_mod_kill_grapple";
 			break;
-			// ZOID
-			/* KONIG */
 			//ZAERO
-		#if 0
-		case MOD_SNIPERRIFLE:
-			message = "was ventilated by";
-			message2 = "'s bullet";
+		case MOD_FLARE:
+			base = "{0} didn't see {1}'s flare.\n";
 			break;
 		case MOD_TRIPBOMB:
-			message = "tripped over";
-			message2 = "'s trip bomb";
-			break;
-		case MOD_FLARE:
-			message = "didn't see";
-			message2 = "'s flare";
-			break;
-		case MOD_GL_POLYBLEND:
-			message = "turned off gl_polyblend and was damaged by";
-			message2 = "'s flare";
-			break;
-		case MOD_A2K:
-			message = "got dissassembled by";
-			message2 = "";
+			base = "{0} tripped over {1}'s trip bomb.\n";
 			break;
 		case MOD_SONICCANNON:
-			message = "got microwaved by";
-			message2 = "";
+			base = "{0} got microwaved by {1}.\n";
 			break;
-		#endif
+		case MOD_SNIPERRIFLE:
+			base = "{0} got ventilated by {1}'s bullet.\n";
+			break;
+		case MOD_A2K:
+			base = "{0} got dissassembled by {1}.\n";
+			break;
 		default:
 			base = "$g_mod_kill_generic";
 			break;
@@ -888,18 +881,7 @@ void InitClientPersistant(edict_t *ent, gclient_t *client)
 			// ROGUE
 			client->pers.max_ammo[AMMO_FLECHETTES] = 200;
 			client->pers.max_ammo[AMMO_DISRUPTOR] = 12;
-			/* KONIG - Increase capacity of default Tesla to 10; new ammo */
-			client->pers.max_ammo[AMMO_TESLA] = 10;
-			//ZAERO
-			client->pers.max_ammo[AMMO_FLARES] = 50;
-			//client->pers.max_ammo[AMMO_LASERTRIPBOMB] = 10;
-			//client->pers.max_ammo[AMMO_EMPNUKE] = 5;
-			//client->pers.max_ammo[AMMO_A2K] = 1;
-			//client->pers.max_ammo[AMMO_PLASMASHIELD] = 5;
-			//OBLIVION
-			//PSX
-			client->pers.max_ammo[AMMO_BATTERIES] = 200;
-			client->pers.max_ammo[AMMO_FUEL] = 100;
+			client->pers.max_ammo[AMMO_TESLA] = 5;
 			// ROGUE
 
 			if (!deathmatch->integer || !g_instagib->integer)

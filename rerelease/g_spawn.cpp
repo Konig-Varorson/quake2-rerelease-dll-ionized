@@ -218,24 +218,28 @@ void SP_info_ctf_teleport_destination(edict_t *self);
 
 void SP_monster_shambler(edict_t* self);
 
-/*KONIG*/
+/* KONIG - IONIZED ADDITIONS*/
+void SP_item_foodcube(edict_t* self);
 //ZAERO
-//void SP_misc_lasertripbomb(edict_t* self);
-//void SP_load_mirrorlevel(edict_t* self);
-//void SP_monster_autocannon(edict_t* self);
-//void SP_monster_autocannon_floor(edict_t* self);
+void SP_misc_lasertripbomb(edict_t* self);
+void SP_monster_autocannon(edict_t* self);
+void SP_monster_autocannon_floor(edict_t* self);
 void SP_monster_sentien(edict_t* self);
-//void SP_misc_securitycamera(edict_t* self);
+void SP_misc_securitycamera(edict_t* self);
 void SP_monster_hound(edict_t* self);
 void SP_monster_handler(edict_t* self);
 void SP_misc_commdish(edict_t* self);
 void SP_misc_crate(edict_t* self);
 void SP_misc_crate_medium(edict_t* self);
 void SP_misc_crate_small(edict_t* self);
-//void SP_monster_zboss(edict_t* self);
-//void SP_target_zboss_target(edict_t* self);
-//void SP_func_barrier(edict_t* self);
+void SP_monster_zboss(edict_t* self);
+void SP_target_zboss(edict_t* self);
+void SP_func_barrier(edict_t* self);
 void SP_misc_seat(edict_t* self);
+//ZAERO COMPATIBILITY
+void SP_key_landingarea(edict_t* self);
+void SP_key_lab(edict_t* self);
+void SP_key_clearancepass(edict_t* self);
 //ZAERO INSPIRED
 void SP_misc_bulldog_s(edict_t* self);
 void SP_misc_bulldog_m(edict_t* self);
@@ -260,20 +264,57 @@ void SP_monster_psoldier_elite(edict_t* self);
 void SP_monster_psoldier_death(edict_t* self);
 void SP_monster_psoldier_captain(edict_t* self);
 void SP_monster_heavy(edict_t* self);
-//PSX
-//void SP_misc_dropship(edict_t* self);
-//void SP_misc_fighter(edict_t* self);
-//void SP_monster_flamer(edict_t* self);
-//void SP_monster_blitz(edict_t* self);
-//Q1
-// void SP_monster_grunt(edict_t* self);
-// void SP_monster_ogre(edict_t* self);
-// void SP_monster_ogre_marksman(edict_t* self);
-// void SP_monster_scrag(edict_t* self);
-// void SP_monster_fiend(edict_t* self);
-// void SP_monster_knight(edict_t* self);
-// void SP_monster_zombie(edict_t* self);
-// void SP_monster_chthon(edict_t* self);
+void SP_monster_sauron(edict_t* self);
+void SP_monster_droid(edict_t* self);
+void SP_monster_assassin(edict_t* self);
+//Q1 - base
+void SP_monster_army(edict_t* self);
+void SP_monster_chthon(edict_t* self);
+void SP_monster_dog(edict_t* self);
+void SP_monster_enforcer(edict_t* self);
+void SP_monster_fiend(edict_t* self);
+void SP_monster_hknight(edict_t* self);
+void SP_monster_knight(edict_t* self);
+void SP_monster_ogre(edict_t* self);
+void SP_monster_oldone(edict_t* self);
+void SP_monster_rotfish(edict_t* self);
+void SP_monster_scrag(edict_t* self);
+void SP_monster_tarbaby(edict_t* self);
+void SP_monster_vore(edict_t* self);
+void SP_monster_zombie(edict_t* self);
+void SP_light_torch_small_walltorch(edict_t* ent);
+void SP_light_flame_large_yellow(edict_t* ent);
+void SP_light_flame_small_yellow(edict_t* ent);
+void SP_light_flouro(edict_t* ent);
+void SP_light_fluorospark(edict_t* ent);
+void SP_light_sphere(edict_t* ent);
+void SP_item_silver_key(edict_t* self);
+void SP_item_gold_key(edict_t* self);
+void SP_item_sigil(edict_t* self);
+//Q1 - expansions
+void SP_monster_armagon(edict_t* self);
+void SP_monster_dragon(edict_t* self);
+void SP_monster_centroid(edict_t* self);
+void SP_monster_eel(edict_t* self);
+void SP_monster_highpriest(edict_t* self);
+void SP_monster_hstatue(edict_t* self);
+void SP_monster_lavaman(edict_t* self);
+void SP_monster_spike(edict_t* self);
+void SP_monster_mummy(edict_t* self);
+void SP_monster_ogre_multigrenade(edict_t* self);
+void SP_monster_overlord(edict_t* self);
+void SP_monster_priest(edict_t* self);
+void SP_monster_statue(edict_t* self);
+void SP_monster_sword(edict_t* self);
+void SP_monster_tarbaby_hell(edict_t* self);
+void SP_monster_wrath(edict_t* self);
+// Q1 - Qtest and mods
+// void SP_monster_freddie(edict_t* self);
+void SP_monster_ogre_marksman(edict_t* self);
+void SP_monster_serpent(edict_t* self);
+void SP_monster_shalrath(edict_t* self);
+void SP_monster_vomitus(edict_t* self);
+void SP_monster_wyvern(edict_t* self);
 // CITADEL
 void SP_monster_soldier_cobalt(edict_t* self);
 void SP_monster_boss5_gamma(edict_t* self);
@@ -282,10 +323,9 @@ void SP_monster_boss2_titan(edict_t* self);
 void SP_monster_bfgladiator(edict_t* self);
 void SP_monster_soldier_dist(edict_t* self);
 //IONIZED
-void SP_trigger_setskill(edict_t* ent);
-void SP_target_print(edict_t* ent);
 void SP_target_shooter_blaster(edict_t* ent);
 void SP_target_shooter_rockets(edict_t* ent);
+void SP_target_shooter_magic(edict_t* ent);
 void SP_item_foodcube(edict_t* self);
 void SP_ammo_shells_small(edict_t* self);
 void SP_ammo_bullets_small(edict_t* self);
@@ -321,22 +361,32 @@ void SP_misc_gib_shambler(edict_t* self);
 //cut monsters restored
 void SP_monster_shocker(edict_t* self);
 void SP_monster_gnorta(edict_t* self);
-//DEMAKES
-//void SP_monster_tactical_male(edict_t* self);
-//void SP_monster_tactical_female(edict_t* self);
-//void SP_monster_tactical_cyborg(edict_t* self);
+void SP_monster_dropship(edict_t* self);
+void SP_misc_fighter(edict_t* self);
+void SP_monster_flamer(edict_t* self);
+void SP_monster_blitz(edict_t* self);
+//Q4 DEMAKES
+void SP_monster_tactical_male(edict_t* self);
+void SP_monster_tactical_female(edict_t* self);
+void SP_monster_tactical_cyborg(edict_t* self);
 void SP_monster_berserk2(edict_t* self);
 void SP_monster_dropper(edict_t* self);
 void SP_monster_protector(edict_t* self);
 void SP_monster_fixbot2(edict_t* self);
-// void SP_monster_voss(edict_t* self);
-// void SP_monster_reject(edict_t* self);
-//beta enemies
+void SP_monster_voss(edict_t* self);
+void SP_monster_reject(edict_t* self);
+// QW DEMAKES
+void SP_monster_oppressor(edict_t* self);
+void SP_monster_aggressor(edict_t* self);
+void SP_monster_constructor(edict_t* self);
+void SP_monster_infiltrator(edict_t* self);
+// IONIZED Originals
 void SP_monster_soldier_discharger(edict_t* self);
 void SP_monster_infantry_handler(edict_t* self);
 void SP_monster_mimic(edict_t* self);
-void SP_monster_tank_guardian(edict_t* self);
-void SP_monster_boss2_guardian(edict_t* self);
+void SP_monster_shark(edict_t* self);
+void SP_monster_cutter(edict_t* self);
+void SP_monster_gladiator_flak(edict_t* self);
 
 // clang-format off
 static const std::initializer_list<spawn_t> spawns = {
@@ -557,24 +607,28 @@ static const std::initializer_list<spawn_t> spawns = {
 
 	{ "monster_shambler", SP_monster_shambler },
 
-	//KONIG
+	/* KONIG - IONIZED ADDITIONS*/
 	//ZAERO
 	//{ "misc_ired", SP_misc_lasertripbomb },
-	//{ "monster_autocannon", SP_monster_autocannon },
-	//{ "monster_autocannon_floor", SP_monster_autocannon_floor },
+	{ "monster_autocannon", SP_monster_autocannon },
+	{ "monster_autocannon_floor", SP_monster_autocannon_floor },
 	{ "monster_sentien", SP_monster_sentien },
 	//{ "misc_securitycamera", SP_misc_securitycamera },
 	{ "monster_hound", SP_monster_hound },
-	//{ "monster_handler", SP_monster_handler },
-	//{ "monster_zboss", SP_monster_zboss },
+	{ "monster_handler", SP_monster_handler },
+	{ "monster_zboss", SP_monster_zboss },
 	{ "misc_crate", SP_misc_crate },
 	{ "misc_crate_medium", SP_misc_crate_medium },
 	{ "misc_crate_small", SP_misc_crate_small },
 	{ "misc_seat", SP_misc_seat },
 	{ "misc_commdish", SP_misc_commdish },
-	//{ "load_mirrorlevel", SP_load_mirrorlevel },
-	//{ "func_barrier", SP_func_barrier },
-	//{ "target_zboss_target", SP_target_zboss_target }
+	{ "func_barrier", SP_func_barrier },
+	{ "target_zboss", SP_target_zboss },
+	//ZAERO COMPATIBILITY
+	{ "target_zboss_target", SP_target_zboss },
+	{ "key_landingarea", SP_key_landingarea },
+	{ "key_lab", SP_key_lab },
+	{ "key_clearancepass", SP_key_clearancepass },
 	// ZAERO INSPIRED
 	{ "misc_bulldog_s", SP_misc_bulldog_s },
 	{ "misc_bulldog_m", SP_misc_bulldog_m },
@@ -601,28 +655,68 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_psoldier_death", SP_monster_psoldier_death },
 	{ "monster_psoldier_captain", SP_monster_psoldier_captain },
 	{ "monster_heavy", SP_monster_heavy },
-	//{ "monster_gunner2", SP_monster_guncmdr },
+	{ "monster_gunner2", SP_monster_guncmdr },
 	//{ "monster_sauron", SP_monster_sauron },
 	//{ "monster_droid", SP_monster_droid },
 	//{ "monster_assassin", SP_monster_assassin },
-	//{ "monster_datran", SP_monster_datran },
+	//{ "monster_dathran", SP_monster_dathran },
 	//PSX
-	//{ "misc_dropship", SP_misc_dropship },
-	//{ "misc_fighter", SP_misc_fighter },
 	//{ "monster_flamer", SP_monster_flamer },
 	//{ "monster_blitz", SP_monster_blitz },
-	//Q1
+	//Q1 - base
+	{ "monster_army", SP_monster_army },
+	{ "monster_chthon", SP_monster_chthon },
+	{ "monster_dog", SP_monster_dog },
+	{ "monster_enforcer", SP_monster_enforcer },
+	{ "monster_fiend", SP_monster_fiend },
+	{ "monster_hknight", SP_monster_hknight },
+	{ "monster_knight", SP_monster_knight },
+	{ "monster_ogre", SP_monster_ogre },
+	{ "monster_oldone", SP_monster_oldone },
+	{ "monster_rotfish", SP_monster_rotfish },
+	{ "monster_scrag", SP_monster_scrag },
+	{ "monster_tarbaby", SP_monster_tarbaby },
+	{ "monster_vore", SP_monster_vore },
+	{ "monster_zombie", SP_monster_zombie },
+	//{ "light_flame_small_walltorch", SP_light_torch_small_walltorch },
 	//{ "light_flame_large_yellow", SP_light_flame_large_yellow },
 	//{ "light_flame_small_yellow", SP_light_flame_small_yellow },
 	//{ "light_flame_small_white", SP_light_flame_small_yellow },
-	//{ "monster_grunt", SP_monster_grunt },
-	//{ "monster_ogre", SP_monster_ogre },
-	//{ "monster_ogre_marksman", SP_monster_ogre_marksman },
-	//{ "monster_scrag", SP_monster_scrag },
-	//{ "monster_fiend", SP_monster_fiend },
-	//{ "monster_knight", SP_monster_knight },
-	//{ "monster_zombie", SP_monster_zombie },
-	//{ "monster_chthon", SP_monster_chthon },
+	//{ "light_flouro", SP_light_flouro },
+	//{ "light_flourospark", SP_light_fluorospark },
+	//{ "light_sphere", SP_light_sphere },
+	{ "key_silver_key", SP_item_silver_key },
+	{ "key_gold_key", SP_item_gold_key },
+	{ "item_sigil", SP_item_silver_key },
+	{ "item_key1", SP_item_silver_key }, //backwards compatibility
+	{ "item_key2", SP_item_gold_key }, //backwards compatibility
+	{ "monster_wizard", SP_monster_scrag }, //backwards compatibility
+	{ "monster_demon1", SP_monster_fiend }, //backwards compatibility
+	{ "monster_boss", SP_monster_chthon }, //backwards compatibility
+	//Q1 - expansions
+	// { "monster_armagon", SP_monster_armagon },
+	{ "monster_dragon", SP_monster_dragon },
+	{ "monster_centroid", SP_monster_centroid },
+	{ "monster_eel", SP_monster_eel },
+	// { "monster_highpriest", SP_monster_highpriest},
+	{ "monster_hstatue", SP_monster_hstatue },
+	{ "monster_lavaman", SP_monster_lavaman },
+	{ "monster_mummy", SP_monster_mummy },
+	// { "monster_priest", SP_monster_priest},
+	// { "monster_ogre_multigrenade", SP_monster_ogre_multigrenade },
+	{ "monster_overlord", SP_monster_overlord },
+	{ "monster_mine", SP_monster_spike },
+	{ "monster_statue", SP_monster_statue },
+	{ "monster_sword", SP_monster_sword },
+	{ "monster_tarbaby_hell", SP_monster_tarbaby_hell },
+	{ "monster_wrath", SP_monster_wrath },
+	// Q1 - Qtest and mods
+	// { "monster_freddie", SP_monster_freddie },
+	{ "monster_ogre_marksman", SP_monster_ogre_marksman },
+	//{ "monster_serpent", SP_monster_serpent },
+	{ "monster_shalrath", SP_monster_shalrath },
+	//{ "monster_vomitus", SP_monster_vomitus },
+	{ "monster_wyvern", SP_monster_wyvern },
 	//CITADEL
 	{ "monster_soldier_cobalt", SP_monster_soldier_cobalt },
 	{ "monster_gunner_elite", SP_monster_guncmdr }, //Citadel compatibility
@@ -640,11 +734,10 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "ammo_rockets_small", SP_ammo_rockets_small },
 	{ "ammo_cells_small", SP_ammo_cells_small },
 	{ "ammo_slugs_small", SP_ammo_slugs_small },
-	{ "ammo_flechettes_small", SP_ammo_flechettes_small },
-	{ "ammo_prox_small", SP_ammo_prox_small },
-	{ "ammo_magslugs_small", SP_ammo_magslugs_small },
-	{ "ammo_rounds_small", SP_ammo_rounds_small },
-
+	//{ "ammo_flechettes_small", SP_ammo_flechettes_small },
+	//{ "ammo_prox_small", SP_ammo_prox_small },
+	//{ "ammo_magslugs_small", SP_ammo_magslugs_small },
+	//{ "ammo_rounds_small", SP_ammo_rounds_small },
 	{ "misc_gib_head2", SP_misc_gib_head2 },
 	{ "misc_gib_chest", SP_misc_gib_chest },
 	{ "misc_gib_gekk", SP_misc_gib_gekk },
@@ -669,27 +762,32 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "misc_gib_shambler", SP_misc_gib_shambler },
 	{ "target_shooter_blaster", SP_target_shooter_blaster },
 	{ "target_shooter_rockets", SP_target_shooter_rockets },
-	//Cut monsters restored
+	{ "target_shooter_magic", SP_target_shooter_magic },
+	//Cut Content restored
 	//{ "monster_gnorta", SP_monster_gnorta },
 	//{ "monster_shocker", SP_monster_shocker },
+	//{ "misc_dropship", SP_misc_dropship },
+	//{ "misc_fighter", SP_misc_fighter },
+	//{ "monster_dropship", SP_monster_dropship },
+	//{ "monster_fighter", SP_monster_fighter },
 	//Q4 demake enemies
-	//{ "monster_tactical_male", SP_monster_tactical_male },
-	//{ "monster_tactical_female", SP_monster_tactical_female },
-	//{ "monster_tactical_cyborg", SP_monster_tactical_cyborg },
+	{ "monster_tactical_male", SP_monster_tactical_male },
+	{ "monster_tactical_female", SP_monster_tactical_female },
+	{ "monster_tactical_cyborg", SP_monster_tactical_cyborg },
 	{ "monster_berserk2", SP_monster_berserk2 },
 	{ "monster_dropper", SP_monster_dropper },
 	{ "monster_protector", SP_monster_protector },
 	{ "monster_fixbot2", SP_monster_fixbot2 },
 	//{ "monster_voss", SP_monster_voss },
 	//{ "monster_reject", SP_monster_reject },
-	//Beta enemies
+	//Ionized Originals
 	{ "monster_alphamutant", SP_monster_mutant },
 	{ "monster_infantry_handler", SP_monster_infantry_handler },
 	{ "monster_mimic", SP_monster_mimic },
 	{ "monster_soldier_discharger", SP_monster_soldier_discharger },
-	{ "monster_tank_guardian", SP_monster_tank_guardian }, //shortcut to monster_tank or monster_tank_commander spawnflags 8
-	{ "monster_boss2_guardian", SP_monster_boss2_guardian } //shortcut to monster_boss2 spawnflags 8
-
+	{ "monster_shark", SP_monster_shark },
+	{ "monster_gladiator_flak", SP_monster_gladiator_flak },
+	{ "monster_cutter", SP_monster_cutter }
 };
 // clang-format on
 
@@ -1066,8 +1164,8 @@ static const std::initializer_list<field_t> entity_fields = {
 		}
 	},
 
-	/* KONIG - customizable armor */
-	FIELD_AUTO_NAMED("armor_power", monsterinfo.power_armor_power),
+	/* KONIG - customizable armor stuff*/
+	FIELD_AUTO_NAMED("armor_power", monsterinfo.armor_power),
 	{ "armor_type", [](edict_t* s, const char* v)
 		{
 			int32_t type = atoi(v);
@@ -1082,6 +1180,7 @@ static const std::initializer_list<field_t> entity_fields = {
 				s->monsterinfo.armor_type = IT_ARMOR_BODY;
 		}
 	},
+
 	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 

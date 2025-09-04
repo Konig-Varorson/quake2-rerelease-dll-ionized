@@ -26,6 +26,7 @@ static cached_soundindex sound_search;
 static cached_soundindex sound_sight;
 
 /* KONIG - BFGladiator sounds from 25th Anniversary pack */
+static cached_soundindex sound_attack_bfg;
 static cached_soundindex bfglad_sound_pain1;
 static cached_soundindex bfglad_sound_pain2;
 static cached_soundindex bfglad_sound_gun;
@@ -171,9 +172,15 @@ void GladiatorGun(edict_t *self)
 	/* KONIG _ BFGladiator from 25th Anniversary*/
 	if (strcmp(self->classname, "monster_bfgladiator") == 0)
 		if (skill->integer >= 3) //TO DO: Homing BFG only in Nightmare
+		{
+			gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
 			monster_fire_bfg(self, start, dir, 25, 300, 100, 300, MZ2_GLADIATOR_RAILGUN_1);
+		}
 		else
+		{
+			gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
 			monster_fire_bfg(self, start, dir, 25, 300, 100, 300, MZ2_GLADIATOR_RAILGUN_1);
+		}
 	else
 		monster_fire_railgun(self, start, dir, 50, 100, MZ2_GLADIATOR_RAILGUN_1);
 }
@@ -207,6 +214,7 @@ void gladbGun(edict_t *self)
 
 	int damage = 35;
 	int radius_damage = 45;
+	int spread = 800;
 
 	if (self->s.frame > FRAME_attack3)
 	{
@@ -214,7 +222,14 @@ void gladbGun(edict_t *self)
 		radius_damage /= 2;
 	}
 
-	fire_plasma(self, start, dir, damage, 725, radius_damage, radius_damage);
+	/* KONIG - Flak Gladiator and swap fire_plasma for monster_fire_plasma for muzzle flash*/
+	if (strcmp(self->classname, "monster_gladiator_flak") == 0)
+	{
+		gi.sound(self, CHAN_WEAPON, gi.soundindex("weapons/flakgn.wav"), 1, ATTN_NORM, 0);
+		monster_fire_flakcannon(self, start, dir, 5, 800, spread, spread, 7, MZ2_GLADIATOR_RAILGUN_1);
+	}
+	else
+		monster_fire_plasma(self, start, dir, damage, 725, radius_damage, radius_damage, MZ2_GLADIATOR_RAILGUN_1);
 
 	// save for aiming the shot
 	self->pos1 = self->enemy->s.origin;
@@ -241,7 +256,7 @@ mframe_t gladb_frames_attack_gun[] = {
 MMOVE_T(gladb_move_attack_gun) = { FRAME_attack1, FRAME_attack9, gladb_frames_attack_gun, gladiator_run };
 // RAFAEL
 
-MONSTERINFO_ATTACK(gladiator_attack) (edict_t* self) -> void
+MONSTERINFO_ATTACK(gladiator_attack) (edict_t *self) -> void
 {
 	float  range;
 	vec3_t v;
@@ -261,6 +276,11 @@ MONSTERINFO_ATTACK(gladiator_attack) (edict_t* self) -> void
 	if (self->style == 1)
 	{
 		gi.sound(self, CHAN_WEAPON, sound_gunb, 1, ATTN_NORM, 0);
+		M_SetAnimation(self, &gladb_move_attack_gun);
+	}
+	/* KONIG - Flak Gladiator*/
+	else if (strcmp(self->classname, "monster_gladiator_flak") == 0)
+	{
 		M_SetAnimation(self, &gladb_move_attack_gun);
 	}
 	/* KONIG _ BFGladiator from 25th Anniversary*/
@@ -307,6 +327,9 @@ PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int damage, con
 
 	self->pain_debounce_time = level.time + 3_sec;
 
+	if (!M_ShouldReactToPain(self, mod))
+		return; // no pain anims in nightmare
+
 	/* KONIG _ BFGladiator from 25th Anniversary*/
 	if (strcmp(self->classname, "monster_bfgladiator") == 0)
 	{
@@ -322,8 +345,6 @@ PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int damage, con
 		else
 			gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	}
-	if (!M_ShouldReactToPain(self, mod))
-		return; // no pain anims in nightmare
 
 	if (self->velocity[2] > 100)
 		M_SetAnimation(self, &gladiator_move_pain_air);
@@ -415,6 +436,7 @@ DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 		else
 			gi.sound(self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
 	}
+
 	self->deadflag = true;
 	self->takedamage = true;
 
@@ -462,6 +484,7 @@ void SP_monster_gladiator(edict_t *self)
 	bfglad_sound_gun.assign("gladiator/bfattack.wav");
 	bfglad_sound_idle.assign("gladiator/bfidle1.wav");
 	bfglad_sound_sight.assign("gladiator/bfsight.wav");
+	sound_attack_bfg.assign("makron/bfg_fire.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -482,12 +505,10 @@ void SP_monster_gladiator(edict_t *self)
 		self->health = 500 * st.health_multiplier;
 		self->mass = 350;
 
-		self->gib_health = -175;
-		
 		if (!st.was_key_specified("power_armor_type"))
 			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
 		if (!st.was_key_specified("power_armor_power"))
-			self->monsterinfo.power_armor_power = 200;
+			self->monsterinfo.power_armor_power = 300;
 
 		self->s.skinnum = 2;
 
@@ -495,9 +516,24 @@ void SP_monster_gladiator(edict_t *self)
 
 		self->monsterinfo.weapon_sound = gi.soundindex("weapons/phaloop.wav");
 	}
+	else if (strcmp(self->classname, "monster_gladiator_flak") == 0)
+	{
+		self->health = 600 * st.health_multiplier;
+		self->mass = 400;
+
+		self->gib_health = -200;
+
+		if (!st.was_key_specified("power_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("power_power"))
+			self->monsterinfo.armor_power = 200;
+
+		self->style = 1;
+		self->s.skinnum = 4;
+	}
 	else if (strcmp(self->classname, "monster_bfgladiator") == 0)
 	{
-		self->health = 500 * st.health_multiplier;
+		self->health = 800 * st.health_multiplier;
 		self->mass = 400;
 
 		self->gib_health = -200;
@@ -505,12 +541,16 @@ void SP_monster_gladiator(edict_t *self)
 		if (!self->s.scale)
 			self->s.scale = 1.25f;
 
-		if (!st.was_key_specified("power_type"))
-			self->monsterinfo.power_armor_type = IT_ARMOR_COMBAT;
-		if (!st.was_key_specified("power_power"))
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
 			self->monsterinfo.power_armor_power = 200;
-		
-		self->s.skinnum = 4;
+		if (!st.was_key_specified("power_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("power_power"))
+			self->monsterinfo.armor_power = 200;
+
+		self->s.skinnum = 6;
 	}
 	else
 	{
@@ -521,11 +561,11 @@ void SP_monster_gladiator(edict_t *self)
 		self->mass = 400;
 		// RAFAEL
 
-		self->gib_health = -175;
-
 		self->monsterinfo.weapon_sound = gi.soundindex("weapons/rg_hum.wav");
 	}
 	// RAFAEL
+
+	self->gib_health = -175;
 
 	self->mins = { -32, -32, -24 };
 	self->maxs = { 32, 32, 42 };
@@ -563,10 +603,18 @@ void SP_monster_gladb(edict_t *self)
 	SP_monster_gladiator(self);
 }
 
-/* KONIG _ BFGladiator from 25th Anniversary*/
+/* KONIG - BFGladiator from 25th Anniversary*/
 /*QUAKED monster_bfgladiator (1 .5 0) (-32 - 32 - 24) (32 32 64) Ambush Trigger_Spawn Sight
 */
 void SP_monster_bfgladiator(edict_t* self)
+{
+	SP_monster_gladiator(self);
+}
+
+/* KONIG - Flak Gladiator as requested by Coffee09 */
+/*QUAKED monster_gladiator_flak (1 .5 0) (-32 - 32 - 24) (32 32 64) Ambush Trigger_Spawn Sight
+*/
+void SP_monster_gladiator_flak(edict_t* self)
 {
 	SP_monster_gladiator(self);
 }

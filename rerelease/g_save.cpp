@@ -958,6 +958,19 @@ SAVE_STRUCT_START
 	FIELD_AUTO(sound2_entity_time),
 
 	FIELD_AUTO(last_firing_time),
+
+		//ZAERO
+		FIELD_AUTO(flashTime),
+		FIELD_AUTO(flashBase),
+		FIELD_AUTO(sniper_ready_time),
+		FIELD_AUTO(scannon_sound_time),
+		FIELD_AUTO(scannon_start_fire_time),
+		FIELD_AUTO(scannon_ready_time),
+		FIELD_AUTO(a2k_time),
+		FIELD_AUTO(zaero_camera_tracking),
+		FIELD_AUTO(zaero_camera_local_entity),
+		FIELD_AUTO(zaero_camera_offset),
+		FIELD_AUTO(zaero_camera_static_effect_time),
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT
 // clang-format on
@@ -1269,6 +1282,11 @@ SAVE_STRUCT_START
 	FIELD_AUTO( monsterinfo.move_block_change_time ),
 	FIELD_AUTO( monsterinfo.react_to_damage_time ),
 	FIELD_AUTO(monsterinfo.jump_time),
+	// ZAERO
+		FIELD_AUTO(monsterinfo.flashTime),
+		FIELD_AUTO(monsterinfo.flashBase),
+		FIELD_AUTO(monsterinfo.reducedDamageAmount),
+		FIELD_AUTO(monsterinfo.shottarget),
 
 	FIELD_SIMPLE( monsterinfo.reinforcements, ST_REINFORCEMENTS ),
 	FIELD_AUTO( monsterinfo.chosen_reinforcements ),
@@ -1337,6 +1355,14 @@ SAVE_STRUCT_START
 	FIELD_AUTO( lastMOD.friendly_fire ),
 
 	FIELD_AUTO(vision_cone),
+
+	//ZAERO
+		FIELD_AUTO(timeout),
+		FIELD_AUTO(active),
+		FIELD_AUTO(seq),
+		FIELD_AUTO(onFloor),
+		FIELD_AUTO(bossFireTimeout),
+		FIELD_AUTO(visor_time),
 
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT

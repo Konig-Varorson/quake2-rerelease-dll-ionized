@@ -1460,11 +1460,10 @@ void SP_monster_guncmdr(edict_t *self)
 	M_SetAnimation(self, &guncmdr_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	/* KONIG - power armor -> screen */
 	if (!st.was_key_specified("power_armor_power"))
 		self->monsterinfo.power_armor_power = 200;
 	if (!st.was_key_specified("power_armor_type"))
-		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
+		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
 
 	// PMM
 	//self->monsterinfo.blindfire = true;

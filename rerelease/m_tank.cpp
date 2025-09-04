@@ -28,8 +28,9 @@ static cached_soundindex sound_strike;
 constexpr spawnflags_t SPAWNFLAG_TANK_GUARDIAN = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TANK_HEAT_SEEKING = 16_spawnflag;
 
-/* KONIG - universal boss powerup copy */
+/* KONIG - universal boss powerup copy; melee attack */
 void BossPowerups(edict_t* self);
+void T_SlamRadiusDamage(vec3_t point, edict_t* inflictor, edict_t* attacker, float damage, float kick, edict_t* ignore, float radius, mod_t mod);
 
 //
 // misc
@@ -394,12 +395,16 @@ void TankBlaster(edict_t *self)
 		PredictAim(self, self->enemy, start, 0, false, 0.f, &dir, nullptr);
 	// pmm
 
-		/*KONIG - Tanks now use blue blaster, slightly slower; Commanders hit slightly harder; Guardians use green blasters, hits even harder and faster*/
-	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	/*KONIG - Tanks now use blue blaster, slightly slower; Guardians use buckblasters*/
+	if (self->count == 3)
 	{
-		monster_fire_blaster2(self, start, dir, 35, 1000, flash_number, EF_BLASTER);
+		monster_fire_flakblaster(self, start, dir, 15, 800, 500, 800, max(3, 3 + 2 * (skill->integer - 2)), flash_number, EF_BLASTER, 2);
 	}
-	else if (strcmp(self->classname, "monster_tank_commander") == 0)
+	else if (self->count == 2)
+	{
+		monster_fire_flakblaster(self, start, dir, 15, 600, 500, 800, max(3, 3 + 2 * (skill->integer - 2)), flash_number, EF_BLASTER, 0);
+	}
+	else if (self->count == 1)
 	{
 		monster_fire_blaster(self, start, dir, 30, 800, flash_number, EF_BLASTER);
 	}
@@ -554,10 +559,8 @@ void TankMachineGun(edict_t *self)
 	AngleVectors(dir, forward, nullptr, nullptr);
 
 	/*KONIG - Commander hits slightly harder; Commander Guardian uses railgun */
-	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	if (self->count >= 2)
 		monster_fire_railgun(self, start, forward, 40, 100, flash_number);
-	else if (strcmp(self->classname, "monster_tank_commander") == 0)
-		monster_fire_bullet(self, start, forward, 25, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 	else
 		monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
@@ -919,6 +922,8 @@ MONSTERINFO_ATTACK(tank_attack) (edict_t *self) -> void
 // death
 //
 
+/* KONIG - Faithful n64 explosions on spawnflags */
+
 static void tank_gib(edict_t* self)
 {
 	gi.WriteByte(svc_temp_entity);
@@ -940,7 +945,7 @@ static void tank_gib(edict_t* self)
 		});
 }
 
-void tank_dead(edict_t *self)
+void tank_dead(edict_t* self)
 {
 
 	// no blowy on deady
@@ -952,7 +957,7 @@ void tank_dead(edict_t *self)
 			self->takedamage = true;
 			return;
 		}
-		
+
 		tank_gib(self);
 	}
 	else
@@ -963,7 +968,7 @@ void tank_dead(edict_t *self)
 	}
 }
 
-static void tank_shrink(edict_t *self)
+static void tank_shrink(edict_t* self)
 {
 	if (!self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
 	{
@@ -1102,13 +1107,6 @@ MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
-
-//
-// monster_tank
-//
-
 
 /* KONIG - use generic checkattack for Tank Guardian*/
 MONSTERINFO_CHECKATTACK(Tank_CheckAttack) (edict_t* self) -> bool
@@ -1117,6 +1115,10 @@ MONSTERINFO_CHECKATTACK(Tank_CheckAttack) (edict_t* self) -> bool
 		BossPowerups(self);
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
+
+//
+// monster_tank
+//
 
 /*QUAKED monster_tank (1 .5 0) (-32 -32 -16) (32 32 72) Ambush Trigger_Spawn Sight
 model="models/monsters/tank/tris.md2"
@@ -1161,17 +1163,34 @@ void SP_monster_tank(edict_t *self)
 	gi.soundindex("tank/tnkatck3.wav");
 
 	/* KONIG - reworked code to make Tank Guardians their own visual entity; Tank Guardians get GZ health scaling; reduced health, added armor; Tank Commanders always heatseeking rockets*/
-	if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	if (strcmp(self->classname, "monster_tank_commander") == 0 && self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
 	{
-		//exclusive teal skin for n64 maps
-		if (level.is_n64)
+		self->count = 3;
+
+		self->s.skinnum = 6;
+
+		// [Paril-KEX] N64 tank commander is a chonky boy
+		if (!self->s.scale)
+			self->s.scale = 1.5f;
+
+		self->health = max(1500, 1500 + 1000 * (skill->integer - 1)) * st.health_multiplier;
+		self->gib_health = -300;
+
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_BODY;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = max(250, 250 + 100 * (skill->integer - 1));
+		if (coop->integer)
 		{
-			self->s.skinnum = 6;
+			self->health += (250 * (CountPlayers() - 1));
+			self->monsterinfo.armor_power += (100 * (CountPlayers() - 1));
 		}
-		else
-		{
-			self->s.skinnum = 4;
-		}
+	}
+	else if (self->spawnflags.has(SPAWNFLAG_TANK_GUARDIAN))
+	{
+		self->count = 2;
+
+		self->s.skinnum = 4;
 
 		if (!self->s.scale)
 			self->s.scale = 1.5f;
@@ -1191,10 +1210,11 @@ void SP_monster_tank(edict_t *self)
 	}
 	else if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
+		self->count = 1;
+
 		self->spawnflags |= SPAWNFLAG_TANK_HEAT_SEEKING;
 		sound_pain2.assign("tank/pain.wav");
 
-		// [Paril-KEX] N64 tank commander is a chonky boy
 		self->s.skinnum = 2;
 
 		self->health = 950 * st.health_multiplier;
@@ -1204,22 +1224,22 @@ void SP_monster_tank(edict_t *self)
 			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 		if (!st.was_key_specified("armor_power"))
 			self->monsterinfo.armor_power = 200;
-		self->count = 1;
 	}
 	else
 	{
-		sound_pain.assign("tank/tnkpain2.wav");
-			self->health = 750 * st.health_multiplier;
-			self->gib_health = -200;
+		self->count = 0;
 
-			if (!st.was_key_specified("armor_type"))
-				self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
-			if (!st.was_key_specified("armor_power"))
-				self->monsterinfo.armor_power = 200;
+		sound_pain.assign("tank/tnkpain2.wav");
+		self->health = 750 * st.health_multiplier;
+		self->gib_health = -200;
+
+		if (!st.was_key_specified("armor_type"))
+			self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
+		if (!st.was_key_specified("armor_power"))
+			self->monsterinfo.armor_power = 200;
 	}
 
 	self->monsterinfo.scale = MODEL_SCALE;
-
 
 	// heat seekingness
 	if (!self->accel)
@@ -1238,6 +1258,7 @@ void SP_monster_tank(edict_t *self)
 	self->monsterinfo.sight = tank_sight;
 	self->monsterinfo.idle = tank_idle;
 	self->monsterinfo.blocked = tank_blocked; // PGM
+	self->monsterinfo.checkattack = Tank_CheckAttack;
 	self->monsterinfo.setskin = tank_setskin;
 
 	gi.linkentity(self);
@@ -1297,15 +1318,4 @@ void SP_monster_tank_stand(edict_t *self)
 	self->think = Think_TankStand;
 	self->nextthink = level.time + 10_hz;
 	gi.linkentity(self);
-}
-/*KONIG - function to make classname tank guardians */
-/*QUAKED monster_tank_guardian (1 .5 0) (-32 -32 0) (32 32 90) Ambush Trigger_Spawn Sight Guardian HeatSeeking
- */
-void SP_monster_tank_guardian(edict_t* self)
-{
-	const spawn_temp_t& st = ED_GetSpawnTemp();
-
-	self->spawnflags |= SPAWNFLAG_TANK_GUARDIAN;
-
-	SP_monster_tank(self);
 }

@@ -763,7 +763,7 @@ void G_SetStats(edict_t *ent)
 	//
 	uint32_t weaponbits = 0;
 
-	for (invIndex = IT_WEAPON_GRAPPLE; invIndex <= IT_WEAPON_DISRUPTOR; invIndex++)
+	for (invIndex = IT_WEAPON_GRAPPLE; invIndex <= IT_WEAPON_DISINTEGRATOR; invIndex++)
 	{
 		if (ent->client->pers.inventory[invIndex])
 		{

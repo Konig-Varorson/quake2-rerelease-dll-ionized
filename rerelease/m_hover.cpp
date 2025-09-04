@@ -401,7 +401,8 @@ void hover_fire_blaster(edict_t *self)
 	if (self->mass < 200)
 		monster_fire_blaster(self, start, dir, 1, 1000, (self->s.frame & 1) ? MZ2_HOVER_BLASTER_2 : MZ2_HOVER_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 	else
-		monster_fire_blaster2(self, start, dir, 1, 1000, (self->s.frame & 1) ? MZ2_DAEDALUS_BLASTER_2 : MZ2_DAEDALUS_BLASTER, (self->s.frame % 4) ? EF_NONE : EF_BLASTER);
+		/* KONIG - reduced health by 25, increased damage by 3 per shot */
+		monster_fire_blaster2(self, start, dir, 3, 1000, (self->s.frame & 1) ? MZ2_DAEDALUS_BLASTER_2 : MZ2_DAEDALUS_BLASTER, (self->s.frame % 4) ? EF_NONE : EF_BLASTER);
 	// PGM
 }
 
@@ -506,9 +507,9 @@ PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 MONSTERINFO_SETSKIN(hover_setskin) (edict_t *self) -> void
 {
 	if (self->health < (self->max_health / 2))
-		self->s.skinnum |= 1; // PGM support for skins 2 & 3.
+		self->s.skinnum |= 1;
 	else
-		self->s.skinnum &= ~1; // PGM support for skins 2 & 3.
+		self->s.skinnum &= ~1;
 }
 
 void hover_dead(edict_t *self)
@@ -612,7 +613,8 @@ void SP_monster_hover(edict_t *self)
 	// PGM
 	if (strcmp(self->classname, "monster_daedalus") == 0)
 	{
-		self->health = 450 * st.health_multiplier;
+		/* KONIG - reduced health by 25, increased damage by 3 per shot */
+		self->health = 425 * st.health_multiplier;
 		self->mass = 225;
 		self->yaw_speed = 23;
 		if (!st.was_key_specified("power_armor_type"))

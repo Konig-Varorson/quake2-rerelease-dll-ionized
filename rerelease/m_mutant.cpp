@@ -718,7 +718,7 @@ void SP_monster_mutant(edict_t *self)
 		if (!self->s.scale)
 			self->s.scale = 1.25f;
 
-		self->health = 400 * st.health_multiplier;
+		self->health = 500 * st.health_multiplier;
 		self->gib_health = -160;
 		self->mass = 400;
 	}

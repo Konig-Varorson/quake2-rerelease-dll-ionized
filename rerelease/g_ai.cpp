@@ -266,6 +266,12 @@ void ai_charge(edict_t *self, float dist)
     if (visible(self, self->enemy))
         self->monsterinfo.blind_fire_target = self->enemy->s.origin + (self->enemy->velocity * -0.1f);
     // pmm
+    
+    //ZAERO
+    if (self->monsterinfo.aiflags & AI_ONESHOTTARGET)
+    {
+        v = self->enemy->monsterinfo.shottarget - self->s.origin;
+    }
 
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
     {

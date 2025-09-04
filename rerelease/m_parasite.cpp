@@ -659,6 +659,46 @@ static void parasite_proboscis_pull_wait(edict_t *self)
 		proboscis_retract(self->proboscus);
 }
 
+static void teleport_dropper_launch(edict_t* self)
+{
+	vec3_t					 forward, right;
+	vec3_t					 start;
+	vec3_t offset;
+
+	if (self->s.frame >= FRAME_break01 && self->s.frame < FRAME_break01 + q_countof(parasite_break_offsets))
+		offset = parasite_break_offsets[self->s.frame - FRAME_break01];
+	else if (self->s.frame >= FRAME_drain01 && self->s.frame < FRAME_drain01 + q_countof(parasite_drain_offsets))
+		offset = parasite_drain_offsets[self->s.frame - FRAME_drain01];
+	else
+		offset = { 8, 0, 6 };
+
+	if (!self->enemy || !self->enemy->inuse) // PGM
+		return;
+
+	AngleVectors(self->s.angles, forward, right, nullptr);
+	start = M_ProjectFlashSource(self, offset, forward, right);
+
+	vec3_t aim_point;
+	PredictAim(self, self->enemy, start, 0, false, crandom_open() * 0.1f, &forward, &aim_point);
+
+	for (float speed = 250.f; speed < 500.f; speed += 50.f)
+	{
+		if (!M_CalculatePitchToFire(self, aim_point, start, forward, speed, 2.5f, true))
+			continue;
+
+		fire_dropper(self, start, forward, speed);
+		break;
+	}
+
+	self->monsterinfo.attack_finished = level.time + 3_sec;
+}
+
+static void teleport_dropper_difficulty_check(edict_t* self)
+{
+	if (skill->integer < 3)
+		parasite_start_run(self);
+}
+
 mframe_t parasite_frames_fire_proboscis[] = {
 	{ parasite_charge_proboscis, 0, parasite_launch },
 	{ parasite_charge_proboscis },
@@ -681,6 +721,26 @@ mframe_t parasite_frames_fire_proboscis[] = {
 };
 MMOVE_T(parasite_move_fire_proboscis) = { FRAME_drain01, FRAME_drain18, parasite_frames_fire_proboscis, parasite_start_run };
 
+mframe_t parasite_frames_fire_droppers[] = {
+	{ parasite_charge_proboscis },
+	{ parasite_charge_proboscis, -3 },
+	{ parasite_charge_proboscis, 1 },
+	{ parasite_charge_proboscis, 2, teleport_dropper_launch },
+	{ parasite_charge_proboscis, -3 },
+
+	{ parasite_charge_proboscis, 1, teleport_dropper_launch },
+	{ parasite_charge_proboscis, 1 },
+	{ parasite_charge_proboscis, 3 },
+	{ parasite_charge_proboscis, 0, teleport_dropper_difficulty_check },
+	{ parasite_charge_proboscis, -18, teleport_dropper_launch },
+
+	{ parasite_charge_proboscis, 3 },
+	{ parasite_charge_proboscis, 9 },
+	{ parasite_charge_proboscis, 6 },
+	{ parasite_charge_proboscis }
+};
+MMOVE_T(parasite_move_fire_droppers) = { FRAME_break01, FRAME_break14, parasite_frames_fire_droppers, parasite_start_run };
+
 MONSTERINFO_ATTACK(parasite_attack) (edict_t *self) -> void
 {
 	if (!M_CheckClearShot(self, parasite_drain_offsets[0]))
@@ -688,8 +748,15 @@ MONSTERINFO_ATTACK(parasite_attack) (edict_t *self) -> void
 
 	if (self->proboscus && self->proboscus->style != 2)
 		proboscis_retract(self->proboscus);
+	if (strcmp(self->classname, "monster_dropper") == 0)
+	{
+		if (level.time < self->monsterinfo.attack_finished)
+			return;
 
-	M_SetAnimation(self, &parasite_move_fire_proboscis);
+		M_SetAnimation(self, &parasite_move_fire_droppers);
+	}
+	else
+		M_SetAnimation(self, &parasite_move_fire_proboscis);
 }
 
 //================
@@ -977,8 +1044,13 @@ void SP_monster_dropper(edict_t* self)
 	self->style = 1;
 
 	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
-	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
+	self->monsterinfo.armor_power = 100;
+
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS; //makeshift fix to avoid infighting with spawned entities
 
 	if (!self->s.scale)
-		self->s.scale = 1.1f;
+		self->s.scale = 1.25f;
+
+	self->mins[2] = -32;
+
 }

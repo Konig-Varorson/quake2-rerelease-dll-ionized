@@ -35,10 +35,6 @@ void floater_run(edict_t *self);
 void floater_wham(edict_t *self);
 void floater_zap(edict_t *self);
 
-/* KONIG - Mimic stuff*/
-void float_mimic_explode(edict_t* self);
-void float_mimic_check(edict_t* self);
-
 void floater_fire_blaster(edict_t *self)
 {
 	vec3_t	  start;
@@ -58,7 +54,7 @@ void floater_fire_blaster(edict_t *self)
 	dir.normalize();
 
 	/* KONIG - blue blasters for Mimics */
-	if (self->style == 1)
+	if (strcmp(self->classname, "monster_mimic") == 0)
 		monster_fire_blueblaster(self, start, dir, 2, 1000, MZ2_FLOAT_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_BLUEHYPERBLASTER);
 	else
 		monster_fire_blaster(self, start, dir, 1, 1000, MZ2_FLOAT_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
@@ -725,6 +721,7 @@ void SP_monster_floater(edict_t *self)
 
 	flymonster_start(self);
 }
+
 /* KONIG - technician beta aka Mimic */
 /*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight Disguise
  */
@@ -735,8 +732,6 @@ void SP_monster_mimic(edict_t* self)
 	self->spawnflags |= SPAWNFLAG_FLOATER_DISGUISE;
 	SP_monster_floater(self);
 	self->s.skinnum = 2;
-	self->style = 1;
-	self->health = 200 * st.health_multiplier;
 
 	self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 	self->monsterinfo.armor_power = 100;

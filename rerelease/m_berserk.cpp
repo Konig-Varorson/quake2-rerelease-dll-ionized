@@ -110,30 +110,6 @@ MONSTERINFO_WALK(berserk_walk) (edict_t *self) -> void
 	M_SetAnimation(self, &berserk_move_walk);
 }
 
-/*
-
-  *****************************
-  SKIPPED THIS FOR NOW!
-  *****************************
-
-   Running -> Arm raised in air
-
-void()	berserk_runb1	=[	$r_att1 ,	berserk_runb2	] {ai_run(21);};
-void()	berserk_runb2	=[	$r_att2 ,	berserk_runb3	] {ai_run(11);};
-void()	berserk_runb3	=[	$r_att3 ,	berserk_runb4	] {ai_run(21);};
-void()	berserk_runb4	=[	$r_att4 ,	berserk_runb5	] {ai_run(25);};
-void()	berserk_runb5	=[	$r_att5 ,	berserk_runb6	] {ai_run(18);};
-void()	berserk_runb6	=[	$r_att6 ,	berserk_runb7	] {ai_run(19);};
-// running with arm in air : start loop
-void()	berserk_runb7	=[	$r_att7 ,	berserk_runb8	] {ai_run(21);};
-void()	berserk_runb8	=[	$r_att8 ,	berserk_runb9	] {ai_run(11);};
-void()	berserk_runb9	=[	$r_att9 ,	berserk_runb10	] {ai_run(21);};
-void()	berserk_runb10	=[	$r_att10 ,	berserk_runb11	] {ai_run(25);};
-void()	berserk_runb11	=[	$r_att11 ,	berserk_runb12	] {ai_run(18);};
-void()	berserk_runb12	=[	$r_att12 ,	berserk_runb7	] {ai_run(19);};
-// running with arm in air : end loop
-*/
-
 mframe_t berserk_frames_run1[] = {
 	{ ai_run, 21 },
 	{ ai_run, 11, monster_footstep },
@@ -187,6 +163,53 @@ void berserk_attack_club(edict_t *self)
 		self->monsterinfo.melee_debounce_time = level.time + 2.5_sec;
 }
 
+/* KONIG - Berser2 attacks*/
+void berserk_lightning(edict_t* self)
+{
+	vec3_t					 start;
+	vec3_t					 forward, right;
+	vec3_t					 aim;
+	vec3_t					 offset;
+
+	if (!self->enemy || !self->enemy->inuse)
+		return;
+
+	//		offset = { 24.8f, -9.0f, 39.0f };
+
+	if (self->s.frame == FRAME_att_b8)
+		offset = { -34.0f, -27.8f, 29.0f };
+	else if (self->s.frame == FRAME_att_b10)
+		offset = { -72.0f, -15.8f, 15.0f };
+	else if (self->s.frame == FRAME_att_b11)
+		offset = { -14.0f, -44.8f, 15.7f };
+	else if (self->s.frame == FRAME_att_b12)
+		offset = { 32.0f, -37.7f, 20.9f };
+	else if (self->s.frame == FRAME_att_b13)
+		offset = { 46.9f, 14.8f, 20.7f };
+	else if (self->s.frame == FRAME_r_attb5)
+		offset = { 14.7f, -35.2f, 29.6f };
+	else if (self->s.frame == FRAME_r_attb9)
+		offset = { 20.3f, -25.6f, 43.3f };
+	else if (self->s.frame == FRAME_r_attb15)
+		offset = { 19.3f, -16.8f, 45.4f };
+	else
+		return;
+
+	AngleVectors(self->s.angles, forward, right, nullptr);
+	start = M_ProjectFlashSource(self, offset, forward, right);
+	PredictAim(self, self->enemy, start, 0, true, -0.2f, &aim, nullptr);
+	gi.sound(self, CHAN_WEAPON, gi.soundindex("weapons/lhit.wav"), 1, ATTN_NORM, 0);
+	fire_lightning(self, start, aim, 5, 300, EF_PLASMA);
+}
+
+void berserk_attack_club2(edict_t* self)
+{
+	vec3_t aim = { MELEE_DISTANCE, self->mins[0], -4 };
+
+	if (!fire_hit(self, aim, irandom(20, 26), 250)) // Slower attack
+		self->monsterinfo.melee_debounce_time = level.time + 2.5_sec;
+}
+
 mframe_t berserk_frames_attack_club[] = {
 	{ ai_charge },
 	{ ai_charge },
@@ -203,6 +226,57 @@ mframe_t berserk_frames_attack_club[] = {
 };
 MMOVE_T(berserk_move_attack_club) = { FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run };
 
+/* KONIG - Berserk2 attacks*/
+mframe_t berserk_frames_attack_chargedclub[] = {
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+
+	{ ai_charge },
+	{ ai_charge, 0, monster_footstep },
+	{ ai_charge, 0, berserk_lightning },
+	{ ai_charge },
+	{ ai_charge, 0,  [](edict_t* self) { berserk_swing(self); berserk_lightning(self); } },
+
+	{ ai_charge, 0, berserk_lightning },
+	{ ai_charge, 0, berserk_lightning },
+	{ ai_charge, 0, berserk_lightning },
+	{ ai_charge, 0, berserk_attack_club2 },
+	{ ai_charge },
+
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+
+	{ ai_charge }
+};
+MMOVE_T(berserk_move_attack_chargedclub) = { FRAME_att_b1, FRAME_att_b21, berserk_frames_attack_chargedclub, berserk_run };
+
+void berserk_attack_slam(edict_t* self);
+
+mframe_t berserk_frames_attack_slam[] = {
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge },
+	{ ai_charge, 0, monster_footstep },
+	{ ai_charge },
+
+	{ ai_charge, 0, berserk_swing },
+	{ ai_charge },
+	{ ai_charge, 0, monster_footstep },
+	{ ai_charge, 0, berserk_attack_slam },
+	{ ai_charge },
+
+	{ ai_charge },
+	{ ai_charge, 0, monster_footstep },
+	{ ai_charge },
+	{ ai_charge, 0, monster_footstep }
+};
+MMOVE_T(berserk_move_attack_slam) = { FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_slam, berserk_run };
 
 /*
 ============
@@ -271,8 +345,8 @@ static void berserk_attack_slam(edict_t *self)
 	self->velocity = {};
 	self->flags |= FL_KILL_VELOCITY;
 
-	if (self->style == 1)
-		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);		
+	if (strcmp(self->classname, "monster_berserk2") == 0)
+		T_SlamRadiusDamage(tr.endpos, self, self, 16, 300.f, self, 165, MOD_UNKNOWN);
 	else
 		T_SlamRadiusDamage(tr.endpos, self, self, 8, 300.f, self, 165, MOD_UNKNOWN);
 }
@@ -390,6 +464,7 @@ mframe_t berserk_frames_attack_strike[] = {
 MMOVE_T(berserk_move_attack_strike) = { FRAME_slam1, FRAME_slam23, berserk_frames_attack_strike, berserk_run };
 
 extern const mmove_t berserk_move_run_attack1;
+extern const mmove_t berserk_move_run_attack2; //KONIG berserk2 variant
 
 MONSTERINFO_MELEE(berserk_melee) (edict_t *self) -> void
 {
@@ -403,13 +478,33 @@ MONSTERINFO_MELEE(berserk_melee) (edict_t *self) -> void
 		self->monsterinfo.attack_finished = 0_ms;
 		return;
 	}
+	/* KONIG - same as above but berserk2*/
+	else if (self->monsterinfo.active_move == &berserk_move_run_attack2 && self->s.frame >= FRAME_r_att13)
+	{
+		self->monsterinfo.attack_state = AS_STRAIGHT;
+		self->monsterinfo.attack_finished = 0_ms;
+		return;
+	}
 
 	monster_done_dodge(self);
 
-	if (brandom())
-		M_SetAnimation(self, &berserk_move_attack_spike);
+	/* KONIG - berserk2 attacks*/
+	if (strcmp(self->classname, "monster_berserk2") == 0)
+	{
+		if (frandom() < 0.4)
+			M_SetAnimation(self, &berserk_move_attack_spike);
+		else if (frandom() < 0.6)
+			M_SetAnimation(self, &berserk_move_attack_club);
+		else
+			M_SetAnimation(self, &berserk_move_attack_slam);
+	}
 	else
-		M_SetAnimation(self, &berserk_move_attack_club);
+	{
+		if (brandom())
+			M_SetAnimation(self, &berserk_move_attack_spike);
+		else
+			M_SetAnimation(self, &berserk_move_attack_club);
+	}
 }
 
 static void berserk_run_attack_speed(edict_t *self)
@@ -455,13 +550,36 @@ mframe_t berserk_frames_run_attack1[] = {
 };
 MMOVE_T(berserk_move_run_attack1) = { FRAME_r_att1, FRAME_r_att18, berserk_frames_run_attack1, berserk_run };
 
+/* KONIG - Berserk2 attacks */
+mframe_t berserk_frames_run_attack2[] = {
+	{ ai_run, 21, berserk_run_attack_speed },
+	{ ai_run, 11, [](edict_t* self) { berserk_run_attack_speed(self); monster_footstep(self); } },
+	{ ai_run, 21, berserk_run_attack_speed },
+	{ ai_run, 25, [](edict_t* self) { berserk_run_attack_speed(self); monster_done_dodge(self); }},
+	{ ai_run, 18, [](edict_t* self) { berserk_run_attack_speed(self); monster_footstep(self); berserk_lightning(self); } },
+	{ ai_run, 19, berserk_run_attack_speed },
+	{ ai_run, 21 },
+	{ ai_run, 11, monster_footstep },
+	{ ai_run, 21, berserk_lightning },
+	{ ai_run, 25 },
+	{ ai_run, 18, monster_footstep },
+	{ ai_run, 19 },
+	{ ai_run, 21, berserk_run_swing },
+	{ ai_run, 11, monster_footstep },
+	{ ai_run, 21, berserk_lightning },
+	{ ai_run, 25 },
+	{ ai_run, 18, monster_footstep },
+	{ ai_run, 19, berserk_attack_club }
+};
+MMOVE_T(berserk_move_run_attack2) = { FRAME_r_attb1, FRAME_r_attb18, berserk_frames_run_attack2, berserk_run };
+
 MONSTERINFO_ATTACK(berserk_attack) (edict_t *self) -> void
 {
 	if (self->monsterinfo.melee_debounce_time <= level.time && (range_to(self, self->enemy) < MELEE_DISTANCE))
 		berserk_melee(self);
 	// only jump if they are far enough away for it to make sense (otherwise
 	// it gets annoying to have them keep hopping over and over again)
-	else if (!self->spawnflags.has(SPAWNFLAG_BERSERK_NOJUMPING) && (self->timestamp < level.time && brandom()) && range_to(self, self->enemy) > 150.f)
+	else if (!self->spawnflags.has(SPAWNFLAG_BERSERK_NOJUMPING) && (self->timestamp < level.time && brandom()) && range_to(self, self->enemy) > 250.f) //KONIG - increased distance for jumping
 	{
 		M_SetAnimation(self, &berserk_move_attack_strike);
 		// don't do this for a while, otherwise we just keep doing it
@@ -470,7 +588,16 @@ MONSTERINFO_ATTACK(berserk_attack) (edict_t *self) -> void
 	}
 	else if (self->monsterinfo.active_move == &berserk_move_run1 && (range_to(self, self->enemy) <= RANGE_NEAR))
 	{
-		M_SetAnimation(self, &berserk_move_run_attack1);
+		/* KONIG - Berser2 attacks*/
+		if (strcmp(self->classname, "monster_berserk2") == 0)
+		{
+			if (frandom() > 0.4f)
+				M_SetAnimation(self, &berserk_move_run_attack2);
+			else
+				M_SetAnimation(self, &berserk_move_attack_chargedclub);
+		}
+		else
+			M_SetAnimation(self, &berserk_move_run_attack1);
 		self->monsterinfo.nextframe = FRAME_r_att1 + (self->s.frame - FRAME_run1) + 1;
 	}
 }
@@ -538,7 +665,7 @@ PAIN(berserk_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 
 MONSTERINFO_SETSKIN(berserk_setskin) (edict_t *self) -> void
 {
-	/* KONIG - set for multiple skins*/
+	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -851,7 +978,6 @@ void SP_monster_berserk(edict_t *self)
 	walkmonster_start(self);
 }
 
-
 /*QUAKED monster_berserk2 (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
  /* KONIG - new berserker beta; Quake 4's Berserker*/
@@ -861,12 +987,14 @@ void SP_monster_berserk2(edict_t* self)
 
 	SP_monster_berserk(self);
 	self->s.skinnum = 2;
-	self->style = 1;
 
 	self->health = 300 * st.health_multiplier;
 	self->monsterinfo.armor_type = IT_ARMOR_JACKET;
-	self->monsterinfo.armor_power = 100 + (25 * skill->integer);
+	self->monsterinfo.armor_power = 100;
 
 	if (!self->s.scale)
 		self->s.scale = 1.2f;
+
+	self->mins[2] = -28;
+
 }

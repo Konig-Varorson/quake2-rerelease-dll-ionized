@@ -30,6 +30,7 @@ static cached_soundindex sound_idle;
 // range at which we'll try to initiate a run-attack to close distance
 constexpr float RANGE_RUN_ATTACK = RANGE_NEAR * 0.75f;
 
+/* KONIG - new spawnflag for Handler*/
 constexpr spawnflags_t SPAWNFLAG_INFANTRY_NOJUMPING = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_INFANTRY_HANDLER = 32_spawnflag;
 
@@ -317,11 +318,13 @@ void InfantryMachineGun(edict_t *self)
 	/* KONIG - Unseen and SMD inspired variants */
 	if (self->spawnflags.has(SPAWNFLAG_INFANTRY_HANDLER))
 	{
+		gi.sound(self, CHAN_WEAPON, gi.soundindex("guncmdr/gcdratck2.wav"), 1, ATTN_NORM, 0);
 		monster_fire_flechette(self, start, forward, 4, 750, flash_number);
 	}
 	else if (strcmp(self->classname, "monster_heavy") == 0) /* KONIG - TO DO: swap with hellfury rockets*/
 	{
-		monster_fire_rocket(self, start, forward, 30, 800, flash_number);
+		gi.sound(self, CHAN_WEAPON, gi.soundindex("chick/chkatck2.wav"), 1, ATTN_NORM, 0);
+		monster_fire_rocket(self, start, forward, 5, 800, flash_number);
 	}
 	else
 	{
@@ -907,6 +910,7 @@ void SP_monster_infantry(edict_t *self)
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, 32 };
 
+	/* KONIG - altered health/mass/armor for heavy, skin for handler*/
 	if (strcmp(self->classname, "monster_infantry_handler") == 0)
 	{
 		self->s.skinnum = 2;
@@ -969,6 +973,7 @@ void SP_monster_infantry(edict_t *self)
 	walkmonster_start(self);
 }
 
+
 /* KONIG - Zaero handler function change and Unseen's Heavy */
 /*QUAKED monster_infantry_handler (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
  */
@@ -994,7 +999,13 @@ void handler_ConvertToInfantry(edict_t* self)
 {
 	SP_monster_infantry_handler(self);
 
+	self->s.origin[0] -= 18;
+	self->s.origin[1] -= 9;
+
 	self->s.skinnum = 2;
+	self->s.frame = FRAME_run01;
+
+	infantry_run(self);
 
 	// [Paril-KEX] set health bar over to Makron when we throw him out
 	for (size_t i = 0; i < 2; i++)

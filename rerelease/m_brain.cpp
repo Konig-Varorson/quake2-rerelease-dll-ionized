@@ -648,7 +648,7 @@ PAIN(brain_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		monster_duck_up(self);
 }
 
-MONSTERINFO_SETSKIN(brain_setskin) (edict_t* self) -> void
+MONSTERINFO_SETSKIN(brain_setskin) (edict_t *self) -> void
 {
 	/* KONIG - allow multiple skins */
 	if (self->health < (self->max_health / 2))
