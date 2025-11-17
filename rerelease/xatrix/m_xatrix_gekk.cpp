@@ -15,8 +15,7 @@ constexpr spawnflags_t SPAWNFLAG_GEKK_NOSWIM = 32_spawnflag;
 static cached_soundindex sound_swing;
 static cached_soundindex sound_hit;
 static cached_soundindex sound_hit2;
-static cached_soundindex sound_speet;
-static cached_soundindex loogie_hit;
+static cached_soundindex sound_spit;
 static cached_soundindex sound_death;
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_sight;
@@ -684,7 +683,7 @@ void loogie(edict_t *self)
 
 	fire_acid(self, start, dir, 5, 550);
 
-	gi.sound(self, CHAN_BODY, sound_speet, 1.0f, ATTN_NORM, 0);
+	gi.sound(self, CHAN_BODY, sound_spit, 1.0f, ATTN_NORM, 0);
 }
 
 void reloogie(edict_t *self)
@@ -1537,8 +1536,7 @@ void SP_monster_gekk(edict_t *self)
 	sound_swing.assign("gek/gk_atck1.wav");
 	sound_hit.assign("gek/gk_atck2.wav");
 	sound_hit2.assign("gek/gk_atck3.wav");
-	sound_speet.assign("gek/gk_atck4.wav");
-	loogie_hit.assign("gek/loogie_hit.wav");
+	sound_spit.assign("gek/gk_atck4.wav");
 	sound_death.assign("gek/gk_deth1.wav");
 	sound_pain1.assign("gek/gk_pain1.wav");
 	sound_sight.assign("gek/gk_sght1.wav");
@@ -1628,4 +1626,5 @@ void land_to_water(edict_t *self)
 
 	self->mins = { -18, -18, -24 };
 	self->maxs = { 18, 18, 16 };
+
 }
