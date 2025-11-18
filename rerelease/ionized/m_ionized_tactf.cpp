@@ -9,20 +9,27 @@ TACTICAL - FEMALE
 */
 
 #include "../g_local.h"
-#include "m_tactical.h"
+#include "m_ionized_player.h"
 #include "../m_flash.h"
 
-static cached_soundindex sound_pain;
-static cached_soundindex sound_death;
+static cached_soundindex sound_pain100_1;
+static cached_soundindex sound_pain100_2;
+static cached_soundindex sound_pain75_1;
+static cached_soundindex sound_pain75_2;
+static cached_soundindex sound_pain50_1;
+static cached_soundindex sound_pain50_2;
+static cached_soundindex sound_pain25_1;
+static cached_soundindex sound_pain25_2;
+static cached_soundindex sound_death1;
+static cached_soundindex sound_death2;
+static cached_soundindex sound_death3;
+static cached_soundindex sound_death4;
 static cached_soundindex sound_idle;
 static cached_soundindex sound_search;
 static cached_soundindex sound_sight;
 static cached_soundindex sound_jump;
 
 constexpr spawnflags_t SPAWNFLAG_TACTICAL_NOJUMPING = 8_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_TACTICAL_WEAPON1 = 16_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_TACTICAL_WEAPON2 = 32_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_TACTICAL_WEAPON3 = 64_spawnflag;
 
 //
 //SOUNDS
@@ -125,34 +132,9 @@ mframe_t tactf_frames_stand2[] = {
 	{ ai_stand },
 	{ ai_stand },
 	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand, 0, tactf_fidget },
-
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand, 0, tactf_fidget },
-
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
-	{ ai_stand },
 	{ ai_stand, 0, tactf_fidget }
 };
-MMOVE_T(tactf_move_stand2) = { FRAME_stand01, FRAME_stand40, tactf_frames_stand2, nullptr };
+MMOVE_T(tactf_move_stand2) = { FRAME_crstnd01, FRAME_crstnd19, tactf_frames_stand2, nullptr };
 
 mframe_t tactf_frames_flip[] = {
 	{ ai_stand },
@@ -621,13 +603,13 @@ MONSTERINFO_ATTACK(tactf_attack) (edict_t* self) -> void
 		self->style = 3;
 		self->s.modelindex2 = gi.modelindex("players/female/w_glauncher.md2");
 	}
-	else if (range_to(self, self->enemy) <= (RANGE_MID))
+	else if (range_to(self, self->enemy) <= RANGE_MID)
 	{
 		self->s.modelindex2 = 0;
 		self->style = 4;
 		self->s.modelindex2 = gi.modelindex("players/female/w_etfrifle.md2");
 	}
-	else if (range_to(self, self->enemy) <= RANGE_MID)
+	else
 	{
 		self->s.modelindex2 = 0;
 		self->style = 5;
@@ -840,8 +822,34 @@ PAIN(tactf_pain) (edict_t* self, edict_t* other, float kick, int damage, const m
 		return; // no pain anims in nightmare
 	}
 
-
-	gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+	if (self->health > 75)
+	{
+		if (frandom() > 0.5)
+			gi.sound(self, CHAN_VOICE, sound_pain100_1, 1, ATTN_NORM, 0);
+		else
+			gi.sound(self, CHAN_VOICE, sound_pain100_2, 1, ATTN_NORM, 0);
+	}
+	else if (self->health > 50)
+	{
+		if (frandom() > 0.5)
+			gi.sound(self, CHAN_VOICE, sound_pain75_1, 1, ATTN_NORM, 0);
+		else
+			gi.sound(self, CHAN_VOICE, sound_pain75_2, 1, ATTN_NORM, 0);
+	}
+	else if (self->health > 25)
+	{
+		if (frandom() > 0.5)
+			gi.sound(self, CHAN_VOICE, sound_pain50_1, 1, ATTN_NORM, 0);
+		else
+			gi.sound(self, CHAN_VOICE, sound_pain50_2, 1, ATTN_NORM, 0);
+	}
+	else
+	{
+		if (frandom() > 0.5)
+			gi.sound(self, CHAN_VOICE, sound_pain25_1, 1, ATTN_NORM, 0);
+		else
+			gi.sound(self, CHAN_VOICE, sound_pain25_2, 1, ATTN_NORM, 0);
+	}
 
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		M_SetAnimation(self, &tactf_move_pain4);
@@ -950,7 +958,14 @@ DIE(tactf_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage
 	self->deadflag = true;
 	self->takedamage = true;
 
-	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	if (frandom() < 0.25f)
+		gi.sound(self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+	else if (frandom() < 0.5f)
+		gi.sound(self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
+	else if (frandom() < 0.75f)
+		gi.sound(self, CHAN_VOICE, sound_death3, 1, ATTN_NORM, 0);
+	else
+		gi.sound(self, CHAN_VOICE, sound_death4, 1, ATTN_NORM, 0);
 
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 	{
@@ -982,12 +997,22 @@ void SP_monster_tactical_female(edict_t* self)
 		return;
 	}
 
-	sound_death.assign("chick/chkdeth2.wav");
-	sound_pain.assign("chick/chkpain2.wav");
-	sound_idle.assign("chick/chkidle2.wav");
-	sound_search.assign("chick/chksrch1.wav");
-	sound_sight.assign("chick/chksght1.wav");
-	sound_jump.assign("chick/chkfall1.wav");
+	sound_pain100_1.assign("tactical/female/pain100_1.wav");
+	sound_pain100_2.assign("tactical/female/pain100_2.wav");
+	sound_pain75_1.assign("tactical/female/pain75_1.wav");
+	sound_pain75_2.assign("tactical/female/pain75_2.wav");
+	sound_pain50_1.assign("tactical/female/pain50_1.wav");
+	sound_pain50_2.assign("tactical/female/pain50_2.wav");
+	sound_pain25_1.assign("tactical/female/pain25_1.wav");
+	sound_pain25_2.assign("tactical/female/pain25_2.wav");
+	sound_death1.assign("tactical/female/death1.wav");
+	sound_death2.assign("tactical/female/death2.wav");
+	sound_death3.assign("tactical/female/death3.wav");
+	sound_death4.assign("tactical/female/death4.wav");
+	sound_sight.assign("tactical/female/sight.wav");
+	sound_search.assign("tactical/female/seach.wav");
+	sound_idle.assign("tactical/female/idle.wav");
+	sound_jump.assign("tactical/female/jump.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

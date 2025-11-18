@@ -242,3 +242,104 @@ void SP_target_shooter_magic(edict_t* self)
 
 	self->svflags = SVF_NOCLIENT;
 }
+#if 0
+/*
+==================
+
+MUFFMODE ADDITIONS
+
+==================
+*/
+
+/*QUAKED target_remove_weapons (1 0 0) (-8 -8 -8) (8 8 8) BLASTER x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Takes away all the activator's weapons and ammo (except blaster).
+BLASTER : also remove blaster
+*/
+static USE(target_remove_weapons_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (!activator->client)
+		return;
+
+	for (size_t i = 0; i < IT_TOTAL; i++) {
+		if (!activator->client->pers.inventory[i])
+			continue;
+
+		if (itemlist[i].flags & IF_WEAPON | IF_AMMO && itemlist[i].id != IT_WEAPON_BLASTER)
+			activator->client->pers.inventory[i] = 0;
+	}
+
+	NoAmmoWeaponChange(ent, false);
+
+	activator->client->pers.weapon = activator->client->newweapon;
+	if (activator->client->newweapon)
+		activator->client->pers.selected_item = activator->client->newweapon->id;
+	activator->client->newweapon = nullptr;
+	activator->client->pers.lastweapon = activator->client->pers.weapon;
+}
+
+void SP_target_remove_weapons(edict_t* ent) {
+	ent->use = target_remove_weapons_use;
+}
+
+
+/*QUAKED target_give (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Gives the activator the targetted item.
+*/
+static USE(target_give_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (!activator->client)
+		return;
+
+	ent->item->pickup(ent, other);
+}
+
+void SP_target_give(edict_t* ent) {
+	edict_t* target_ent = G_PickTarget(ent->target);
+	if (!target_ent || !target_ent->classname[0]) {
+		gi.Com_PrintFmt("{}: Invalid target entity, removing.\n", *ent);
+		G_FreeEntity(ent);
+		return;
+	}
+
+	gitem_t* it = FindItemByClassname(target_ent->classname);
+	if (!it || !it->pickup) {
+		gi.Com_PrintFmt("{}: Targetted entity is not an item, removing.\n", *ent);
+		G_FreeEntity(ent);
+		return;
+	}
+
+	ent->item = it;
+	ent->use = target_give_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8) REDTEAM BLUETEAM PRIVATE x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Sends a center-printed message to clients.
+"message"	text to print
+If "private", only the activator gets the message. If no checks, all clients get the message.
+*/
+static USE(target_print_use) (edict_t* ent, edict_t* other, edict_t* activator) -> void {
+	if (activator && activator->client && ent->spawnflags.has(4_spawnflag)) {
+		gi.LocClient_Print(activator, PRINT_CENTER, "{}", ent->message);
+		return;
+	}
+
+	if (ent->spawnflags.has(3_spawnflag)) {
+		if (ent->spawnflags.has(1_spawnflag))
+			BroadcastTeamMessage(TEAM_RED, PRINT_CENTER, G_Fmt("{}", ent->message).data());
+		if (ent->spawnflags.has(2_spawnflag))
+			BroadcastTeamMessage(TEAM_BLUE, PRINT_CENTER, G_Fmt("{}", ent->message).data());
+		return;
+	}
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
+}
+
+void SP_target_print(edict_t* ent) {
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
+		G_FreeEntity(ent);
+		return;
+	}
+	ent->use = target_print_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+#endif

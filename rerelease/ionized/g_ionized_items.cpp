@@ -88,30 +88,6 @@ void SP_key_clearancepass(edict_t* self)
 	self->count = 1;
 }
 
-void SP_item_silver_key(edict_t* self)
-{
-	if (self->spawnflags.has(16_spawnflag))
-		self->model = "models/items/keys/b_s_key/tris.md2";
-	else if (self->spawnflags.has(32_spawnflag))
-		self->model = "models/items/keys/m_s_key/tris.md2";
-	else
-		self->model = "models/items/keys/w_s_key/tris.md2";
-	SpawnItem(self, GetItemByIndex(IT_KEY_SILVER_KEY), ED_GetSpawnTemp());
-	self->count = 1;
-}
-
-void SP_item_gold_key(edict_t* self)
-{
-	if (self->spawnflags.has(16_spawnflag))
-		self->model = "models/items/keys/b_g_key/tris.md2";
-	else if (self->spawnflags.has(32_spawnflag))
-		self->model = "models/items/keys/m_g_key/tris.md2";
-	else
-		self->model = "models/items/keys/w_g_key/tris.md2";
-	SpawnItem(self, GetItemByIndex(IT_KEY_GOLD_KEY), ED_GetSpawnTemp());
-	self->count = 1;
-}
-
 void SP_item_sigil(edict_t* self)
 {
 	if (self->spawnflags.has(16_spawnflag))

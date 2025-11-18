@@ -205,4 +205,4 @@ enum {
 	FRAME_death308
 };
 
-constexpr float MODEL_SCALE		= 1.2f;
+constexpr float MODEL_SCALE		= 1.000000f;
