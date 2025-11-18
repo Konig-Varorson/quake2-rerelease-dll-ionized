@@ -77,14 +77,140 @@
     <ClInclude Include="xatrix\m_xatrix_gekk.h">
       <Filter>xatrix</Filter>
     </ClInclude>
-    <ClInclude Include="nexus\m_ionized_tactical.h">
-      <Filter>nexus</Filter>
+    <ClInclude Include="ionized\m_ionized_player.h">
+      <Filter>ionized</Filter>
     </ClInclude>
-    <ClInclude Include="nexus\m_zaero_sentien.h">
-      <Filter>nexus</Filter>
+    <ClInclude Include="zaero\m_zaero_hound.h">
+      <Filter>zaero</Filter>
     </ClInclude>
-    <ClInclude Include="nexus\m_nexus_gekk.h">
-      <Filter>nexus</Filter>
+    <ClInclude Include="quake1\m_q1_army.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_dog.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_enforcer.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_fiend.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_hknight.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_knight.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_ogre.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_rotfish.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_scrag.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_tarbaby.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_vore.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_zombie.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="ionized\m_ionized_shark.h">
+      <Filter>ionized</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_centroid.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_chthon.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_dragon.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_eel.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_oldone.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_overlord.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_shalrath.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_spike.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_sword.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_wrath.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_wyvern.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="zaero\m_zaero_acannon.h">
+      <Filter>zaero</Filter>
+    </ClInclude>
+    <ClInclude Include="zaero\m_zaero_bossz.h">
+      <Filter>zaero</Filter>
+    </ClInclude>
+    <ClInclude Include="zaero\m_zaero_handler.h">
+      <Filter>zaero</Filter>
+    </ClInclude>
+    <ClInclude Include="zaero\m_zaero_sentien.h">
+      <Filter>zaero</Filter>
+    </ClInclude>
+    <ClInclude Include="oblivion\m_oblivion_cyborg.h">
+      <Filter>oblivion</Filter>
+    </ClInclude>
+    <ClInclude Include="oblivion\m_oblivion_kigrax.h">
+      <Filter>oblivion</Filter>
+    </ClInclude>
+    <ClInclude Include="oblivion\m_oblivion_sentinel.h">
+      <Filter>oblivion</Filter>
+    </ClInclude>
+    <ClInclude Include="oblivion\m_oblivion_spider.h">
+      <Filter>oblivion</Filter>
+    </ClInclude>
+    <ClInclude Include="unseen\m_unseen_assassin.h">
+      <Filter>unseen</Filter>
+    </ClInclude>
+    <ClInclude Include="unseen\m_unseen_dathren.h">
+      <Filter>unseen</Filter>
+    </ClInclude>
+    <ClInclude Include="unseen\m_unseen_droid.h">
+      <Filter>unseen</Filter>
+    </ClInclude>
+    <ClInclude Include="unseen\m_unseen_sauron.h">
+      <Filter>unseen</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_armagon.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_gremlin.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_morph.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_serpent.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_vomitus.h">
+      <Filter>quake1</Filter>
+    </ClInclude>
+    <ClInclude Include="ionized\m_ionized_servitor.h">
+      <Filter>ionized</Filter>
+    </ClInclude>
+    <ClInclude Include="quake1\m_q1_freddie.h">
+      <Filter>quake1</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -256,38 +382,225 @@
     <ClCompile Include="xatrix\p_xatrix_weapon.cpp">
       <Filter>xatrix</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\g_nexus_weapon.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\m_ionized_tactc.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\p_nexus_weapon.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\m_ionized_tactf.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\g_nexus_monster.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\m_ionized_tactm.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\m_ionized_tactc.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\g_ionized_items.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\m_ionized_tactf.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\g_ionized_monster.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\m_ionized_tactm.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\g_ionized_weapon.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\m_zaero_sentien.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="ionized\p_ionized_weapon.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\g_ionized_weapon.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="zaero\g_zaero_monster.cpp">
+      <Filter>zaero</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\g_ionized_monster.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="zaero\g_zaero_weapon.cpp">
+      <Filter>zaero</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\p_ionized_weapon.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="zaero\p_zaero_weapon.cpp">
+      <Filter>zaero</Filter>
     </ClCompile>
-    <ClCompile Include="nexus\m_nexus_gekk.cpp">
-      <Filter>nexus</Filter>
+    <ClCompile Include="zaero\g_zaero_misc.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\g_zaero_phys.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\m_zaero_hound.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\g_q1_monster.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_army.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_dog.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_enforcer.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_fiend.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_hknight.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_knight.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_ogre.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_rotfish.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_scrag.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_tarbaby.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_vore.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_zombie.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="ionized\m_ionized_shark.cpp">
+      <Filter>ionized</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_centroid.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_chthon.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_dragon.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_eel.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_oldone.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_overlord.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_shalrath.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_spike.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_sword.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_wrath.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_wyvern.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\m_zaero_handler.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\g_zaero_func.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\m_zaero_acannon.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\m_zaero_bossz.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="zaero\m_zaero_sentien.cpp">
+      <Filter>zaero</Filter>
+    </ClCompile>
+    <ClCompile Include="m_soldier2.cpp" />
+    <ClCompile Include="ionized\g_ionized_misc.cpp">
+      <Filter>ionized</Filter>
+    </ClCompile>
+    <ClCompile Include="ionized\g_ionized_target.cpp">
+      <Filter>ionized</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\g_q1_ai.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\g_oblivion_items.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\g_oblivion_misc.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\g_oblivion_monster.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\g_oblivion_func.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\g_oblivion_weapon.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\m_oblivion_cyborg.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\m_oblivion_kigrax.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\m_oblivion_sentinel.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\m_oblivion_spider.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="oblivion\p_oblivion_weapon.cpp">
+      <Filter>oblivion</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\m_unseen_assassin.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\m_unseen_droid.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\m_unseen_sauron.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\g_unseen_weapon.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\m_unseen_dathren.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\p_unseen_weapon.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="unseen\g_unseen_monster.cpp">
+      <Filter>unseen</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\g_q1_weapon.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_armagon.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_gremlin.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_morph.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_serpent.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_vomitus.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="ionized\m_ionized_servitor.cpp">
+      <Filter>ionized</Filter>
+    </ClCompile>
+    <ClCompile Include="quake1\m_q1_morph2.cpp">
+      <Filter>quake1</Filter>
+    </ClCompile>
+    <ClCompile Include="ionized\g_ionized_func.cpp">
+      <Filter>ionized</Filter>
+    </ClCompile>
+    <ClCompile Include="ionized\m_ionized_crakhor.cpp">
+      <Filter>ionized</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -303,8 +616,20 @@
     <Filter Include="xatrix">
       <UniqueIdentifier>{6565427e-a805-4dc7-ba57-3ce0b62e4336}</UniqueIdentifier>
     </Filter>
-    <Filter Include="nexus">
-      <UniqueIdentifier>{7db9af09-0513-4e27-88b7-f02881eb8e73}</UniqueIdentifier>
+    <Filter Include="ionized">
+      <UniqueIdentifier>{1c7b3d96-d14f-4f8d-8b07-f03832720516}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="zaero">
+      <UniqueIdentifier>{94de955e-8c0e-451f-b8ae-6ec5c54dc5b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="quake1">
+      <UniqueIdentifier>{e3213d9c-866e-4d7c-8469-01d317a100ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="oblivion">
+      <UniqueIdentifier>{1278df3a-e66c-4f08-8b17-f5834802c32c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="unseen">
+      <UniqueIdentifier>{0c7547c9-a9a7-46ee-95bf-fafbfe4f2c41}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
