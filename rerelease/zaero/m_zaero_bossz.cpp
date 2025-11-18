@@ -27,12 +27,13 @@ static cached_soundindex	sound_walk;
 static cached_soundindex	sound_raisegun;
 static cached_soundindex	sound_lowergun;
 static cached_soundindex	sound_switchattacks;
-static cached_soundindex	sound_plamsaballfly;
-static cached_soundindex	sound_plamsaballexplode;
-static cached_soundindex	sound_plamsaballfire;
 static cached_soundindex	sound_taunt1;
 static cached_soundindex	sound_taunt2;
 static cached_soundindex	sound_taunt3;
+static cached_soundindex	sound_rocket;
+
+/* KONIG - boss powerup copy */
+unsigned int zsentien_damage_multiplier;
 
 void fire_empnuke(edict_t* ent, vec3_t center, int radius);
 void SV_AddGravity(edict_t* ent);
@@ -372,8 +373,55 @@ mframe_t zboss_frames_pain3[] =
 };
 MMOVE_T(zboss_move_pain3) = { FRAME_pain301, FRAME_pain325, zboss_frames_pain3, zboss_run };
 
+bool zboss_has_active_empnuke(edict_t *boss)
+{
+    edict_t *ent = nullptr;
+    
+    for (uint32_t i = 1; i < globals.num_edicts; i++)
+    {
+        ent = &g_edicts[i];
+        
+        if (!ent->inuse)
+            continue;
+            
+        if (ent->classname && !strcmp(ent->classname, "EMPNukeCenter") && ent->owner == boss)
+            return true;
+    }
+    
+    return false;
+}
+
 PAIN(zboss_pain) (edict_t* self, edict_t* other, float kick, int damage, const mod_t& mod) -> void
 {
+	if (self->proboscus)
+		return;		// while hook is out.
+
+	if (self->count && self->bossFireTimeout < level.time)
+		self->count = 0;
+
+	if (self->count > 40 && self->bossFireTimeout > level.time && !zboss_has_active_empnuke(self))
+	{
+		// that's it, we are pissed...
+		fire_empnuke(self, self->s.origin, 1024);
+
+		zboss_attack(self);
+		self->count = 0;
+		self->bossFireTimeout = 0_sec;
+		return;
+	}
+
+	self->count++;
+	self->bossFireTimeout = level.time + 1_sec;
+
+	if ((self->health < (self->max_health / 4)) && !zboss_has_active_empnuke(self))
+	{
+		fire_empnuke(self, self->s.origin, 1024);
+
+		zboss_attack(self);
+		self->count = 0;
+		self->bossFireTimeout = 0_sec;
+	}
+
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -381,33 +429,6 @@ PAIN(zboss_pain) (edict_t* self, edict_t* other, float kick, int damage, const m
 
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
-
-	if (self->proboscus)
-		return;		// while hook is out.
-
-	if (self->bossFireCount && self->bossFireTimeout < level.time)
-		self->bossFireCount = 0;
-
-	if (self->bossFireCount > 40 && self->bossFireTimeout > level.time)
-	{
-		// that's it, we are pissed...
-		if (range_to(self, self->enemy) <= RANGE_MELEE)
-		{
-			fire_empnuke(self, self->s.origin, 1024);
-		}
-
-		zboss_attack(self);
-		self->bossFireCount = 0;
-		self->bossFireTimeout = 0_sec;
-		return;
-	}
-
-	self->bossFireCount++;
-	self->bossFireTimeout = level.time + 1_sec;
-
-	if (self->health < (self->max_health / 4) && (range_to(self, self->enemy) <= RANGE_MELEE))
-		fire_empnuke(self, self->s.origin, 1024);
-
 
 	if (damage >= 150)
 	{
@@ -443,7 +464,7 @@ MONSTERINFO_SETSKIN(zboss_setskin) (edict_t* self) -> void
 void zboss_swing(edict_t* self)
 {
 	static	vec3_t	aim = { MELEE_DISTANCE, 0, -24 };
-	fire_hit(self, aim, (15 + (rand() % 6)), 800);
+	fire_hit(self, aim, (15 + (rand() % 6)) * zsentien_damage_multiplier, 800);
 }
 
 mframe_t zboss_frames_attack2c[] =
@@ -534,7 +555,7 @@ void FireFlare(edict_t* self)
 
 	int offset = (self->s.frame - 71) / 3;
 
-	AngleVectors(self->s.angles, forward, right, NULL);
+	AngleVectors(self->s.angles, forward, right, nullptr);
 
 	start = G_ProjectSource(self->s.origin, rocketoffset[offset], forward, right);
 
@@ -544,14 +565,14 @@ void FireFlare(edict_t* self)
 	}
 	else
 	{
-		vec = self->enemy->s.origin, vec;
+		vec = self->enemy->s.origin;
 		vec[2] += self->enemy->viewheight;
 	}
 
 	dir = vec - start;
 	dir.normalize();
 
-	fire_flare(self, start, dir, 10, 1000, 10, 10, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f));
+	fire_flare(self, start, dir, 10 * zsentien_damage_multiplier, 1000, 10, 10, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f));
 
 	// play shooting sound
 	gi.sound(self, CHAN_WEAPON, gi.soundindex("weapons/flare/shoot.wav"), 1, ATTN_NORM, 0);
@@ -582,7 +603,7 @@ void FireRocket(edict_t* self)
 	}
 	else
 	{
-		vec = self->enemy->s.origin, vec;
+		vec = self->enemy->s.origin;
 		vec[2] += self->enemy->viewheight;
 	}
 
@@ -593,12 +614,8 @@ void FireRocket(edict_t* self)
 	dir = vec - start;
 	dir.normalize();
 
-	fire_rocket(self, start, dir, 70, 500, 70 + 20, 70);
-
-	gi.WriteByte(svc_muzzleflash2);
-	gi.WriteShort(self - g_edicts);
-	gi.WriteByte(MZ2_BOSS2_ROCKET_1);
-	gi.multicast(start, MULTICAST_PVS, false);
+	gi.sound(self, CHAN_VOICE, sound_rocket, 1, ATTN_NORM, 0);
+	fire_rocket(self, start, dir, 70 * zsentien_damage_multiplier, 500, 70 + 20, 70);
 }
 
 mframe_t zboss_frames_attack1a[] =
@@ -645,14 +662,14 @@ void zboss_reelInGrapple2(edict_t* self)
 	length = dir.length();
 
 	if (length <= 80 || (self->proboscus->think == HookDragThink && self->proboscus->powerarmor_time < level.time))
-	{
+	{	
 		G_FreeEdict(self->proboscus);
 		self->proboscus = nullptr;
-
 		self->s.modelindex3 = gi.modelindex("models/monsters/bossz/grapple/tris.md2");
 
 		if (enemy)
 		{
+			enemy->no_gravity_time = level.time - 1_sec;
 			enemy->velocity = {};
 			zboss_melee2(self);
 		}
@@ -675,295 +692,34 @@ mframe_t zboss_frames_attack2b[] =
 };
 MMOVE_T(zboss_move_attack2b) = { FRAME_attak2b01, FRAME_attak2b03, zboss_frames_attack2b, zboss_reelInGrapple2 };
 
-
-
-#if 0
-
-THINK(hook_reset) (edict_t* self) -> void
-{
-	self->owner->proboscus = nullptr;
-	G_FreeEdict(self->proboscus);
-	G_FreeEdict(self);
-}
-
-
-DIE(hook_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, const vec3_t& point, const mod_t& mod) -> void
-{
-	if (mod.id == MOD_CRUSH)
-		hook_reset(self);
-}
-
-static void hook_retract(edict_t* self)
-{
-	// start retract animation
-	if (self->owner->monsterinfo.active_move == &parasite_move_fire_proboscis)
-		self->owner->monsterinfo.nextframe = FRAME_drain12;
-
-	// mark as retracting
-	self->movetype = MOVETYPE_NONE;
-	self->solid = SOLID_NOT;
-	// come back real hard
-	if (self->style != 2)
-		self->speed *= 2.0f;
-	self->style = 2;
-	gi.linkentity(self);
-}
-
-
-TOUCH(hook_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
-{
-	// owner isn't trying to probe any more, don't touch anything
-	if (self->owner->monsterinfo.active_move != &parasite_move_fire_proboscis)
-		return;
-
-	vec3_t p;
-
-	// hit what we want to succ
-	if ((other->svflags & SVF_PLAYER) || other == self->owner->enemy)
-	{
-		if (tr.startsolid)
-			p = tr.endpos;
-		else
-			p = tr.endpos - ((self->s.origin - tr.endpos).normalized() * 12);
-
-		self->owner->monsterinfo.nextframe = FRAME_drain06;
-		self->movetype = MOVETYPE_NONE;
-		self->solid = SOLID_NOT;
-		self->style = 1;
-		// stick to this guy
-		self->move_origin = p - other->s.origin;
-		self->enemy = other;
-		self->s.alpha = 0.35f;
-		gi.sound(self, CHAN_WEAPON, sound_suck, 1, ATTN_NORM, 0);
-	}
-	else
-	{
-		p = tr.endpos + tr.plane.normal;
-		// hit monster, don't suck but do small damage
-		// and retract immediately
-		if (other->svflags & (SVF_MONSTER | SVF_DEADMONSTER))
-			hook_retract(self);
-		else
-		{
-			// hit wall; stick to it and do break animation
-			self->owner->monsterinfo.active_move = &parasite_move_break;
-			self->movetype = MOVETYPE_NONE;
-			self->solid = SOLID_NOT;
-			self->style = 1;
-			self->owner->s.angles[YAW] = self->s.angles[YAW];
-		}
-	}
-
-	if (other->takedamage)
-		T_Damage(other, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 5, 0, DAMAGE_NONE, MOD_UNKNOWN);
-
-	gi.positioned_sound(tr.endpos, self->owner, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
-
-	self->s.origin = p;
-	self->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
-	gi.linkentity(self);
-}
-
-THINK(hook_think) (edict_t* self) -> void
-{
-	self->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
-
-	// retracting; keep pulling until we hit the parasite
-	if (self->style == 2)
-	{
-		vec3_t start = parasite_get_proboscis_start(self->owner);
-		vec3_t dir = (self->s.origin - start);
-		float dist = dir.normalize();
-
-		if (dist <= (self->speed * 2) * gi.frame_time_s)
-		{
-			// reached target; free self on next frame, let parasite know
-			self->style = 3;
-			self->think = hook_reset;
-			self->s.origin = start;
-			gi.linkentity(self);
-			return;
-		}
-
-		// pull us in
-		self->s.origin -= dir * (self->speed * gi.frame_time_s);
-		gi.linkentity(self);
-	}
-	// stuck on target; do damage, suck health
-	// and check if target goes away
-	else if (self->style == 1)
-	{
-		if (!self->enemy)
-		{
-			// stuck in wall
-		}
-		else if (!self->enemy->inuse || self->enemy->health <= 0 || !self->enemy->takedamage)
-		{
-			// target gone, retract early
-			hook_retract(self);
-		}
-		else
-		{
-			// update our position
-			self->s.origin = self->enemy->s.origin + self->move_origin;
-
-			vec3_t start = parasite_get_proboscis_start(self->owner);
-
-			self->s.angles = vectoangles((self->s.origin - start).normalized());
-
-			// see if we got cut by the world
-			trace_t tr = gi.traceline(start, self->s.origin, nullptr, MASK_SOLID);
-
-			if (tr.fraction != 1.0f)
-			{
-				// blocked, so retract
-				hook_retract(self);
-				self->s.origin = self->s.old_origin;
-			}
-			else
-			{
-				// succ & drain
-				if (self->timestamp <= level.time)
-				{
-					T_Damage(self->enemy, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 2, 0, DAMAGE_NONE, MOD_UNKNOWN);
-					self->owner->health = min(self->owner->max_health, self->owner->health + 2);
-					self->owner->monsterinfo.setskin(self->owner);
-					self->timestamp = level.time + 10_hz;
-				}
-			}
-
-			gi.linkentity(self);
-		}
-	}
-	// flying
-	else if (self->style == 0)
-	{
-		// owner gone away?
-		if (!self->owner->enemy || !self->owner->enemy->inuse || self->owner->enemy->health <= 0)
-		{
-			hook_retract(self);
-			return;
-		}
-
-		// if we're well behind our target and missed by 2x velocity,
-		// be smart enough to pull in automatically
-		vec3_t to_target = (self->s.origin - self->owner->enemy->s.origin);
-		float dist_to_target = to_target.normalize();
-
-		if (dist_to_target > (self->speed * 2) / 15.f)
-		{
-			vec3_t from_owner = (self->s.origin - self->owner->s.origin).normalized();
-			float dot = to_target.dot(from_owner);
-
-			if (dot > 0.f)
-			{
-				hook_retract(self);
-				return;
-			}
-		}
-	}
-}
-
-PRETHINK(hook_segment_draw) (edict_t* self) -> void
-{
-	vec3_t start = { -5, -24, 34 };
-
-	self->s.origin = start;
-	self->s.old_origin = self->owner->s.origin - ((self->owner->s.origin - start).normalized() * 8.f);
-	gi.linkentity(self);
-}
-
-
-void fire_hook(edict_t* self)
-{
-	vec3_t start, dir;
-	float speed = 1250;
-	vec3_t f, r, start;
-	vec3_t offset;
-
-	AngleVectors(self->s.angles, f, r, nullptr);
-	offset = { -5, -24, 34 };
-	start = M_ProjectFlashSource(self, offset, f, r);
-
-	PredictAim(self, self->enemy, start, speed, false, crandom_open() * 0.1f, &dir, nullptr);
-
-	edict_t* tip = G_Spawn();
-	tip->s.angles = vectoangles(dir);
-	tip->s.modelindex = gi.modelindex("models/monsters/parasite/tip/tris.md2");
-	tip->movetype = MOVETYPE_FLYMISSILE;
-	tip->owner = self;
-	self->proboscus = tip;
-	tip->clipmask = MASK_PROJECTILE & ~CONTENTS_DEADMONSTER;
-	tip->s.origin = tip->s.old_origin = start;
-	tip->speed = speed;
-	tip->velocity = dir * speed;
-	tip->solid = SOLID_BBOX;
-	tip->takedamage = true;
-	tip->flags |= FL_NO_DAMAGE_EFFECTS | FL_NO_KNOCKBACK;
-	tip->die = hook_die;
-	tip->touch = hook_touch;
-	tip->think = hook_think;
-	tip->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
-	tip->svflags |= SVF_PROJECTILE;
-
-	edict_t* segment = G_Spawn();
-	segment->s.modelindex = gi.modelindex("models/monsters/parasite/segment/tris.md2");
-	segment->s.renderfx = RF_BEAM;
-	segment->postthink = hook_segment_draw;
-
-	tip->proboscus = segment;
-	segment->owner = tip;
-
-	trace_t tr = gi.traceline(tip->s.origin, tip->s.origin + (tip->velocity * gi.frame_time_s), self, tip->clipmask);
-	if (tr.startsolid)
-	{
-		tr.plane.normal = -dir;
-		tr.endpos = start;
-		tip->touch(tip, tr.ent, tr, false);
-	}
-	else if (tr.fraction < 1.0f)
-		tip->touch(tip, tr.ent, tr, false);
-
-	segment->s.origin = start;
-	segment->s.old_origin = tip->s.origin + ((tip->s.origin - start).normalized() * 8.f);
-
-	gi.linkentity(tip);
-	gi.linkentity(segment);
-}
-#endif
-
-
-
-
-
-
-
-
-
-
 THINK(HookDragThink) (edict_t* self) -> void
 {
 	vec3_t	dir, vec;
-	float	speed;
+	float	speed, distance;
 	vec3_t	hookoffset = { -5, -24, 34 };
 	vec3_t	forward, right;
 
 	if (self->enemy && self->enemy->health > 0)
 	{
-		self->s.origin = self->enemy->s.origin;
-	}
+		// Stupid, but makes the hook drag more consistent from below
+		if (self->enemy->s.origin[2] < self->owner->s.origin[2])
+            self->enemy->s.origin[2] += 16;
 
-	dir = self->owner->s.origin - self->s.origin;
+		self->s.origin = self->enemy->s.origin;
+		// More consistent hook drag when player is above or below the origin of the hook
+		self->enemy->no_gravity_time = level.time + 2_sec;
+		dir = self->owner->s.origin - self->enemy->s.origin;
+		speed = dir.length();
+		dir.normalize();
+
+		// More velocity because no gravity still isn't enough to drag the player in from above fast enough
+		distance = fabsf(self->owner->s.origin[2] - self->enemy->s.origin[2]);
+		speed = 2000 + (distance * 5);
+		self->enemy->velocity = dir * speed;
+	}
 
 	AngleVectors(self->owner->s.angles, forward, right, nullptr);
 	vec = G_ProjectSource(self->owner->s.origin, hookoffset, forward, right);
-
-	dir = vec - self->s.origin;
-	speed = dir.length();
-	dir.normalize();
-
-	speed = 1500;
-	self->velocity = dir * speed;
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_MEDIC_CABLE_ATTACK);
@@ -972,7 +728,35 @@ THINK(HookDragThink) (edict_t* self) -> void
 	gi.WritePosition(vec);
 	gi.multicast(self->s.origin, MULTICAST_PVS, false);
 
-	self->nextthink = level.time + 0.1_sec;
+	self->nextthink = level.time + 100_ms;
+}
+
+THINK(hook_think) (edict_t* self) -> void
+{
+	vec3_t	vec;
+	vec3_t	hookoffset = { -3, -24, 34 };
+	vec3_t	forward, right;
+
+	if (self->powerarmor_time < level.time)
+	{
+		self->owner->proboscus = nullptr;
+		self->owner->s.modelindex3 = gi.modelindex("models/monsters/bossz/grapple/tris.md2");
+		zboss_posthook(self->owner);
+		G_FreeEdict(self);
+		return;
+	}
+
+	AngleVectors(self->owner->s.angles, forward, right, nullptr);
+	vec = G_ProjectSource(self->owner->s.origin, hookoffset, forward, right);
+
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_MEDIC_CABLE_ATTACK);
+	gi.WriteShort(self - g_edicts);
+	gi.WritePosition(self->s.origin);
+	gi.WritePosition(vec);
+	gi.multicast(self->s.origin, MULTICAST_PVS, false);
+
+	self->nextthink = level.time + 100_ms;
 }
 
 TOUCH(hook_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
@@ -986,50 +770,19 @@ TOUCH(hook_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, 1, 0, DAMAGE_NONE, MOD_ROCKET);
 	}
 
+	self->powerarmor_time = level.time + 2_sec;
+	self->velocity = {};
+	self->nextthink = level.time + 100_ms;
+	self->s.frame = 283;
+
 	if (other->client && other->health > 0)
 	{ // alive... Let's drag the bastard back...
 		self->enemy = other;
-		vec3_t forward;
 		self->s.origin[2] += 1;
-		AngleVectors(self->s.angles, forward, nullptr, nullptr);
-		self->enemy->velocity = forward * -1200;
-	}
-
-	self->powerarmor_time = level.time + 15_sec;
-	self->velocity = {};
-	self->nextthink = level.time + 0.1_sec;
-	self->think = HookDragThink;
-	self->s.frame = 283;
-}
-
-
-THINK(hook_think) (edict_t* self) -> void
-{
-	vec3_t	vec;
-	vec3_t	hookoffset = { -3, -24, 34 };
-	vec3_t	forward, right;
-
-	if (self->powerarmor_time < level.time)
-	{
-		self->powerarmor_time = level.time + 15_sec;
-		self->velocity = {};
-		self->enemy = nullptr;
 		self->think = HookDragThink;
-		self->s.frame = 283;
 	}
-
-
-	AngleVectors(self->owner->s.angles, forward, right, nullptr);
-	vec = G_ProjectSource(self->owner->s.origin, hookoffset, forward, right);
-
-	gi.WriteByte(svc_temp_entity);
-	gi.WriteByte(TE_MEDIC_CABLE_ATTACK);
-	gi.WriteShort(self - g_edicts);
-	gi.WritePosition(self->s.origin);
-	gi.WritePosition(vec);
-	gi.multicast(self->s.origin, MULTICAST_PVS, false);
-
-	self->nextthink = level.time + 0.1_sec;
+	else
+		self->think = hook_think;
 }
 
 void fire_hook(edict_t* self)
@@ -1140,106 +893,6 @@ mframe_t zboss_frames_prehook[] =
 };
 MMOVE_T(zboss_move_prehook) = { FRAME_rhook01, FRAME_rhook10, zboss_frames_prehook, zboss_chooseHookRocket };
 
-// Plasma Cannon
-
-THINK(PlasmaballBlastAnim) (edict_t* ent) -> void
-{
-	ent->s.frame++;
-	ent->s.skinnum++;
-
-	if (ent->s.frame > 1)
-	{
-		G_FreeEdict(ent);
-		return;
-	}
-	else
-	{
-		ent->nextthink = level.time + 0.1_sec;
-	}
-}
-
-THINK(Plasmaball_Explode) (edict_t* ent) -> void
-{
-	//FIXME: if we are onground then raise our Z just a bit since we are a point?
-	if (ent->enemy)
-	{
-		float	points;
-		vec3_t	v;
-		vec3_t	dir;
-
-		v =ent->enemy->mins + ent->enemy->maxs;
-		v = ent->enemy->s.origin + (v * 0.5);
-		v = ent->s.origin - v;
-		points = ent->dmg - 0.5 * v.length();
-		dir = ent->enemy->s.origin - ent->s.origin;
-		T_Damage(ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS, MOD_UNKNOWN);
-	}
-
-	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
-
-	ent->s.origin = ent->s.origin + (ent->velocity * -0.02);
-	ent->velocity = {};
-
-	ent->movetype = MOVETYPE_NONE;
-	ent->s.modelindex = gi.modelindex("models/objects/b_explode/tris.md2");
-	ent->s.effects &= ~EF_BFG & ~EF_ANIM_ALLFAST;
-	ent->s.frame = 0;
-	ent->s.skinnum = 6;
-
-	gi.sound(ent, CHAN_AUTO, sound_plamsaballexplode, 1, ATTN_NORM, 0);
-
-	ent->think = PlasmaballBlastAnim;
-	ent->nextthink = level.time + 0.1_sec;
-}
-
-TOUCH(Plasmaball_Touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
-{
-	if (tr.surface && (tr.surface->flags & SURF_SKY))
-	{
-		G_FreeEdict(self);
-		return;
-	}
-
-	self->enemy = other;
-	Plasmaball_Explode(self);
-}
-
-void fire_plasmacannon(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, float distance)
-{
-	edict_t* plasmaball;
-	vec3_t	dir;
-	vec3_t	forward, right, up;
-
-	dir = vectoangles(aimdir);
-	AngleVectors(dir, forward, right, up);
-
-	plasmaball = G_Spawn();
-	plasmaball->s.origin = start;
-	plasmaball->velocity = aimdir * speed;
-	plasmaball->velocity = plasmaball->velocity + (up * ((distance - 500) + crandom() * 10.0));
-	plasmaball->velocity = plasmaball->velocity + (right * (crandom() * 10.0));
-	plasmaball->avelocity = { 300, 300, 300 };
-	plasmaball->movetype = MOVETYPE_BOUNCE;
-	plasmaball->clipmask = MASK_SHOT;
-	plasmaball->solid = SOLID_BBOX;
-	plasmaball->mins = {};
-	plasmaball->maxs = {};
-	plasmaball->s.modelindex = gi.modelindex("sprites/plasma1.sp2");
-	plasmaball->s.effects = EF_BFG | EF_ANIM_ALLFAST;
-	plasmaball->owner = self;
-	plasmaball->touch = Plasmaball_Touch;
-	plasmaball->nextthink = level.time + 2.5_sec;
-	plasmaball->think = Plasmaball_Explode;
-	plasmaball->dmg = damage;
-	plasmaball->dmg_radius = damage_radius;
-	plasmaball->classname = "plasmaball";
-	plasmaball->s.sound = sound_plamsaballfly;
-
-	gi.sound(self, CHAN_AUTO, sound_plamsaballfire, 1, ATTN_NORM, 0);
-	gi.linkentity(plasmaball);
-}
-
-
 static vec3_t cannonoffset[] =
 {
 	{-19, -44, 30},
@@ -1305,15 +958,15 @@ void FireCannon(edict_t* self)
 
 	if (skill->integer < 2)
 	{
-		fire_plasmacannon(self, start, dir, 90, 700, 90 + 40, distance);
+		fire_plasmacannon(self, start, dir, 90 * zsentien_damage_multiplier, 700, 90 + 40, distance);
 	}
 	else if (skill->integer < 3)
 	{
-		fire_plasmacannon(self, start, dir, 90, (int)(distance * 1.2), 90 + 40, distance);
+		fire_plasmacannon(self, start, dir, 90 * zsentien_damage_multiplier, (int)(distance * 1.2), 90 + 40, distance);
 	}
 	else
 	{
-		fire_plasmacannon(self, start, dir, 90, (int)(distance * 1.6), 90 + 40, distance);
+		fire_plasmacannon(self, start, dir, 90 * zsentien_damage_multiplier, (int)(distance * 1.6), 90 + 40, distance);
 	}
 }
 
@@ -1861,6 +1514,148 @@ DIE(zboss_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage
 	}
 }
 
+//
+// CHECK ATTAKC
+//
+
+
+void ZBossQuad(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	zsentien_damage_multiplier = 4;
+}
+
+void ZBossQuadnDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.quad_time = time;
+	self->monsterinfo.double_time = time;
+	zsentien_damage_multiplier = 8;
+}
+
+void ZBossDouble(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.double_time = time;
+	zsentien_damage_multiplier = 2;
+}
+
+void ZBossPent(edict_t* self, gtime_t time)
+{
+	self->monsterinfo.invincible_time = time;
+}
+
+void ZBossPowerArmor(edict_t* self)
+{
+	self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+	// I don't like this, but it works
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
+	if (coop->integer)
+		self->monsterinfo.power_armor_power += ((25 * skill->integer) + (25 * (CountPlayers() - 1)));
+}
+
+void ZBossRespondPowerup(edict_t* self, edict_t* other)
+{
+	if (other->s.effects & EF_QUAD & EF_DOUBLE)
+	{
+		ZBossPowerArmor(self);
+		if (skill->integer >= 1)
+		{
+			ZBossQuadnDouble(self, other->client->quad_time);
+		}
+	}
+	else if (other->s.effects & EF_QUAD)
+	{
+		ZBossPowerArmor(self);
+		if (skill->integer >= 1)
+			ZBossQuad(self, other->client->quad_time);
+	}
+	else if (other->s.effects & EF_DOUBLE)
+	{
+		ZBossPowerArmor(self);
+		if (skill->integer >= 1)
+			ZBossDouble(self, other->client->double_time);
+	}
+	else if (other->s.effects & EF_DUALFIRE)
+	{
+		ZBossPowerArmor(self);
+		if (skill->integer >= 3)
+			ZBossDouble(self, other->client->double_time);
+	}
+	else
+		zsentien_damage_multiplier = 1;
+
+	if (other->s.effects & EF_PENT)
+	{
+		if (skill->integer == 1)
+			ZBossPowerArmor(self);
+		else if (skill->integer >= 2)
+			ZBossPent(self, other->client->invincible_time);
+	}
+}
+
+void ZBossPowerups(edict_t* self)
+{
+	edict_t* ent;
+
+	if (!coop->integer)
+	{
+		ZBossRespondPowerup(self, self->enemy);
+	}
+	else
+	{
+		// in coop, check for pents, then quads, then doubles
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_PENT)
+			{
+				ZBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_QUAD)
+			{
+				ZBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+
+		for (uint32_t player = 1; player <= game.maxclients; player++)
+		{
+			ent = &g_edicts[player];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client)
+				continue;
+			if (ent->s.effects & EF_DOUBLE)
+			{
+				ZBossRespondPowerup(self, ent);
+				return;
+			}
+		}
+	}
+}
+
+MONSTERINFO_CHECKATTACK(zboss_CheckAttack) (edict_t* self) -> bool
+{
+	/* KONIG - add powerup copy */
+	ZBossPowerups(self);
+	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
+}
+
+
 
 /*
 ===
@@ -1895,12 +1690,10 @@ void SP_monster_zboss(edict_t* self)
 	sound_raisegun.assign("bossz/braisegun.wav");
 	sound_lowergun.assign("bossz/blowergun.wav");
 	sound_switchattacks.assign("bossz/bswitch.wav");
-	sound_plamsaballfly.assign("bossz/bpbfly.wav");
-	sound_plamsaballexplode.assign("bossz/bpbexplode.wav");
-	sound_plamsaballfire.assign("bossz/bpbfire.wav");
 	sound_taunt1.assign("bossz/btaunt1.wav");
 	sound_taunt2.assign("bossz/btaunt2.wav");
 	sound_taunt3.assign("bossz/btaunt3.wav");
+	sound_rocket.assign("chick/chkatck2.wav");
 
 	gi.modelindex("sprites/plasma1.sp2");
 	gi.modelindex("models/objects/b_explode/tris.md2");
@@ -1944,6 +1737,7 @@ void SP_monster_zboss(edict_t* self)
 	self->monsterinfo.sight = zboss_sight;
 	self->monsterinfo.idle = zboss_idle;
 	self->monsterinfo.setskin = zboss_setskin;
+	self->monsterinfo.checkattack = zboss_CheckAttack;
 
 	gi.linkentity(self);
 
@@ -1960,7 +1754,7 @@ void SP_monster_zboss(edict_t* self)
 
 USE(trigger_zboss) (edict_t* self, edict_t* other, edict_t* activator) -> void
 {
-	edict_t* boss = NULL;
+	edict_t* boss = nullptr;
 
 	while ((boss = G_FindByString<&edict_t::targetname>(boss, self->target)) != nullptr)
 	{

@@ -514,9 +514,9 @@ DIE(hound_die) (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			//{ "models/monsters/guard/hound/gibs/chest.md2", GIB_SKINNED },
-			{ "models/objects/gibs/chest/tris.md2" },
+			// { "models/objects/gibs/chest/tris.md2" },
 			//{ "models/monsters/guard/hound/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
-			{ "models/monsters/gibs/sm_meat/head.md2", GIB_SKINNED | GIB_HEAD }
+			{ "models/objects/gibs/head2/tris.md2", GIB_SKINNED | GIB_HEAD }
 			});
 
 		self->deadflag = true;
@@ -548,17 +548,8 @@ void hound_precache()
 	gi.modelindex("models/monsters/guard/hound/tris.md2");
 }
 
-/*QUAKED monster_hound (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
-void SP_monster_hound(edict_t* self)
+void hound_setup(edict_t *self)
 {
-	const spawn_temp_t& st = ED_GetSpawnTemp();
-
-	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
-		return;
-	}
-
 	hound_precache();
 
 	self->monsterinfo.aiflags |= AI_STINKY;
@@ -567,15 +558,10 @@ void SP_monster_hound(edict_t* self)
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/guard/hound/tris.md2");
 
-	self->mins = { -16, -16, -24 };
-	self->maxs = { 16, 16, 24 };
-
-	self->health = 100 * st.health_multiplier;
-	self->gib_health = -75;
-	self->mass = 150;
-
 	self->pain = hound_pain;
 	self->die = hound_die;
+
+	self->monsterinfo.combat_style = COMBAT_MELEE;
 
 	self->monsterinfo.stand = hound_stand;
 	self->monsterinfo.walk = hound_walk;
@@ -589,63 +575,112 @@ void SP_monster_hound(edict_t* self)
 	self->monsterinfo.blocked = nullptr;
 	self->monsterinfo.setskin = hound_setskin;
 
-	gi.linkentity(self);
-
 	M_SetAnimation(self, &hound_stand1);
-
-	self->monsterinfo.combat_style = COMBAT_MELEE;
-
 	self->monsterinfo.scale = MODEL_SCALE;
 	self->monsterinfo.can_jump = !(self->spawnflags & SPAWNFLAG_HOUND_NOJUMPING);
 	self->monsterinfo.drop_height = 256;
 	self->monsterinfo.jump_height = 68;
+}
+
+/*QUAKED monster_hound (1 .5 0) (-16 -16 -24) (16 16 24) Ambush Trigger_Spawn Sight
+*/
+void SP_monster_hound(edict_t *self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	hound_setup(self);
+
+	self->mins = { -16, -16, -24 };
+	self->maxs = { 16, 16, 24 };
+	self->health = 100 * st.health_multiplier;
+	self->gib_health = -75;
+	self->mass = 150;
+
+	gi.linkentity(self);
 
 	walkmonster_start(self);
 }
 
-THINK(HoundSpawn) (edict_t* self) -> void
+void hound_createHound(edict_t *self, float healthPercent)
 {
-	vec3_t	 vec;
-	edict_t* player;
+	vec3_t spawn_origin;
+    vec3_t hound_mins = { -16, -16, -24 };
+    vec3_t hound_maxs = { 16, 16, 24 };
+	vec3_t startpoint = self->s.origin;
+    vec3_t forward;
 
-	SP_monster_hound(self);
-	self->think(self);
+    AngleVectors(self->s.angles, forward, nullptr, nullptr);
+    
+    startpoint += forward * 64;
+    startpoint[2] += 10;
+    
+    if (!FindSpawnPoint(startpoint, hound_mins, hound_maxs, spawn_origin, 32) ||
+        !CheckGroundSpawnPoint(spawn_origin, hound_mins, hound_maxs, 256, -1))
+    {
+        // Fallback - just use handler position with slight offset
+        spawn_origin = self->s.origin;
+        spawn_origin[2] += 8;
+    }
+    
+    edict_t* ent = G_Spawn();
+    hound_setup(ent);
+    
+    ent->classname = "monster_hound";
+	ent->mins = hound_mins;
+	ent->maxs = hound_maxs;
+    ent->s.origin = spawn_origin;
+    ent->target = self->target;
+    ent->enemy = self->enemy;
+    
+    ent->health = (int)(100.0f * healthPercent);
+    ent->max_health = ent->health;
+    ent->gib_health = -75;
+    ent->mass = 150;
 
-	// jump at player
-	if (self->enemy && self->enemy->inuse && self->enemy->health > 0)
-		player = self->enemy;
-	else
-		player = AI_GetSightClient(self);
+	ent->yaw_speed = 30;
+    ent->monsterinfo.pausetime = 0_ms;
+    ent->monsterinfo.attack_finished = 0_ms;
+    ent->monsterinfo.melee_debounce_time = 0_ms;
 
-	if (!player)
-		return;
-
-	vec = player->s.origin - self->s.origin;
-	self->s.angles[YAW] = vectoyaw(vec);
-	vec.normalize();
-	self->velocity = vec * 200;
-	self->velocity[2] = 400;
-	self->groundentity = nullptr;
-	self->enemy = player;
-	FoundTarget(self);
-	self->monsterinfo.sight(self, self->enemy);
-	self->s.frame = self->monsterinfo.nextframe = FRAME_restrain12;
-}
-
-void hound_createHound(edict_t* self, float healthPercent)
-{
-	edict_t* ent = G_Spawn();
-	ent->classname = "monster_hound";
-	ent->target = self->target;
-	ent->s.origin = self->s.origin;
-	ent->enemy = self->enemy;
-
-	ent->health *= healthPercent;
-
-	HoundSpawn(ent);
-
-	// [Paril-KEX] set health bar over to Makron when we throw him out
-	for (size_t i = 0; i < 2; i++)
-		if (level.health_bar_entities[i] && level.health_bar_entities[i]->enemy == self)
-			level.health_bar_entities[i]->enemy = ent;
+	ent->takedamage = true;
+    ent->svflags |= SVF_MONSTER;
+    ent->clipmask = MASK_MONSTERSOLID;
+    ent->deadflag = false;
+    
+    // Link the entity
+    gi.linkentity(ent);
+    
+    // Set up for jump attack at player (from original HoundSpawn logic)
+    edict_t* player = nullptr;
+    if (ent->enemy && ent->enemy->inuse && ent->enemy->health > 0)
+        player = ent->enemy;
+    else
+        player = AI_GetSightClient(ent);
+    
+    if (player)
+    {
+        vec3_t vec = player->s.origin - ent->s.origin;
+        ent->s.angles[YAW] = vectoyaw(vec);
+        vec.normalize();
+        ent->velocity = vec * 100;
+        ent->velocity[2] = 200;
+        ent->groundentity = nullptr;
+        ent->enemy = player;
+        FoundTarget(ent);
+        ent->monsterinfo.sight(ent, ent->enemy);
+        ent->s.frame = ent->monsterinfo.nextframe = FRAME_restrain12;
+    }
+    
+    ent->think = monster_think;
+    ent->nextthink = level.time + 10_hz;
+    
+    // Set health bar over to hound if there is one
+    for (size_t i = 0; i < 2; i++)
+        if (level.health_bar_entities[i] && level.health_bar_entities[i]->enemy == self)
+            level.health_bar_entities[i]->enemy = ent;
 }

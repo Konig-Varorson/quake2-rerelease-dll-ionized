@@ -2,7 +2,7 @@
 
 #include "../g_local.h"
 
-void barrier_think(edict_t* self)
+THINK(barrier_think) (edict_t* self) -> void
 {
 	if (!self)
 	{

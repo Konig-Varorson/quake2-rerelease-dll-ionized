@@ -10,8 +10,9 @@ handler
 #include "../g_local.h"
 #include "m_zaero_handler.h"
 
-constexpr spawnflags_t SPAWNFLAG_HANDLER_HOLD_DELAY = 8_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_HANDLER_ONE_ENTITY = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_HANDLER_NOJUMPING = 8_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_HANDLER_HOLD_DELAY = 16_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_HANDLER_ONE_ENTITY = 32_spawnflag;
 
 static cached_soundindex sound_idle;
 static cached_soundindex sound_idle1;
@@ -428,13 +429,13 @@ void SP_monster_handler(edict_t* self)
 	*/
 
 	self->mins = { -32, -32, -24 };
-	self->maxs = { 24, 32, 28 };
+	self->maxs = { 32, 32, 32 };
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	self->health = 275 * st.health_multiplier;
+	self->health = 175 * st.health_multiplier;
 	self->gib_health = -65;
-	self->mass = 450;
+	self->mass = 250;
 
 	self->pain = handler_pain;
 	self->die = handler_die;
@@ -451,13 +452,13 @@ void SP_monster_handler(edict_t* self)
 	gi.linkentity (self);
 
 	M_SetAnimation(self, &handler_stand1);
-
 	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_HANDLER_NOJUMPING);
+	self->monsterinfo.drop_height = 192;
+	self->monsterinfo.jump_height = 40;
 
 	if (!self->spawnflags.has(SPAWNFLAG_HANDLER_ONE_ENTITY))
-	{
 		level.total_monsters++; // add one for the hound which is created later :)
-	}
 
 	walkmonster_start (self);
 }

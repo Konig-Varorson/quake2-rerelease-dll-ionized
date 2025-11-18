@@ -27,7 +27,7 @@ void SV_Physics_FallFloat(edict_t* ent)
 	SV_CheckVelocity(ent);
 
 	wasonground = (ent->groundentity == nullptr);
-	if (ent->velocity[2] < sv_gravity->value * -0.1)
+	if (ent->velocity[2] < sv_gravity->value * -0.1f)
 		hitsound = true;
 
 	if (!ent->waterlevel)
@@ -42,19 +42,19 @@ void SV_Physics_FallFloat(edict_t* ent)
 		max = ent->maxs;
 
 		end = ent->s.origin;
-		end[2] -= 0.25; // down 4
+		end[2] -= 0.25f; // down 4
 
 		tr = gi.trace(ent->s.origin, min, max, end, ent, MASK_SHOT);
-		if (tr.plane.normal[2] > 0.7) // on solid ground
+		if (tr.plane.normal[2] > 0.7f) // on solid ground
 		{
 			ent->groundentity = tr.ent;
 			ent->s.origin = tr.endpos;
-			ent->velocity = { 0, 0, 0 };
+			ent->velocity = { 0.0f, 0.0f, 0.0f };
 		}
-		else if (tr.fraction < 1.0 && tr.plane.normal[2] <= 0.7) // on steep slope
+		else if (tr.fraction < 1.0f && tr.plane.normal[2] <= 0.7f) // on steep slope
 		{
 			normal = tr.plane.normal;
-			gravity = { 0, 0, -gravVal };
+			gravity = { 0.0f, 0.0f, -gravVal };
 			ent->velocity = gravity + (normal * gravVal);
 			ent->groundentity = nullptr;
 		}
@@ -67,26 +67,26 @@ void SV_Physics_FallFloat(edict_t* ent)
 	else
 	{
 		// where's the midpoint? above or below the water?
-		const double WATER_MASS = 500.0;
+		const double WATER_MASS = 500.0f;
 		vec3_t accel;
-		float percentBelow = 0.0;
-		float massOfObject = 0.0;
-		float massOfVolumeWater = 0.0;
-		float massOfWater = 0.0;
-		float massDiff = 0.0;
-		double i = 0.0;
+		float percentBelow = 0.0f;
+		float massOfObject = 0.0f;
+		float massOfVolumeWater = 0.0f;
+		float massOfWater = 0.0f;
+		float massDiff = 0.0f;
+		double i = 0.0f;
 		vec3_t volume;
 
 		// TODO if we're not grounded on the bottom of the lake...
 
 		// calculate massPerCubicMetre
-		volume = ent->size * (1.0 / 32.0);
+		volume = ent->size * (1.0f / 32.0f);
 		massOfObject = ent->mass;
 		massOfVolumeWater = WATER_MASS * (volume[0] * volume[1] * volume[2]);
 
 		// how much of ourself is actually in the water?
-		percentBelow = 1.0;
-		for (i = 0.0; i <= 1.0; i += 0.05)
+		percentBelow = 1.0f;
+		for (i = 0.0f; i <= 1.0f; i += 0.05f)
 		{
 			vec3_t midpoint;
 			int watertype;
@@ -97,19 +97,34 @@ void SV_Physics_FallFloat(edict_t* ent)
 
 			if (!(watertype & MASK_WATER))
 			{
-				percentBelow = i - 0.05;
+				percentBelow = i - 0.05f;
 				break;
 			}
 		}
-		if (percentBelow < 0.05) // safety net
-			percentBelow = 0.0;
+		if (percentBelow < 0.05f) // safety net
+			percentBelow = 0.0f;
 		massOfWater = percentBelow * massOfVolumeWater;
 		massDiff = massOfWater - massOfObject; // difference between
-		accel = {};
 		accel = { 0, 0, gravVal * (massDiff / massOfVolumeWater) };
-		ent->velocity = ent->velocity * 0.7;
+
+		float mass_factor = ent->mass / 400.0f;
+		if (ent->mass <= 300.0f)
+		{
+			// Very aggressive damping for light barrels
+			accel[2] *= 0.3f;
+			ent->velocity *= 0.3f; // Heavy damping
+		}
+    	if (mass_factor < 1.0f) 
+    	{
+    		// Even more damping to avoid players getting nudged
+    		accel[2] *= mass_factor;
+    		ent->velocity *= (0.7f * mass_factor + 0.3f);
+    	}
+		else
+   	    	ent->velocity *= 0.7f; // Normal damping
+
 		if (accel.length() > 4)
-			ent->velocity = accel + ent->velocity;
+			ent->velocity += accel;
 	}
 
 	if (ent->velocity[0] || ent->velocity[1] || ent->velocity[2])
