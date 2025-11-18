@@ -88,44 +88,67 @@ bool TryRandomTeleportPosition(edict_t* self, float radius)
 	return false;
 }
 
-// TO DO: Replace explosions with gibs
-
-THINK(Q1BossExplode_think) (edict_t* self) -> void
+THINK(BossGibs_think) (edict_t* self) -> void
 {
-    // owner gone or changed
-    if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count)
-    {
-        G_FreeEdict(self);
-        return;
-    }
+	// owner gone or changed
+	if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count)
+	{
+		G_FreeEdict(self);
+		return;
+	}
 
-    vec3_t org = self->owner->s.origin + self->owner->mins;
+	vec3_t org = self->owner->s.origin + self->owner->mins;
 
-    org.x += frandom() * self->owner->size.x;
-    org.y += frandom() * self->owner->size.y;
-    org.z += frandom() * self->owner->size.z;
+	org.x += frandom() * self->owner->size.x;
+	org.y += frandom() * self->owner->size.y;
+	org.z += frandom() * self->owner->size.z;
 
-    gi.WriteByte(svc_temp_entity);
-    gi.WriteByte(!(self->viewheight % 3) ? TE_EXPLOSION1 : TE_EXPLOSION1_NL);
-    gi.WritePosition(org);
-    gi.multicast(org, MULTICAST_PVS, false);
+	// Select random gib model
+	static const char* gib_models[] = {
+		"models/objects/gibs/bone/tris.md2",
+		"models/objects/gibs/bone2/tris.md2",
+		"models/objects/gibs/sm_meat/tris.md2",
+		"models/objects/gibs/q1_meat/tris.md2"
+	};
 
-    self->viewheight++;
+	// Throw two gibs per tick instead of one
+	for (int i = 0; i < 2; i++)
+	{
+		const char* gib_model = gib_models[irandom(4)];
 
-    self->nextthink = level.time + random_time(50_ms, 200_ms);
+		// Calculate velocity away from owner center
+		vec3_t dir = org - self->owner->s.origin;
+		dir.normalize();
+
+		// Add some randomness to direction
+		dir.x += crandom() * 0.3f;
+		dir.y += crandom() * 0.3f;
+		dir.z += crandom() * 0.3f;
+		dir.normalize();
+
+		// Increased velocity (500-800 speed range, was 200-400)
+		float speed = 1000.0f + frandom() * 600.0f;
+		vec3_t velocity = dir * speed;
+		velocity.z += 400.0f + frandom() * 400.0f; // Increased upward component (was 100-200)
+
+		ThrowGib(self->owner, gib_model, velocity.length(), GIB_NONE, (self->s.scale ? self->s.scale : 1));
+	}
+
+	self->viewheight++;
+	self->nextthink = level.time + random_time(50_ms, 200_ms);
 }
 
-void Q1BossExplode(edict_t* self)
+void BossGibs(edict_t* self)
 {
-    // no blowy on deady
-    if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
-        return;
+	// no gibs on dead spawn
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
+		return;
 
-    edict_t* exploder = G_Spawn();
-    exploder->owner = self;
-    exploder->count = self->spawn_count;
-    exploder->style = self->s.modelindex;
-    exploder->think = Q1BossExplode_think;
-    exploder->nextthink = level.time + random_time(75_ms, 250_ms);
-    exploder->viewheight = 0;
+	edict_t* gibber = G_Spawn();
+	gibber->owner = self;
+	gibber->count = self->spawn_count;
+	gibber->style = self->s.modelindex;
+	gibber->think = BossGibs_think;
+	gibber->nextthink = level.time + random_time(75_ms, 250_ms);
+	gibber->viewheight = 0;
 }

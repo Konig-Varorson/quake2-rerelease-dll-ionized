@@ -58,7 +58,7 @@ TOUCH(lavaball_touch) (edict_t* ent, edict_t* other, const trace_t& tr, bool oth
 	G_FreeEdict(ent);
 }
 
-edict_t* fire_lavaball(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius, int radius_damage)
+void fire_lavaball(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius, int radius_damage)
 {
 	edict_t* lavaball;
 
@@ -86,8 +86,6 @@ edict_t* fire_lavaball(edict_t* self, const vec3_t& start, const vec3_t& dir, in
 	lavaball->classname = "lavaball";
 
 	gi.linkentity(lavaball);
-
-	return lavaball;
 }
 
 /*
@@ -97,6 +95,7 @@ fire_vorepod
 Fires a homing explosive spiked ball. Used by eldritch monsters.
 =================
 */
+
 TOUCH(vorepod_touch) (edict_t* ent, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
 {
 	vec3_t origin;
@@ -287,7 +286,7 @@ TOUCH(flame_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other
 	G_FreeEdict(self);
 }
 
-edict_t* fire_flame(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed)
+void fire_flame(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed)
 {
 	edict_t* flame;
 	trace_t	 tr;
@@ -322,13 +321,11 @@ edict_t* fire_flame(edict_t* self, const vec3_t& start, const vec3_t& dir, int d
 		flame->s.origin = tr.endpos + (tr.plane.normal * 1.f);
 		flame->touch(flame, tr.ent, tr, false);
 	}
-
-	return flame;
 }
 
 /*
 =================
-q1_fire_gib
+fire_gib
 
 Fires a gib projectile.  Used by the Zombie.
 =================
@@ -372,7 +369,6 @@ TOUCH(zombiegib_touch) (edict_t *ent, edict_t *other, const trace_t& tr, bool su
 	ent->nextthink = level.time + 3_sec;
 	ent->think = G_FreeEdict;
 }
-
 
 void fire_gib (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float right_adjust, float up_adjust)
 {
@@ -422,259 +418,11 @@ void fire_gib (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed
 
 /*
 =================
-fire_plasmaball
 
-Fires a ball of lightning that explodes on impact. Magical partial-BFG.
+monster_fire_multigrenade
+
 =================
 */
-
-THINK(plasmaball_explode) (edict_t* self) -> void
-{
-	edict_t* ent;
-	float	 points;
-	vec3_t	 v;
-	float	 dist;
-
-	if (self->s.frame == 0)
-	{
-		// the BFG effect
-		ent = nullptr;
-		while ((ent = findradius(ent, self->s.origin, self->dmg_radius)) != nullptr)
-		{
-			if (!ent->takedamage)
-				continue;
-			if (ent == self->owner)
-				continue;
-			if (!CanDamage(ent, self))
-				continue;
-			if (!CanDamage(ent, self->owner))
-				continue;
-			// ROGUE - make tesla hurt by bfg
-			if (!(ent->svflags & SVF_MONSTER) && !(ent->flags & FL_DAMAGEABLE) && (!ent->client) && (strcmp(ent->classname, "misc_explobox") != 0))
-				continue;
-			// ZOID
-			// don't target players in CTF
-			if (CheckTeamDamage(ent, self->owner))
-				continue;
-			// ZOID
-
-			v = ent->mins + ent->maxs;
-			v = ent->s.origin + (v * 0.5f);
-			vec3_t centroid = v;
-			v = self->s.origin - centroid;
-			dist = v.length();
-			points = self->radius_dmg * (1.0f - sqrtf(dist / self->dmg_radius));
-
-			T_Damage(ent, self, self->owner, self->velocity, centroid, vec3_origin, (int)points, 0, DAMAGE_ENERGY, MOD_BFG_EFFECT);
-
-			// Paril: draw BFG lightning laser to enemies
-			gi.WriteByte(svc_temp_entity);
-			gi.WriteByte(TE_LIGHTNING);
-			gi.WriteEntity(self);	// source entity
-			gi.WriteEntity(world); // destination entity
-			gi.WritePosition(self->s.origin);
-			gi.WritePosition(centroid);
-			gi.multicast(self->s.origin, MULTICAST_PHS, false);
-		}
-	}
-
-	self->nextthink = level.time;
-	self->think = G_FreeEdict;
-}
-
-TOUCH(plasmaball_touch) (edict_t* self, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
-{
-	if (other == self->owner)
-		return;
-
-	if (tr.surface && (tr.surface->flags & SURF_SKY))
-	{
-		G_FreeEdict(self);
-		return;
-	}
-
-	if (self->owner->client)
-		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
-
-	// core explosion - prevents firing it into the wall/floor
-	if (other->takedamage)
-		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, 200, 0, DAMAGE_ENERGY, MOD_BFG_BLAST);
-	T_RadiusDamage(self, self->owner, 200, other, 100, DAMAGE_ENERGY, MOD_BFG_BLAST);
-
-	gi.sound(self, CHAN_VOICE, gi.soundindex("weapons/bfg__x1b.wav"), 1, ATTN_NORM, 0);
-	self->solid = SOLID_NOT;
-	self->touch = nullptr;
-	self->s.origin += self->velocity * (-1 * gi.frame_time_s);
-	self->velocity = {};
-//	self->s.modelindex = gi.modelindex("sprites/s_bfg3.sp2");
-	self->s.frame = 0;
-	self->s.sound = 0;
-	self->s.effects &= ~EF_ANIM_ALLFAST;
-	self->think = plasmaball_explode;
-	self->nextthink = level.time + 10_hz;
-	self->enemy = other;
-
-	gi.WriteByte(svc_temp_entity);
-	gi.WriteByte(TE_NUKEBLAST);
-	gi.WritePosition(self->s.origin);
-	gi.multicast(self->s.origin, MULTICAST_PHS, false);
-}
-
-void fire_plasmaball(edict_t* self, const vec3_t& start, const vec3_t& dir, int damage, int speed, float damage_radius)
-{
-	edict_t* plasma;
-
-	plasma = G_Spawn();
-	plasma->s.origin = start;
-	plasma->s.angles = vectoangles(dir);
-	plasma->velocity = dir * speed;
-	plasma->svflags = SVF_PROJECTILE;
-	plasma->movetype = MOVETYPE_FLYMISSILE;
-	plasma->clipmask = MASK_PROJECTILE;
-	plasma->flags |= FL_DODGE;
-
-	// [Paril-KEX]
-	if (self->client && !G_ShouldPlayersCollide(true))
-		plasma->clipmask &= ~CONTENTS_PLAYER;
-
-	plasma->solid = SOLID_BBOX;
-	plasma->s.effects |= EF_PLASMA;
-	plasma->s.modelindex = gi.modelindex("models/proj/plasma/tris.md2");
-	plasma->touch = plasmaball_touch;
-
-	plasma->owner = self;
-	plasma->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	plasma->think = G_FreeEdict;
-	plasma->radius_dmg = damage;
-	plasma->dmg_radius = damage_radius;
-	plasma->classname = "plasma blast";
-	plasma->s.sound = gi.soundindex("weapons/plasma__l1a.wav");
-
-	plasma->teammaster = plasma;
-	plasma->teamchain = nullptr;
-
-	gi.linkentity(plasma);
-}
-
-/*
-=================
-fire_multigrenade
-
-Fires a grenade that splits into four smaller grenades. Used by multigrenade ogre.
-=================
-*/
-//PLACEHOLDER - Functions like grenades for now.
-static void MultiGrenade_ExplodeReal(edict_t* ent, edict_t* other, vec3_t normal)
-{
-	vec3_t origin;
-	mod_t  mod;
-
-	if (ent->owner->client)
-		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
-
-	// FIXME: if we are onground then raise our Z just a bit since we are a point?
-	if (other)
-	{
-		vec3_t dir = other->s.origin - ent->s.origin;
-		mod = MOD_GRENADE;
-		T_Damage(other, ent, ent->owner, dir, ent->s.origin, normal, ent->dmg, ent->dmg, mod.id == MOD_HANDGRENADE ? DAMAGE_RADIUS : DAMAGE_NONE, mod);
-	}
-
-	mod = MOD_G_SPLASH;
-	T_RadiusDamage(ent, ent->owner, (float)ent->dmg, other, ent->dmg_radius, DAMAGE_NONE, mod);
-
-	origin = ent->s.origin + normal;
-	gi.WriteByte(svc_temp_entity);
-	if (ent->waterlevel)
-	{
-		if (ent->groundentity)
-			gi.WriteByte(TE_GRENADE_EXPLOSION_WATER);
-		else
-			gi.WriteByte(TE_ROCKET_EXPLOSION_WATER);
-	}
-	else
-	{
-		if (ent->groundentity)
-			gi.WriteByte(TE_GRENADE_EXPLOSION);
-		else
-			gi.WriteByte(TE_ROCKET_EXPLOSION);
-	}
-	gi.WritePosition(origin);
-	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
-
-	G_FreeEdict(ent);
-}
-
-THINK(MultiGrenade_Explode) (edict_t* ent) -> void
-{
-	MultiGrenade_ExplodeReal(ent, nullptr, ent->velocity * -0.02f);
-}
-
-TOUCH(MultiGrenade_Touch) (edict_t* ent, edict_t* other, const trace_t& tr, bool other_touching_self) -> void
-{
-	if (other == ent->owner)
-		return;
-
-	if (tr.surface && (tr.surface->flags & SURF_SKY))
-	{
-		G_FreeEdict(ent);
-		return;
-	}
-
-	if (!other->takedamage)
-	{
-		gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/grenlb1b.wav"), 1, ATTN_NORM, 0);
-	
-		return;
-	}
-
-	MultiGrenade_ExplodeReal(ent, other, tr.plane.normal);
-}
-
-void fire_multigrenade(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed, gtime_t timer, float damage_radius, float right_adjust, float up_adjust, bool monster)
-{
-	edict_t* grenade;
-	vec3_t	 dir;
-	vec3_t	 forward, right, up;
-
-	dir = vectoangles(aimdir);
-	AngleVectors(dir, forward, right, up);
-
-	grenade = G_Spawn();
-	grenade->s.origin = start;
-	grenade->velocity = aimdir * speed;
-
-	if (up_adjust)
-	{
-		float gravityAdjustment = level.gravity / 800.f;
-		grenade->velocity += up * up_adjust * gravityAdjustment;
-	}
-
-	if (right_adjust)
-		grenade->velocity += right * right_adjust;
-
-	grenade->movetype = MOVETYPE_BOUNCE;
-	grenade->clipmask = MASK_PROJECTILE;
-	if (self->client && !G_ShouldPlayersCollide(true))
-		grenade->clipmask &= ~CONTENTS_PLAYER;
-	grenade->solid = SOLID_BBOX;
-	grenade->svflags |= SVF_PROJECTILE;
-	grenade->flags |= (FL_DODGE | FL_TRAP);
-	grenade->s.effects |= EF_GRENADE;
-	grenade->speed = speed;
-	grenade->avelocity = { crandom() * 360, crandom() * 360, crandom() * 360 };
-	grenade->s.modelindex = gi.modelindex("models/objects/grenade/tris.md2");
-	grenade->nextthink = level.time + timer;
-	grenade->think = MultiGrenade_Explode;
-	grenade->s.effects |= EF_GRENADE_LIGHT;
-	grenade->owner = self;
-	grenade->touch = MultiGrenade_Touch;
-	grenade->dmg = damage;
-	grenade->dmg_radius = damage_radius;
-	grenade->classname = "grenade";
-
-	gi.linkentity(grenade);
-}
 
 void monster_fire_multigrenade(edict_t* self, const vec3_t& start, const vec3_t& aimdir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, float right_adjust, float up_adjust)
@@ -686,6 +434,6 @@ void monster_fire_multigrenade(edict_t* self, const vec3_t& start, const vec3_t&
 		monster_muzzleflash(self, start, flashtype);
 		return;
 	}
-	fire_multigrenade(self, start, aimdir, damage, speed, 2.5_sec, damage + 40.f, right_adjust, up_adjust, true);
+	fire_multigrenade(self, start, aimdir, damage, speed, 2.5_sec, damage + 40.f, right_adjust, up_adjust);
 	monster_muzzleflash(self, start, flashtype);
 }
