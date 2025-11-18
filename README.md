@@ -14,6 +14,22 @@ Version 0.3 will be focused on finishing Zaero compatbility and finishing Quake 
 Ionized won't be doing a full compatibility with Unseen, as most of the remaining content ranges from silly to limited. Several concepts will be carried over with Q4 demakes (for example: Sauron->Heavy Hover Tank, Dathren and Assassin -> Tacticals), however.
 
 ## Changelog
+### Version 0.4 (WIP - what isn't in code atm is in progress)
+* Additional features from Zaero. Everything for this is more or less done but won't all be included due to other project reasons.
+* Added the Deatomizer Soldier, Cyborg, Spdier, Kigrax, and Sentinel enemies from Oblivion.
+* Added the remaining enemies from Unseen: Heavy Gunner, Sauron, Droid, Assassin, and Dathren.
+* Code for Unseen compatibility implemented, however access to Unseen weapons is currently not provided (I need to test if more than 32 weapons can work in remaster due to how the weapon and powerup wheels work).
+* Added the remaining official Quake 1 enemies: Armagon, Gremlin, High Priest (Morph), Serpent, and Vomitus.
+  * Updated the Zombie, Mummy, Wrath, Overlord, Centroid, Spawn, Hellspawn, Sword, Statue, and Hellstatue to not drown when underwater.
+* Reworked Nightmare difficulty - instead of no flinching, most enemies have new or changed abilities in Nightmare. Some examples:
+* New trap entities - misc_prox, misc_tesla, and misc_foodcube_trap - to act as hazards for the player.
+* New allied entities.
+* Expanded Tutorial map to showcase newly added enemies and Nightmare difficulty changes.
+
+### Version 0.3.5
+* Fixed grapple bug with Z-Sentien (thank you, Nicco).
+* And a few other things I've honestly forgotten.
+
 ### Version 0.3
 * Added Sentien, Z-Sentien, and Autocannons from Zaero
 * Added Grunt, Dog, Enforcer, Knight, Death Knight, Scrag, Zombie, Fiend, Rotfish, Vore, Spawn, Chthon, and Shub-Niggurath from Quake 1.
