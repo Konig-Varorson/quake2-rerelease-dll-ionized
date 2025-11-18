@@ -788,7 +788,14 @@ void GunnerCmdrFire(edict_t *self)
 	PredictAim(self, self->enemy, start, 800, false, frandom() * 0.3f, &aim, nullptr);
 	for (int i = 0; i < 3; i++)
 		aim[i] += crandom_open() * 0.025f;
-	monster_fire_flechette(self, start, aim, 4, 800, flash_number);
+	if (self->style == 1)
+	{
+		monster_fire_blueblaster(self, start, aim, 4, 800, flash_number, EF_BLUEHYPERBLASTER);
+	}
+	else
+	{
+		monster_fire_flechette(self, start, aim, 4, 800, flash_number);
+	}
 }
 
 mframe_t guncmdr_frames_attack_chain[] = {
@@ -998,10 +1005,44 @@ void GunnerCmdrGrenade(edict_t *self)
 
 		// try search for best pitch
 		if (M_CalculatePitchToFire(self, target, start, aim, speed, 2.5f, (flash_number >= MZ2_GUNCMDR_GRENADE_MORTAR_1 && flash_number <= MZ2_GUNCMDR_GRENADE_MORTAR_3)))
-			monster_fire_grenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+		{
+			if (self->style == 1)
+			{
+				monster_fire_railgrenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+			}
+			else
+			{
+				/* KONIG - cluster grenade Nightmare */
+				if (skill->integer >= 3)
+				{
+					monster_fire_multigrenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+				}
+				else
+				{
+					monster_fire_grenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+				}
+			}
+		}
 		else
-			// normal shot
-			monster_fire_grenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), 200.f + (crandom_open() * 10.0f));
+		{
+			if (self->style == 1)
+			{
+				monster_fire_railgrenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+			}
+			else
+			{
+				/* KONIG - cluster grenade Nightmare */
+				if (skill->integer >= 3)
+				{
+					monster_fire_multigrenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), frandom() * 10.f);
+				}
+				else
+				{
+					// normal shot
+					monster_fire_grenade(self, start, aim, 50, speed, flash_number, (crandom_open() * 10.0f), 200.f + (crandom_open() * 10.0f));
+				}
+			}
+		}
 	}
 }
 
@@ -1464,6 +1505,87 @@ void SP_monster_guncmdr(edict_t *self)
 		self->monsterinfo.power_armor_power = 200;
 	if (!st.was_key_specified("power_armor_type"))
 		self->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+
+	// PMM
+	//self->monsterinfo.blindfire = true;
+	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNCMDR_NOJUMPING);
+	self->monsterinfo.drop_height = 192;
+	self->monsterinfo.jump_height = 40;
+
+	walkmonster_start(self);
+}
+
+/*QUAKED monster_gunner2 (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
+model="models/monsters/guncmdr/tris.md2"
+*/
+void SP_monster_gunner2(edict_t* self)
+{
+	const spawn_temp_t& st = ED_GetSpawnTemp();
+
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	sound_death.assign("gunner/death1.wav");
+	sound_pain.assign("gunner/gunpain2.wav");
+	sound_pain2.assign("gunner/gunpain1.wav");
+	sound_idle.assign("gunner/gunidle1.wav");
+	sound_open.assign("gunner/gunatck1.wav");
+	sound_search.assign("gunner/gunsrch1.wav");
+	sound_sight.assign("gunner/sight1.wav");
+
+	gi.soundindex("guncmdr/gcdratck2.wav");
+	gi.soundindex("guncmdr/gcdratck3.wav");
+
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->s.modelindex = gi.modelindex("models/monsters/gunner/tris.md2");
+
+	gi.modelindex("models/monsters/gunner/gibs/chest.md2");
+	gi.modelindex("models/monsters/gunner/gibs/foot.md2");
+	gi.modelindex("models/monsters/gunner/gibs/garm.md2");
+	gi.modelindex("models/monsters/gunner/gibs/gun.md2");
+	gi.modelindex("models/monsters/gunner/gibs/head.md2");
+
+	self->s.scale = 1.25f;
+	self->mins = vec3_t{ -16, -16, -24 };
+	self->maxs = vec3_t{ 16, 16, 36 };
+	self->s.skinnum = 4;
+	self->style = 1;
+
+	self->health = 275 * st.health_multiplier;
+	self->gib_health = -175;
+	self->mass = 255;
+
+	self->pain = guncmdr_pain;
+	self->die = guncmdr_die;
+
+	self->monsterinfo.stand = guncmdr_stand;
+	self->monsterinfo.walk = guncmdr_walk;
+	self->monsterinfo.run = guncmdr_run;
+	// pmm
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = guncmdr_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.sidestep = guncmdr_sidestep;
+	self->monsterinfo.blocked = guncmdr_blocked; // PGM
+	// pmm
+	self->monsterinfo.attack = guncmdr_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = guncmdr_sight;
+	self->monsterinfo.search = guncmdr_search;
+	self->monsterinfo.setskin = guncmdr_setskin;
+
+	gi.linkentity(self);
+
+	M_SetAnimation(self, &guncmdr_move_stand);
+	self->monsterinfo.scale = MODEL_SCALE;
+
+	if (!st.was_key_specified("armor_power"))
+		self->monsterinfo.armor_power = 200;
+	if (!st.was_key_specified("armor_type"))
+		self->monsterinfo.armor_type = IT_ARMOR_COMBAT;
 
 	// PMM
 	//self->monsterinfo.blindfire = true;

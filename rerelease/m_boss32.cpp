@@ -35,7 +35,7 @@ static cached_soundindex sound_taunt2;
 static cached_soundindex sound_taunt3;
 static cached_soundindex sound_hit;
 
-/* KONIG - universal boss powerup copy */
+/* KONIG - boss powerup copy */
 unsigned int makron_damage_multiplier;
 
 void makron_taunt(edict_t *self)
@@ -446,8 +446,15 @@ void makronBFG(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
-	/* KONIG - damage multiplier */
-	monster_fire_bfg(self, start, dir, 50 * makron_damage_multiplier, 300, 100, 300, MZ2_MAKRON_BFG);
+	/* KONIG - homing bfgin Nightmare */
+	if (skill->integer >= 3)
+	{
+		monster_fire_bfghoming(self, start, dir, 50 * makron_damage_multiplier, 300, 100, 200, 0.05f, MZ2_JORG_BFG_1);
+	}
+	else
+	{
+		monster_fire_bfg(self, start, dir, 50 * makron_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1); //KONIG - powerup multiplier
+	}
 }
 
 mframe_t makron_frames_attack3[] = {

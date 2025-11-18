@@ -3755,9 +3755,11 @@ security pass for the security level
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 	//Q1 Keys and Runes
+	/*QUAKED key_silver_base (0 .5 .8) (-16 -16 -16) (16 16 16)
+	*/
 	{
-		/* id */ IT_KEY_SILVER_KEY,
-		/* classname */ "key_silver_key",
+		/* id */ IT_KEY_SILVER_BASE,
+		/* classname */ "key_silver_base",
 		/* pickup */ Pickup_Key,
 		/* use */ nullptr,
 		/* drop */ Drop_General,
@@ -3775,11 +3777,99 @@ security pass for the security level
 		/* chain */ IT_NULL,
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
-	/*QUAKED key_gold_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+	/*QUAKED key_silver_medieval (0 .5 .8) (-16 -16 -16) (16 16 16)
 	*/
 	{
-		/* id */ IT_KEY_GOLD_KEY,
-		/* classname */ "key_gold_key",
+		/* id */ IT_KEY_SILVER_MEDIEVAL,
+		/* classname */ "key_silver_medieval",
+		/* pickup */ Pickup_Key,
+		/* use */ nullptr,
+		/* drop */ Drop_General,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/keys/w_s_key/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "k_silver",
+		/* use_name */  "Silver Key",
+		/* pickup_name */  "Silver Key",
+		/* pickup_name_definite */ "Silver Key",
+		/* quantity */ 0,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_STAY_COOP | IF_KEY
+	},
+	/*QUAKED key_silver_runic (0 .5 .8) (-16 -16 -16) (16 16 16)
+	*/
+	{
+		/* id */ IT_KEY_SILVER_RUNIC,
+		/* classname */ "key_silver_runic",
+		/* pickup */ Pickup_Key,
+		/* use */ nullptr,
+		/* drop */ Drop_General,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/keys/w_s_key/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "k_silver",
+		/* use_name */  "Silver Key",
+		/* pickup_name */  "Silver Key",
+		/* pickup_name_definite */ "Silver Key",
+		/* quantity */ 0,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_STAY_COOP | IF_KEY
+	},
+	/*QUAKED key_gold_base (0 .5 .8) (-16 -16 -16) (16 16 16)
+	*/
+	{
+		/* id */ IT_KEY_GOLD_BASE,
+		/* classname */ "key_gold_base",
+		/* pickup */ Pickup_Key,
+		/* use */ nullptr,
+		/* drop */ Drop_General,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/keys/w_g_key/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "k_gold",
+		/* use_name */  "Gold Key",
+		/* pickup_name */  "Gold Key",
+		/* pickup_name_definite */ "Gold Key",
+		/* quantity */ 0,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_STAY_COOP | IF_KEY
+	},
+	/*QUAKED key_gold_medieval (0 .5 .8) (-16 -16 -16) (16 16 16)
+	*/
+	{
+		/* id */ IT_KEY_GOLD_MEDIEVAL,
+		/* classname */ "key_gold_medieval",
+		/* pickup */ Pickup_Key,
+		/* use */ nullptr,
+		/* drop */ Drop_General,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/keys/w_g_key/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "k_gold",
+		/* use_name */  "Gold Key",
+		/* pickup_name */  "Gold Key",
+		/* pickup_name_definite */ "Gold Key",
+		/* quantity */ 0,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_STAY_COOP | IF_KEY
+	},
+	/*QUAKED key_gold_runic (0 .5 .8) (-16 -16 -16) (16 16 16)
+	*/
+	{
+		/* id */ IT_KEY_GOLD_RUNIC,
+		/* classname */ "key_gold_runic",
 		/* pickup */ Pickup_Key,
 		/* use */ nullptr,
 		/* drop */ Drop_General,

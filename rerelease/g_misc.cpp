@@ -2464,6 +2464,20 @@ void SetupMannequinModel( edict_t * self, const int32_t modelType, const char * 
 			break;
 		}
 
+		case 4: {
+			self->s.skinnum = (MAX_CLIENTS - 4);
+			modelName = "crakhor";
+			defaultSkin = "crakhorg";
+			break;
+		}
+
+		case 5: {
+			self->s.skinnum = (MAX_CLIENTS - 5);
+			modelName = "zumlin";
+			defaultSkin = "zumlin";
+			break;
+		}
+
 		default: {
 			self->s.skinnum = ( MAX_CLIENTS - 1 );
 			modelName = "female";

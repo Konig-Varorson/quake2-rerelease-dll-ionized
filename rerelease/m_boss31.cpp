@@ -487,7 +487,16 @@ void jorgBFG(edict_t *self)
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_WEAPON, sound_bfg_fire, 1, ATTN_NORM, 0);
-	monster_fire_bfg(self, start, dir, 50 * jorg_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1); //KONIG - powerup multiplier
+	/* KONIG - homing bfgin Nightmare */
+	if (skill->integer >= 3)
+	{
+		monster_fire_bfghoming(self, start, dir, 50 * jorg_damage_multiplier, 300, 100, 200, 0.05f, MZ2_JORG_BFG_1);
+	}
+	else
+	{
+		monster_fire_bfg(self, start, dir, 50 * jorg_damage_multiplier, 300, 100, 200, MZ2_JORG_BFG_1); //KONIG - powerup multiplier
+	}
+
 }
 
 void jorg_firebullet_right(edict_t *self)

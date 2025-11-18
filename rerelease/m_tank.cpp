@@ -919,6 +919,88 @@ MONSTERINFO_ATTACK(tank_attack) (edict_t *self) -> void
 }
 
 //
+// MELEE /*KONIG - Added Melee*/
+//
+
+void tank_stomp(edict_t* self)
+{
+	tank_footstep(self);
+
+	vec3_t f, r, start;
+	AngleVectors(self->s.angles, f, r, nullptr);
+	start = M_ProjectFlashSource(self, { 20.f, 0.f, 14.f }, f, r);
+	trace_t tr = gi.traceline(self->s.origin, start, self, MASK_SOLID);
+	gi.WritePosition(tr.endpos);
+	gi.WriteDir(f);
+	gi.multicast(tr.endpos, MULTICAST_PHS, false);
+
+	T_SlamRadiusDamage(tr.endpos, self, self, 15, 250.f, self, 200.f, MOD_UNKNOWN);
+}
+
+void tank_slam(edict_t* self)
+{
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte(TE_BERSERK_SLAM);
+	vec3_t f, r, start;
+	AngleVectors(self->s.angles, f, r, nullptr);
+	start = M_ProjectFlashSource(self, { 20.f, 0.f, 14.f }, f, r);
+	trace_t tr = gi.traceline(self->s.origin, start, self, MASK_SOLID);
+	gi.WritePosition(tr.endpos);
+	gi.WriteDir(f);
+	gi.multicast(tr.endpos, MULTICAST_PHS, false);
+
+	T_SlamRadiusDamage(tr.endpos, self, self, 15, 250.f, self, 200.f, MOD_UNKNOWN);
+}
+
+mframe_t tank_frames_melee[] = {
+	{ ai_move, 3 },
+	{ ai_move, 2 },
+	{ ai_move, 2 },
+	{ ai_move, 1 },
+	{ ai_move, 6 },
+	{ ai_move, 7 },
+	{ ai_move, 9, tank_stomp },
+	{ ai_move, 2 },
+	{ ai_move, 1 },
+	{ ai_move, 2 },
+	{ ai_move, 2, tank_footstep },
+	{ ai_move, 2 },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move, -2 },
+	{ ai_move, -2 },
+	{ ai_move, 0, tank_windup },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move },
+	{ ai_move, 0, tank_slam },
+	{ ai_move },
+	{ ai_move, -1 },
+	{ ai_move, -1 },
+	{ ai_move, -1 },
+	{ ai_move, -1 },
+	{ ai_move, -1 },
+	{ ai_move, -3 },
+	{ ai_move, -10 },
+	{ ai_move, -10 },
+	{ ai_move, -2 },
+	{ ai_move, -3 },
+	{ ai_move, -2, tank_footstep }
+};
+MMOVE_T(tank_move_melee) = { FRAME_attak201, FRAME_attak238, tank_frames_melee, tank_run };
+
+MONSTERINFO_MELEE(tank_melee) (edict_t* self) -> void
+{
+	M_SetAnimation(self, &tank_move_melee);
+}
+
+
+//
 // death
 //
 
@@ -1217,7 +1299,7 @@ void SP_monster_tank(edict_t *self)
 
 		self->s.skinnum = 2;
 
-		self->health = 950 * st.health_multiplier;
+		self->health = 900 * st.health_multiplier;
 		self->gib_health = -225;
 
 		if (!st.was_key_specified("armor_type"))
@@ -1230,7 +1312,7 @@ void SP_monster_tank(edict_t *self)
 		self->count = 0;
 
 		sound_pain.assign("tank/tnkpain2.wav");
-		self->health = 750 * st.health_multiplier;
+		self->health = 650 * st.health_multiplier;
 		self->gib_health = -200;
 
 		if (!st.was_key_specified("armor_type"))

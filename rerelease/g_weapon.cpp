@@ -901,7 +901,7 @@ THINK(bfg_laser_update) (edict_t *self) -> void
 	gi.linkentity(self);
 }
 
-static void bfg_spawn_laser(edict_t *self)
+void bfg_spawn_laser(edict_t *self)
 {
 	vec3_t end = bfg_laser_pos(self->s.origin, 256);
 	trace_t tr = gi.traceline(self->s.origin, end, self, MASK_OPAQUE | CONTENTS_PROJECTILECLIP);

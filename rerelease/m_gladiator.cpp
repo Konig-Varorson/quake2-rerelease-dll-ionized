@@ -171,10 +171,10 @@ void GladiatorGun(edict_t *self)
 
 	/* KONIG _ BFGladiator from 25th Anniversary*/
 	if (strcmp(self->classname, "monster_bfgladiator") == 0)
-		if (skill->integer >= 3) //TO DO: Homing BFG only in Nightmare
+		if (skill->integer >= 3)
 		{
 			gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
-			monster_fire_bfg(self, start, dir, 25, 300, 100, 300, MZ2_GLADIATOR_RAILGUN_1);
+			monster_fire_bfghoming(self, start, dir, 25, 300, 100, 300, 0.05f, MZ2_GLADIATOR_RAILGUN_1);
 		}
 		else
 		{
