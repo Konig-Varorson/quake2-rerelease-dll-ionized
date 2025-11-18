@@ -8,10 +8,11 @@ Quake II: Ionized is a mod designed with three purposes in mind.
 * Third, to add additional resources for mappers, such as making the grapple and trap's meatcubes worldspawns.
 
 ### What's Next?
-Version 0.2 began encorporating compatibilities with Unseen, Zaero, Citadel, and 25th Anniversary Mappack.
-Version 0.3 finished Zaero enemy conversions, added most Quake 1 enemies, and some Quake 4 demakes in the form of retextured enemies, with a few changes to Nightmare difficulty and armor rebalance.
-Version 0.4 finishes adding the enemies from Unseen and Quake 1, and includes the enemies, weapons, powerups, and features from Oblivion. It will also finish the changes to Nightmare behavior, add mapping features, and include the first few new allied NPCs.
-Version 0.5 is aiming to be the last version before Ionized is considered complete, with restoring and complementing cut content - including small ammo pickups for all ammo, restored Gnorta, Shocker, Blitz, and other enemies, and the two cut weapons from Quake II PSX: Discharger and FlameGun (rebranded Immolator).
+* Version 0.2 began encorporating compatibilities with Unseen, Zaero, Citadel, and 25th Anniversary Mappack.
+* Version 0.3 finished Zaero enemy conversions, added most Quake 1 enemies, and some Quake 4 demakes in the form of retextured enemies, with a few changes to Nightmare difficulty and armor rebalance.
+* Version 0.4 finishes adding the enemies from Unseen and Quake 1, and includes the enemies, weapons, powerups, and features from Oblivion. It will also finish the changes to Nightmare behavior, add mapping features, and include the first few new allied NPCs.
+* Version 0.5 is aiming to be the last version before Ionized is considered complete, with restoring and complementing cut content - including small ammo pickups for all ammo, restored Gnorta, Shocker, Blitz, and other enemies, and the two cut weapons from Quake II PSX: Discharger and FlameGun (rebranded Immolator).
+
 After Version 0.5, I'll be reassessing what's left for making Ionized complete, and rebrand it as Version 1.0.
 
 Ionized won't be doing a full compatibility with Unseen, as most of the remaining content ranges from silly to limited. Several concepts will be carried over with Q4 demakes (for example: Sauron->Heavy Hover Tank, Dathren and Assassin -> Tacticals), however.
