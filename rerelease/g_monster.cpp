@@ -247,14 +247,15 @@ void M_WorldEffects(edict_t *ent)
 	{
 		bool take_drown_damage = false;
 
-		if (!(ent->flags & FL_SWIM))
+		/*KONIG - adding non-drowning flag from CotV*/
+		if (!(ent->flags & FL_SWIM) && !(ent->flags & FL_DEEPONE))
 		{
 			if (ent->waterlevel < WATER_UNDER)
 				ent->air_finished = level.time + 12_sec;
 			else if (ent->air_finished < level.time)
 				take_drown_damage = true;
 		}
-		else
+		else if (!(ent->flags & FL_DEEPONE))
 		{
 			if (ent->waterlevel > WATER_NONE)
 				ent->air_finished = level.time + 9_sec;
